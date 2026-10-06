@@ -1,7 +1,12 @@
-//! Escaneo de carpetas `.docset`, lectura de `Info.plist` y de los
-//! índices SQLite (esquemas `searchIndex` y Core Data `ZTOKEN*`).
+//! Escaneo de carpetas `.docset` (T2). La lectura de `Info.plist`
+//! (T3) y de los índices SQLite (T4) viven en sus propios módulos.
 //!
-//! Toda la lógica debe ser independiente de Tauri y estar cubierta por
-//! tests con docsets reales en `src-tauri/tests/fixtures/`.
-//!
-//! Tarea 2: `model.rs` (Docset/Entry), `scanner.rs`, `plist.rs`, `index.rs`.
+//! Toda la lógica es independiente de Tauri y está cubierta por tests.
+//! Los docsets son entrada no confiable: lo corrupto se registra en
+//! `ScanReport::issues` sin abortar el escaneo.
+
+pub mod model;
+pub mod scanner;
+
+pub use model::{Docset, ScanError, ScanIssue, ScanReport};
+pub use scanner::scan_dir;
