@@ -44,6 +44,18 @@ pub struct Entry {
     pub path: String,
 }
 
+/// Un docset tarix pendiente de extraer (T10): tiene `tarix.tgz` +
+/// `tarixIndex.db` pero aún no hay `Documents/` usable.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PendingTarix {
+    /// Slug estable (mismo algoritmo que `Docset::id`).
+    pub id: String,
+    /// Nombre derivado de la carpeta sin `.docset`.
+    pub name: String,
+    /// Ruta a `<Nombre>.docset/`.
+    pub root_path: PathBuf,
+}
+
 /// Motivo por el que una entrada `*.docset` se saltó durante el escaneo.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum IssueKind {
@@ -63,6 +75,9 @@ pub enum IssueKind {
     InvalidIndex,
     /// No se pudo leer una entrada de la carpeta raíz.
     EntryUnreadable,
+    /// Un tarix no se pudo extraer (tgz corrupto, disco lleno, límites...).
+    /// El resto de docsets no se ve afectado.
+    TarixFailed,
 }
 
 impl std::fmt::Display for IssueKind {
@@ -85,6 +100,9 @@ impl std::fmt::Display for IssueKind {
             IssueKind::EntryUnreadable => {
                 write!(f, "no se pudo leer la entrada")
             }
+            IssueKind::TarixFailed => {
+                write!(f, "tarix no instalable (ver terminal)")
+            }
         }
     }
 }
@@ -103,6 +121,8 @@ pub struct ScanIssue {
 pub struct ScanReport {
     /// Docsets válidos, ordenados por nombre (orden determinista).
     pub docsets: Vec<Docset>,
+    /// Tarix pendientes de extraer (instalables, no issues).
+    pub pending_tarix: Vec<PendingTarix>,
     /// Entradas saltadas con su motivo.
     pub issues: Vec<ScanIssue>,
 }

@@ -9,10 +9,16 @@ pub mod index;
 pub mod model;
 pub mod plist;
 pub mod scanner;
+pub mod tarix;
 
 pub use index::{read_index, IndexData, IndexError, IndexSchema};
-pub use model::{Docset, Entry, IssueKind, ScanError, ScanIssue, ScanReport};
+pub use model::{Docset, Entry, IssueKind, PendingTarix, ScanError, ScanIssue, ScanReport};
+pub use plist::{apply_to_docset, read_info_plist};
 pub use scanner::scan_dir;
+pub use tarix::{
+    cache_dir_for, cleanup_stale_cache, ensure_extracted, ExtractOutcome, ExtractStatus,
+    TarixError, TarixLimits,
+};
 
 /// Ruta a una fixture real o `None` si no está descargada (con aviso).
 /// Las fixtures están en `.gitignore`: quien clone sin ellas ve `SKIP`

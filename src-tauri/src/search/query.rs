@@ -67,6 +67,7 @@ pub fn search(
         entries,
         matcher,
         utf32_buf,
+        ..
     } = &mut *index;
     let mut hits: Vec<(usize, u8, u32)> = Vec::new();
     for (idx, entry) in entries.iter().enumerate() {

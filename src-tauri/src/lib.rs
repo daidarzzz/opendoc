@@ -8,7 +8,8 @@ pub mod search;
 pub mod settings;
 
 use commands::{
-    get_docset_home, get_settings, list_docsets, search, set_docsets_dir, set_theme, AppState,
+    extract_tarix, get_docset_home, get_settings, list_docsets, search, set_docsets_dir, set_theme,
+    AppState,
 };
 
 /// Carga ajustes + carpeta guardada al arrancar. Nunca tumba el arranque:
@@ -29,7 +30,17 @@ fn load_startup_state(app: &mut tauri::App) {
         *guard = settings;
     }
     if let Some(dir) = dir {
-        if let Ok(loaded) = commands::service::load_docsets_dir(&dir) {
+        let cache_base = data_dir.join("tarix-cache");
+        // Solo reutiliza cachés existentes (arranque rápido): la primera
+        // extracción la pide el usuario con Instalar (comando async).
+        docset::tarix::cleanup_stale_cache(&cache_base);
+        if let Ok(loaded) = commands::service::load_docsets_dir(
+            &dir,
+            &commands::service::LoadOptions {
+                cache_base,
+                extract_missing: false,
+            },
+        ) {
             if let Ok(mut guard) = state.loaded.lock() {
                 *guard = loaded;
             }
@@ -85,7 +96,8 @@ pub fn run() {
             search,
             get_docset_home,
             get_settings,
-            set_theme
+            set_theme,
+            extract_tarix
         ])
         .run(tauri::generate_context!());
     if let Err(e) = result {

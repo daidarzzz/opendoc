@@ -17,7 +17,7 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use super::index::read_index;
-use super::model::{Docset, IssueKind, ScanError, ScanIssue, ScanReport};
+use super::model::{Docset, IssueKind, PendingTarix, ScanError, ScanIssue, ScanReport};
 use super::plist::{apply_to_docset, read_info_plist};
 
 /// Sufijo de carpeta que identifica un docset (insensible a mayúsculas).
@@ -67,6 +67,7 @@ pub fn scan_dir(root: &Path) -> Result<ScanReport, ScanError> {
 
     let mut report = ScanReport {
         docsets: Vec::new(),
+        pending_tarix: Vec::new(),
         issues: entry_issues,
     };
     let mut used_slugs: HashSet<String> = HashSet::new();
@@ -92,6 +93,22 @@ pub fn scan_dir(root: &Path) -> Result<ScanReport, ScanError> {
             continue;
         }
         if !contents_path.join("Resources/Documents").is_dir() {
+            // Sin Documents/ pero con triada tarix → instalable (T10),
+            // no un issue. Exige también el .dsidx (las entradas salen
+            // de ahí); sin él es un índice ausente normal.
+            let resources = contents_path.join("Resources");
+            let is_tarix = resources.join("tarix.tgz").is_file()
+                && resources.join("tarixIndex.db").is_file()
+                && resources.join("docSet.dsidx").is_file();
+            if is_tarix {
+                let id = unique_slug(&slugify(stem), &mut used_slugs);
+                report.pending_tarix.push(PendingTarix {
+                    id,
+                    name: stem.to_string(),
+                    root_path,
+                });
+                continue;
+            }
             report.issues.push(ScanIssue {
                 path: root_path,
                 kind: IssueKind::MissingDocuments,
@@ -474,20 +491,26 @@ mod tests {
     }
 
     #[test]
-    fn tarix_style_docset_without_documents_becomes_issue() {
-        // C++.docset es formato tarix (sin Documents/): fuera del MVP,
-        // pero el escaneo lo registra sin tumbarse.
+    fn tarix_style_docset_is_pending_not_issue() {
+        // C++.docset es formato tarix (sin Documents/ pero con triada):
+        // instalable (T10), no un issue.
         if super::super::fixture_or_skip("C++.docset").is_none() {
             return;
         }
         let report = scan_dir(Path::new("tests/fixtures")).expect("scan fixtures");
-        let issue = report
-            .issues
+        let pending = report
+            .pending_tarix
             .iter()
-            .find(|i| i.path.ends_with("C++.docset"))
-            .expect("issue para C++");
-        assert_eq!(issue.kind, IssueKind::MissingDocuments);
-        assert!(report.docsets.iter().all(|d| d.id != "c"));
+            .find(|p| p.root_path.ends_with("C++.docset"))
+            .expect("C++ pendiente");
+        assert_eq!(pending.name, "C++");
+        assert!(
+            report
+                .issues
+                .iter()
+                .all(|i| !i.path.ends_with("C++.docset")),
+            "tarix no genera issues"
+        );
     }
 
     #[test]

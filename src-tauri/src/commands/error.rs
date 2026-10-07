@@ -33,4 +33,10 @@ pub enum ApiError {
         /// Detalle del fallo.
         message: String,
     },
+    /// Ya hay una extracción en curso para ese id.
+    #[error("extracción en curso: {id}")]
+    ExtractionInProgress {
+        /// Id del docset.
+        id: String,
+    },
 }

@@ -21,7 +21,8 @@ export type IssueKind =
   | "MissingIndex"
   | "InvalidInfoPlist"
   | "InvalidIndex"
-  | "EntryUnreadable";
+  | "EntryUnreadable"
+  | "TarixFailed";
 
 /** Entrada saltada del escaneo (docset::ScanIssue). */
 export interface ScanIssue {
@@ -29,9 +30,17 @@ export interface ScanIssue {
   kind: IssueKind;
 }
 
+/** Tarix pendiente de extraer (docset::PendingTarix). */
+export interface PendingTarix {
+  id: string;
+  name: string;
+  root_path: string;
+}
+
 /** Resultado del escaneo (docset::ScanReport). */
 export interface ScanReport {
   docsets: Docset[];
+  pending_tarix: PendingTarix[];
   issues: ScanIssue[];
 }
 
@@ -63,7 +72,8 @@ export type ApiError =
   | { kind: "invalid_dir"; path: string }
   | { kind: "unknown_docset"; id: string }
   | { kind: "no_home_page"; id: string }
-  | { kind: "load_failed"; message: string };
+  | { kind: "load_failed"; message: string }
+  | { kind: "extraction_in_progress"; id: string };
 
 /** Tema guardado (settings::ThemeMode). */
 export type ThemeMode = "light" | "dark" | "system";

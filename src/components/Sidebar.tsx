@@ -6,8 +6,18 @@ import { useViewer } from "../store/viewer";
 const THEME_LABEL = { light: "Claro", dark: "Oscuro", system: "Sistema" } as const;
 
 export function Sidebar() {
-  const { docsets, issues, status, error, dirMissing, savedDir, choose } =
-    useDocsets();
+  const {
+    docsets,
+    pending,
+    extractingIds,
+    issues,
+    status,
+    error,
+    dirMissing,
+    savedDir,
+    choose,
+    extract,
+  } = useDocsets();
   const { current, openDoc } = useViewer();
   const { mode, cycle } = useTheme();
 
@@ -51,10 +61,37 @@ export function Sidebar() {
             </li>
           ))}
         </ul>
-        {docsets.length === 0 && (
+        {docsets.length === 0 && pending.length === 0 && (
           <p className="px-2 py-1 text-xs text-gray-500">
             Sin docsets cargados.
           </p>
+        )}
+        {pending.length > 0 && (
+          <>
+            <p className="px-2 pb-1 pt-2 text-[11px] uppercase text-gray-400">
+              Por instalar (tarix)
+            </p>
+            <ul className="space-y-0.5">
+              {pending.map((p) => {
+                const busy = extractingIds.includes(p.id);
+                return (
+                  <li
+                    key={p.id}
+                    className="flex items-center justify-between rounded px-2 py-1.5 text-sm"
+                  >
+                    <span>{p.name}</span>
+                    <button
+                      onClick={() => void extract(p.id)}
+                      disabled={busy}
+                      className="rounded border border-gray-300 px-2 py-0.5 text-xs hover:bg-gray-200 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                    >
+                      {busy ? "Extrayendo…" : "Instalar"}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
         )}
       </nav>
 

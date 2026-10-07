@@ -43,6 +43,11 @@ export async function searchDocs(
   return invoke<SearchResponse>("search", { request });
 }
 
+/** Extrae un tarix pendiente (largo, no bloquea). Devuelve resumen. */
+export async function extractTarix(docsetId: string): Promise<ScanReport> {
+  return invoke<ScanReport>("extract_tarix", { docsetId });
+}
+
 /** URL opendoc://<id>/<home> de la página de inicio. */
 export async function getDocsetHome(docsetId: string): Promise<string> {
   return invoke<string>("get_docset_home", { docsetId });

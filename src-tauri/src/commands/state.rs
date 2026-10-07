@@ -5,10 +5,11 @@
 //! Los comandos solo leen o sustituyen este estado; la lógica está en
 //! `service.rs`.
 
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-use crate::docset::{Docset, ScanIssue};
+use crate::docset::{Docset, PendingTarix, ScanIssue};
 use crate::search::SearchIndex;
 use crate::settings::Settings;
 
@@ -18,6 +19,8 @@ pub struct Loaded {
     pub source_dir: PathBuf,
     /// Docsets válidos ordenados por nombre.
     pub docsets: Vec<Docset>,
+    /// Tarix pendientes de extraer (instalables).
+    pub pending: Vec<PendingTarix>,
     /// Entradas saltadas con su motivo.
     pub issues: Vec<ScanIssue>,
     /// Índice en memoria de los docsets abribles.
@@ -29,6 +32,7 @@ impl Default for Loaded {
         Self {
             source_dir: PathBuf::new(),
             docsets: Vec::new(),
+            pending: Vec::new(),
             issues: Vec::new(),
             index: SearchIndex::new(),
         }
@@ -40,6 +44,7 @@ impl std::fmt::Debug for Loaded {
         f.debug_struct("Loaded")
             .field("source_dir", &self.source_dir)
             .field("docsets", &self.docsets)
+            .field("pending", &self.pending)
             .field("issues", &self.issues)
             .field("entries", &self.index.len())
             .finish()
@@ -52,6 +57,8 @@ pub struct AppState {
     pub loaded: Mutex<Loaded>,
     /// Ajustes persistentes (T9).
     pub settings: Mutex<Settings>,
+    /// Ids con extracción en curso (evita duplicadas, desactiva el botón).
+    pub extracting: Mutex<HashSet<String>>,
 }
 
 impl Default for AppState {
@@ -59,6 +66,7 @@ impl Default for AppState {
         Self {
             loaded: Mutex::new(Loaded::default()),
             settings: Mutex::new(Settings::default()),
+            extracting: Mutex::new(HashSet::new()),
         }
     }
 }

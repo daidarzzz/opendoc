@@ -28,10 +28,11 @@ rusqlite = { version = "0.40.2", features = ["bundled"] }
 nucleo-matcher = "0.3.1"
 tauri-plugin-os = "2"
 tauri-plugin-dialog = "2"
+# Extracción tarix en producción (v0.2 adelantado a T10).
+flate2 = "1"
+tar = "0.4"
 
 [dev-dependencies]
-flate2 = "1.1.10"
-tar = "0.4.46"
 tempfile = "3"
 
 

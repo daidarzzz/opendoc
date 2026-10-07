@@ -40,8 +40,8 @@ pub fn list_docsets(state: State<'_, AppState>) -> Vec<crate::docset::Docset> {
     docs
 }
 
-/// Carga una carpeta de docsets (escaneo + índices) sin bloquear la UI.
-/// Devuelve el resumen para mostrar docsets e issues.
+/// Carga una carpeta de docsets (escaneo + índices + tarix) sin bloquear.
+/// Devuelve el resumen para mostrar docsets, pendientes e issues.
 #[tauri::command]
 pub async fn set_docsets_dir(
     state: State<'_, AppState>,
@@ -49,12 +49,20 @@ pub async fn set_docsets_dir(
     path: String,
 ) -> Result<crate::docset::ScanReport, ApiError> {
     dlog!("[opendoc] set_docsets_dir <- {path}");
-    let loaded =
-        tauri::async_runtime::spawn_blocking(move || service::load_docsets_dir(path.as_ref()))
-            .await
-            .map_err(|e| ApiError::LoadFailed {
-                message: e.to_string(),
-            })??;
+    let cache_base = cache_base_of(&app);
+    let loaded = tauri::async_runtime::spawn_blocking(move || {
+        service::load_docsets_dir(
+            path.as_ref(),
+            &service::LoadOptions {
+                cache_base,
+                extract_missing: true,
+            },
+        )
+    })
+    .await
+    .map_err(|e| ApiError::LoadFailed {
+        message: e.to_string(),
+    })??;
     dlog!(
         "[opendoc] cargados {} docsets, {} issues",
         loaded.docsets.len(),
@@ -73,6 +81,73 @@ pub async fn set_docsets_dir(
     Ok(report)
 }
 
+/// Base de `tarix-cache/` en datos de la app (vacía si no se resuelve).
+fn cache_base_of(app: &tauri::AppHandle) -> std::path::PathBuf {
+    use tauri::Manager;
+    app.path()
+        .app_data_dir()
+        .map(|d| d.join("tarix-cache"))
+        .unwrap_or_default()
+}
+
+/// Extrae un tarix pendiente sin bloquear la UI. Devuelve el resumen
+/// actualizado. Si ya hay una extracción en curso para ese id, falla con
+/// `ExtractionInProgress` (la UI desactiva el botón).
+#[tauri::command]
+pub async fn extract_tarix(
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+    docset_id: String,
+) -> Result<crate::docset::ScanReport, ApiError> {
+    dlog!("[opendoc] extract_tarix <- {docset_id}");
+    {
+        let mut extracting = state.extracting.lock().map_err(|e| ApiError::LoadFailed {
+            message: e.to_string(),
+        })?;
+        if !extracting.insert(docset_id.clone()) {
+            return Err(ApiError::ExtractionInProgress { id: docset_id });
+        }
+    }
+    // Solo datos propios cruzan al hilo (State no es 'static).
+    let pending = {
+        let loaded = state.loaded.lock().map_err(|e| ApiError::LoadFailed {
+            message: e.to_string(),
+        })?;
+        match loaded.pending.iter().find(|p| p.id == docset_id).cloned() {
+            Some(pending) => pending,
+            None => {
+                if let Ok(mut set) = state.extracting.lock() {
+                    set.remove(&docset_id);
+                }
+                return Err(ApiError::UnknownDocset { id: docset_id });
+            }
+        }
+    };
+    let cache_base = cache_base_of(&app);
+    let installed = tauri::async_runtime::spawn_blocking(move || {
+        service::install_pending(&cache_base, &pending)
+    })
+    .await
+    .map_err(|e| ApiError::LoadFailed {
+        message: e.to_string(),
+    })?;
+    if let Ok(mut set) = state.extracting.lock() {
+        set.remove(&docset_id);
+    }
+    let mut loaded = state.loaded.lock().map_err(|e| ApiError::LoadFailed {
+        message: e.to_string(),
+    })?;
+    match installed {
+        Ok(installed) => service::apply_installed(&mut loaded, installed),
+        Err(e) => {
+            dlog!("[opendoc] tarix {docset_id}: {e}");
+            if let Some(pending) = loaded.pending.iter().find(|p| p.id == docset_id).cloned() {
+                service::fail_pending(&mut loaded, &pending);
+            }
+        }
+    }
+    Ok(service::load_report(&loaded))
+}
 /// Guarda `docsets_dir` en ajustes si cambió. Nunca falla hacia fuera
 /// (un fallo de disco no debe tumbar una carga correcta).
 fn persist_docsets_dir(

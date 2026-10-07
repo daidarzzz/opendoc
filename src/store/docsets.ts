@@ -1,10 +1,17 @@
 // Slice de docsets cargados (origen: commands.ts).
 import { create } from "zustand";
-import { chooseFolder, getSettings, setDocsetsDir } from "../lib/commands";
-import type { Docset, ScanIssue } from "../lib/types";
+import {
+  chooseFolder,
+  extractTarix,
+  getSettings,
+  setDocsetsDir,
+} from "../lib/commands";
+import type { Docset, PendingTarix, ScanIssue } from "../lib/types";
 
 interface DocsetsState {
   docsets: Docset[];
+  pending: PendingTarix[];
+  extractingIds: string[];
   issues: ScanIssue[];
   status: string;
   error: string;
@@ -18,6 +25,8 @@ interface DocsetsState {
   init: () => Promise<void>;
   /** Diálogo nativo + carga. */
   choose: () => Promise<void>;
+  /** Extrae un tarix pendiente (muestra "extrayendo…" y desactiva). */
+  extract: (id: string) => Promise<void>;
 }
 
 /** Normaliza rutas pegadas (espacios, comillas de "Copiar como ruta"). */
@@ -31,6 +40,8 @@ function errText(e: unknown): string {
 
 export const useDocsets = create<DocsetsState>()((set) => ({
   docsets: [],
+  pending: [],
+  extractingIds: [],
   issues: [],
   status: "iniciando…",
   error: "",
@@ -48,6 +59,7 @@ export const useDocsets = create<DocsetsState>()((set) => ({
       const report = await setDocsetsDir(dir);
       set({
         docsets: report.docsets,
+        pending: report.pending_tarix,
         issues: report.issues,
         savedDir: dir,
         dirMissing: false,
@@ -71,6 +83,7 @@ export const useDocsets = create<DocsetsState>()((set) => ({
         const report = await setDocsetsDir(settings.docsets_dir);
         set({
           docsets: report.docsets,
+          pending: report.pending_tarix,
           issues: report.issues,
           dirMissing: false,
           loading: false,
@@ -88,6 +101,29 @@ export const useDocsets = create<DocsetsState>()((set) => ({
     if (picked) {
       const { load } = useDocsets.getState();
       await load(picked);
+    }
+  },
+  extract: async (id: string) => {
+    set((s) => ({
+      extractingIds: s.extractingIds.includes(id)
+        ? s.extractingIds
+        : [...s.extractingIds, id],
+      error: "",
+    }));
+    try {
+      const report = await extractTarix(id);
+      set((s) => ({
+        docsets: report.docsets,
+        pending: report.pending_tarix,
+        issues: report.issues,
+        extractingIds: s.extractingIds.filter((x) => x !== id),
+        status: `cargados ${report.docsets.length} docsets, ${report.issues.length} issues`,
+      }));
+    } catch (e) {
+      set((s) => ({
+        extractingIds: s.extractingIds.filter((x) => x !== id),
+        error: errText(e),
+      }));
     }
   },
 }));

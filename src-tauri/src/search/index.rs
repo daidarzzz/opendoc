@@ -35,6 +35,7 @@ pub struct SearchIndex {
     pub(crate) entries: Vec<IndexedEntry>,
     pub(crate) matcher: Matcher,
     pub(crate) utf32_buf: Vec<char>,
+    pool: HashMap<String, Arc<str>>,
 }
 
 impl SearchIndex {
@@ -44,24 +45,32 @@ impl SearchIndex {
             entries: Vec::new(),
             matcher: Matcher::new(Config::DEFAULT),
             utf32_buf: Vec::with_capacity(256),
+            pool: HashMap::new(),
         }
     }
 
     /// Construye el índice desde las entradas de los docsets abribles.
     pub fn build(entries: Vec<Entry>) -> Self {
         let mut index = Self::new();
-        let mut pool: HashMap<String, Arc<str>> = HashMap::new();
-        index.entries = entries
-            .into_iter()
-            .map(|e| IndexedEntry {
-                name: e.name,
-                path: e.path,
-                kind: intern(&mut pool, &e.kind),
-                docset_id: intern(&mut pool, &e.docset_id),
-            })
-            .collect();
+        index.extend(entries);
         index.entries.shrink_to_fit();
         index
+    }
+
+    /// Añade entradas compartiendo el internado (p. ej. tarix instalados
+    /// después de la carga inicial).
+    pub fn extend(&mut self, entries: Vec<Entry>) {
+        let Self {
+            entries: mine,
+            pool,
+            ..
+        } = self;
+        mine.extend(entries.into_iter().map(|e| IndexedEntry {
+            name: e.name,
+            path: e.path,
+            kind: intern(pool, &e.kind),
+            docset_id: intern(pool, &e.docset_id),
+        }));
     }
 
     /// Número de entradas indexadas.

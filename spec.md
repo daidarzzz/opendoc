@@ -47,7 +47,7 @@ struct Entry { docset_id: u32, name: String, kind: String, path: String }
 La detección del esquema se hace comprobando qué tablas existen (sqlite_master).
 
 3.4 Fuera de alcance del MVP
-Docsets en formato tarix (Apple, Java...): fase posterior.
+Docsets en formato tarix: v0.2 (extracción en caché; ver §6).
 Docsets "online redirect".
 Docsets de usuario/cheatsheets de Dash (formatos propietarios).
 4. Arquitectura
@@ -80,11 +80,12 @@ Inyección opcional de CSS en el iframe para tema oscuro (fase posterior).
 4.4 Comandos Tauri (contrato inicial)
 Comando	Entrada	Salida
 list_docsets	n/a	Vec<Docset>
-set_docsets_dir	path	ScanReport (docsets + issues)
+set_docsets_dir	path	ScanReport (docsets + pending_tarix + issues)
 search	SearchRequest { request_id, query, docset_ids?, limit? }	SearchResponse { request_id (eco), results }
 get_docset_home	docset_id	URL opendoc://...
 get_settings	n/a	Settings { version, docsets_dir?, theme }
 set_theme	theme	Settings (persiste solo si cambió)
+extract_tarix	docset_id	ScanReport (async; ExtractionInProgress si hay otra en curso)
 
 Los tipos se comparten con el frontend (generar bindings, por ejemplo con specta/tauri-specta o ts-rs, o mantenerlos a mano y sincronizados).
 
@@ -114,6 +115,7 @@ Filtro por docset y por prefijo de búsqueda.
 Ajustes persistentes (tema, fuente, atajos; sustituyen la autocarga TEMP y el localStorage interino de T7).
 Soporte de docsets tarix con extracción completa en caché: descargar el .tgz, extraer Documents/ + metadatos y reutilizar el escáner/lector actuales (más limpieza de <dash_entry_*>, ya hecha en T7b). La extracción bajo demanda por rangos (tarindex) queda como optimización posterior.
 Seguridad en la extracción: validar que ninguna entrada del tgz salga de la carpeta destino (.., rutas absolutas, symlinks) y limitar el tamaño total extraído.
+Sin cancelar extracción en v0.2: no hay cancelación (un fallo o cierre nunca deja caché a medias como válida: se extrae a temporal y se renombra al final).
 v0.3: Gestión de docsets
 Catálogo de docsets (feeds de Kapeli y mirrors, con caché).
 Descarga, descompresión (tar.gz) e instalación con progreso.
