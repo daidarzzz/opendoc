@@ -431,6 +431,9 @@ mod tests {
 
     #[test]
     fn real_css_fixture_home_comes_from_plist() {
+        if super::super::fixture_or_skip("CSS.docset").is_none() {
+            return;
+        }
         let report = scan_dir(Path::new("tests/fixtures")).expect("scan fixtures");
         let css = report
             .docsets
@@ -474,6 +477,9 @@ mod tests {
     fn tarix_style_docset_without_documents_becomes_issue() {
         // C++.docset es formato tarix (sin Documents/): fuera del MVP,
         // pero el escaneo lo registra sin tumbarse.
+        if super::super::fixture_or_skip("C++.docset").is_none() {
+            return;
+        }
         let report = scan_dir(Path::new("tests/fixtures")).expect("scan fixtures");
         let issue = report
             .issues

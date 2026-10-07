@@ -150,6 +150,9 @@ mod tests {
 
     #[test]
     fn load_fixtures_indexes_css_and_reports_tarix() {
+        if crate::docset::fixture_or_skip("CSS.docset").is_none() {
+            return;
+        }
         let mut loaded = load_docsets_dir(&fixtures_dir()).expect("cargar fixtures");
         // Solo CSS es abrible (C++ y Python_3 son tarix sin Documents/).
         assert_eq!(loaded.docsets.len(), 1);
@@ -172,6 +175,9 @@ mod tests {
 
     #[test]
     fn request_id_echo_and_filters() {
+        if crate::docset::fixture_or_skip("CSS.docset").is_none() {
+            return;
+        }
         let mut loaded = load_docsets_dir(&fixtures_dir()).expect("cargar fixtures");
         let req = SearchRequest {
             request_id: 42,
@@ -197,6 +203,9 @@ mod tests {
 
     #[test]
     fn home_url_and_errors() {
+        if crate::docset::fixture_or_skip("CSS.docset").is_none() {
+            return;
+        }
         let loaded = load_docsets_dir(&fixtures_dir()).expect("cargar fixtures");
         let url = docset_home_url(&loaded.docsets, "css").expect("home css");
         assert_eq!(

@@ -313,11 +313,12 @@ mod tests {
 
     #[test]
     fn real_css_cases() {
-        let data = crate::docset::read_index(
-            std::path::Path::new("tests/fixtures/CSS.docset/Contents/Resources/docSet.dsidx"),
-            "css",
-        )
-        .expect("leer índice CSS");
+        let Some(dsidx) =
+            crate::docset::fixture_or_skip("CSS.docset/Contents/Resources/docSet.dsidx")
+        else {
+            return;
+        };
+        let data = crate::docset::read_index(&dsidx, "css").expect("leer índice CSS");
         let mut index = SearchIndex::build(data.entries);
         // Exacta primero, insensible a mayúsculas.
         let grid: Vec<String> = search(&mut index, "grid", None, 5)
@@ -345,11 +346,12 @@ mod tests {
 
     #[test]
     fn real_search_is_fast() {
-        let data = crate::docset::read_index(
-            std::path::Path::new("tests/fixtures/CSS.docset/Contents/Resources/docSet.dsidx"),
-            "css",
-        )
-        .expect("leer índice CSS");
+        let Some(dsidx) =
+            crate::docset::fixture_or_skip("CSS.docset/Contents/Resources/docSet.dsidx")
+        else {
+            return;
+        };
+        let data = crate::docset::read_index(&dsidx, "css").expect("leer índice CSS");
         let start = std::time::Instant::now();
         let mut index = SearchIndex::build(data.entries);
         let build = start.elapsed();

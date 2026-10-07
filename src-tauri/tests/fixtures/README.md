@@ -10,6 +10,25 @@ sanfrancisco, london, newyork, tokyo, frankfurt, sydney, singapore).
 - No se suben a git: `*.docset` y `*.tgz` están en el `.gitignore`.
   Borra los `.tgz` cuando ya no los necesites.
 
+## Tests que se saltan sin fixtures
+
+Las fixtures no están en git, así que `cargo test` debe pasar en verde
+en un clon limpio. Los tests que necesitan docsets reales comprueban su
+presencia y se saltan con `SKIP: falta la fixture …` (visible con
+`cargo test -- --nocapture`):
+
+- `plist::real_css_plist`, `plist::real_python_plist`.
+- `index::real_css_index_is_core_data`, `real_cpp…`, `real_python…`,
+  `real_python_paths_all_resolve_after_cleaning`,
+  `reading_does_not_create_files_next_to_docset`, `real_index_read_is_fast`.
+- `scanner::real_css_fixture_home_comes_from_plist`,
+  `tarix_style_docset_without_documents_becomes_issue`.
+- `service::{load_fixtures…, request_id_echo…, home_url…}`.
+- `query::{real_css_cases, real_search_is_fast}`.
+
+Los sintéticos (searchIndex, Core Data mínimo, 300 k entradas) y el resto
+de unitarios corren siempre.
+
 Fixtures actuales:
 
 - `CSS.docset`: feed `CSS`. Esquema **Core Data** (1249 entradas, tipos

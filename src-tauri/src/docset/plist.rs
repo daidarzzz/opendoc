@@ -137,16 +137,13 @@ fn write_plist(dir: &Path, contents: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
-
-    /// Ruta a `tests/fixtures/` (cargo ejecuta los tests desde la raíz del crate).
-    fn fixtures() -> PathBuf {
-        PathBuf::from("tests/fixtures")
-    }
 
     #[test]
     fn real_css_plist() {
-        let info = read_info_plist(&fixtures().join("CSS.docset/Contents"))
+        let Some(contents) = super::super::fixture_or_skip("CSS.docset/Contents") else {
+            return;
+        };
+        let info = read_info_plist(&contents)
             .expect("leer plist")
             .expect("debe existir");
         assert_eq!(info.bundle_name.as_deref(), Some("CSS"));
@@ -164,7 +161,10 @@ mod tests {
 
     #[test]
     fn real_python_plist() {
-        let info = read_info_plist(&fixtures().join("Python_3.docset/Contents"))
+        let Some(contents) = super::super::fixture_or_skip("Python_3.docset/Contents") else {
+            return;
+        };
+        let info = read_info_plist(&contents)
             .expect("leer plist")
             .expect("debe existir");
         assert_eq!(info.bundle_name.as_deref(), Some("Python"));

@@ -429,10 +429,11 @@ mod tests {
         assert_eq!(data.entries[1].kind, "WeirdKind");
     }
 
-    /// Lee un fixture real y resume (nº entradas, tipos). Falla si el
-    /// esquema detectado no es el esperado.
-    fn read_fixture(dsidx: &str, id: &str, expected: IndexSchema) -> IndexData {
-        let data = read_index(Path::new(dsidx), id).expect("leer índice real");
+    /// Lee un fixture real o `None` (SKIP) si no está descargado. Falla
+    /// si el esquema detectado no es el esperado.
+    fn read_fixture(relative: &str, id: &str, expected: IndexSchema) -> Option<IndexData> {
+        let path = super::super::fixture_or_skip(relative)?;
+        let data = read_index(&path, id).expect("leer índice real");
         assert_eq!(data.schema, expected);
         assert!(
             !data.entries.is_empty(),
@@ -450,7 +451,7 @@ mod tests {
             data.entries.iter().all(|e| e.docset_id == id),
             "docset_id propagado"
         );
-        data
+        Some(data)
     }
 
     fn kinds_of(data: &IndexData) -> Vec<&str> {
@@ -462,11 +463,13 @@ mod tests {
 
     #[test]
     fn real_css_index_is_core_data() {
-        let data = read_fixture(
-            "tests/fixtures/CSS.docset/Contents/Resources/docSet.dsidx",
+        let Some(data) = read_fixture(
+            "CSS.docset/Contents/Resources/docSet.dsidx",
             "css",
             IndexSchema::CoreData,
-        );
+        ) else {
+            return;
+        };
         assert_eq!(data.entries.len(), 1249);
         assert_eq!(data.skipped_nulls, 0);
         let kinds = kinds_of(&data);
@@ -488,11 +491,13 @@ mod tests {
     fn real_cpp_index_is_core_data_despite_view() {
         // Este .dsidx trae además `CREATE VIEW searchIndex`: la detección
         // solo mira `type = 'table'`, así que debe salir CoreData.
-        let data = read_fixture(
-            "tests/fixtures/C++.docset/Contents/Resources/docSet.dsidx",
+        let Some(data) = read_fixture(
+            "C++.docset/Contents/Resources/docSet.dsidx",
             "c++",
             IndexSchema::CoreData,
-        );
+        ) else {
+            return;
+        };
         assert_eq!(data.entries.len(), 7225);
         assert_eq!(data.skipped_nulls, 0);
         let kinds = kinds_of(&data);
@@ -503,11 +508,13 @@ mod tests {
 
     #[test]
     fn real_python_index_is_core_data() {
-        let data = read_fixture(
-            "tests/fixtures/Python_3.docset/Contents/Resources/docSet.dsidx",
+        let Some(data) = read_fixture(
+            "Python_3.docset/Contents/Resources/docSet.dsidx",
             "python_3",
             IndexSchema::CoreData,
-        );
+        ) else {
+            return;
+        };
         assert_eq!(data.entries.len(), 14695);
         assert_eq!(data.skipped_nulls, 0);
         let kinds = kinds_of(&data);
@@ -518,22 +525,25 @@ mod tests {
 
     #[test]
     fn real_python_paths_all_resolve_after_cleaning() {
-        // Extrae tarix.tgz a Temp (se borra solo al terminar el test).
+        let Some(tgz) =
+            super::super::fixture_or_skip("Python_3.docset/Contents/Resources/tarix.tgz")
+        else {
+            return;
+        };
+        let Some(dsidx) =
+            super::super::fixture_or_skip("Python_3.docset/Contents/Resources/docSet.dsidx")
+        else {
+            return;
+        };
+        // Extrae a Temp (se borra solo al terminar el test).
         let dir = tempfile::tempdir().expect("tempdir");
-        extract_tarix(
-            Path::new("tests/fixtures/Python_3.docset/Contents/Resources/tarix.tgz"),
-            dir.path(),
-        );
+        extract_tarix(&tgz, dir.path());
         let docs = dir
             .path()
             .join("Python.docset/Contents/Resources/Documents");
         assert!(docs.is_dir(), "Documents/ extraído");
 
-        let data = read_index(
-            Path::new("tests/fixtures/Python_3.docset/Contents/Resources/docSet.dsidx"),
-            "python_3",
-        )
-        .expect("leer índice Python");
+        let data = read_index(&dsidx, "python_3").expect("leer índice Python");
         assert_eq!(data.entries.len(), 14695);
         // El `#ancla` no es parte del fichero: se quita para comprobar.
         let missing: Vec<&str> = data
@@ -557,10 +567,12 @@ mod tests {
 
     #[test]
     fn reading_does_not_create_files_next_to_docset() {
-        let resources = Path::new("tests/fixtures/CSS.docset/Contents/Resources");
-        let before = snapshot_names(resources);
+        let Some(resources) = super::super::fixture_or_skip("CSS.docset/Contents/Resources") else {
+            return;
+        };
+        let before = snapshot_names(&resources);
         read_index(&resources.join("docSet.dsidx"), "css").expect("leer");
-        assert_eq!(snapshot_names(resources), before);
+        assert_eq!(snapshot_names(&resources), before);
     }
 
     /// Nombres de fichero ordenados de un directorio (solo tests).
@@ -580,17 +592,19 @@ mod tests {
 
     #[test]
     fn real_index_read_is_fast() {
+        let Some(css_path) =
+            super::super::fixture_or_skip("CSS.docset/Contents/Resources/docSet.dsidx")
+        else {
+            return;
+        };
+        let Some(cpp_path) =
+            super::super::fixture_or_skip("C++.docset/Contents/Resources/docSet.dsidx")
+        else {
+            return;
+        };
         let start = std::time::Instant::now();
-        let css = read_index(
-            Path::new("tests/fixtures/CSS.docset/Contents/Resources/docSet.dsidx"),
-            "css",
-        )
-        .expect("leer css");
-        let cpp = read_index(
-            Path::new("tests/fixtures/C++.docset/Contents/Resources/docSet.dsidx"),
-            "c++",
-        )
-        .expect("leer c++");
+        let css = read_index(&css_path, "css").expect("leer css");
+        let cpp = read_index(&cpp_path, "c++").expect("leer c++");
         let elapsed = start.elapsed();
         eprintln!(
             "índices reales: css={} + c++={} entradas en {elapsed:?}",

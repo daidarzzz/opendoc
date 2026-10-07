@@ -13,3 +13,17 @@ pub mod scanner;
 pub use index::{read_index, IndexData, IndexError, IndexSchema};
 pub use model::{Docset, Entry, IssueKind, ScanError, ScanIssue, ScanReport};
 pub use scanner::scan_dir;
+
+/// Ruta a una fixture real o `None` si no está descargada (con aviso).
+/// Las fixtures están en `.gitignore`: quien clone sin ellas ve `SKIP`
+/// (con `cargo test -- --nocapture`), no un fallo.
+#[cfg(test)]
+pub(crate) fn fixture_or_skip(relative: &str) -> Option<std::path::PathBuf> {
+    let path = std::path::PathBuf::from("tests/fixtures").join(relative);
+    if path.exists() {
+        Some(path)
+    } else {
+        eprintln!("SKIP: falta la fixture {relative} (ver src-tauri/tests/fixtures/README.md)");
+        None
+    }
+}
