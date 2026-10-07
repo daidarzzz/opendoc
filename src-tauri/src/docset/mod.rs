@@ -6,6 +6,7 @@
 //! `ScanReport::issues` sin abortar el escaneo.
 
 pub mod model;
+pub mod plist;
 pub mod scanner;
 
 pub use model::{Docset, ScanError, ScanIssue, ScanReport};

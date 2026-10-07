@@ -18,6 +18,7 @@ src-tauri/target
 
 # Docsets de prueba (pesados): ver src-tauri/tests/fixtures/README.md
 src-tauri/tests/fixtures/*.docset
+src-tauri/tests/fixtures/*.tgz
 
 # Editor directories and files
 .vscode/*

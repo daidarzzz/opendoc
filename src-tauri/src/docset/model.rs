@@ -20,6 +20,11 @@ pub struct Docset {
     pub platform: Option<String>,
     /// Versión del docset. La rellena T3.
     pub version: Option<String>,
+    /// `CFBundleIdentifier`. Lo rellena T3.
+    pub bundle_id: Option<String>,
+    /// Página de inicio relativa a `Documents/` (`dashIndexFilePath` o
+    /// `index.html`). Lo rellena T3; T4 lo completa si falta.
+    pub home_path: Option<String>,
     /// Ruta a `<Nombre>.docset/`.
     pub root_path: PathBuf,
     /// Ruta a `<Nombre>.docset/Contents/`.
@@ -37,6 +42,9 @@ pub enum IssueKind {
     MissingDocuments,
     /// Falta `Contents/Resources/docSet.dsidx`.
     MissingIndex,
+    /// `Contents/Info.plist` existe pero es ilegible (se conservan los
+    /// valores por defecto del escaneo).
+    InvalidInfoPlist,
     /// No se pudo leer una entrada de la carpeta raíz.
     EntryUnreadable,
 }
@@ -51,6 +59,9 @@ impl std::fmt::Display for IssueKind {
             }
             IssueKind::MissingIndex => {
                 write!(f, "falta Contents/Resources/docSet.dsidx")
+            }
+            IssueKind::InvalidInfoPlist => {
+                write!(f, "Contents/Info.plist ilegible")
             }
             IssueKind::EntryUnreadable => {
                 write!(f, "no se pudo leer la entrada")
