@@ -163,6 +163,18 @@ mod tests {
     }
 
     #[test]
+    fn real_python_plist() {
+        let info = read_info_plist(&fixtures().join("Python_3.docset/Contents"))
+            .expect("leer plist")
+            .expect("debe existir");
+        assert_eq!(info.bundle_name.as_deref(), Some("Python"));
+        assert_eq!(info.bundle_id.as_deref(), Some("python"));
+        assert_eq!(info.platform_family.as_deref(), Some("python"));
+        assert_eq!(info.dash_index_path.as_deref(), Some("doc/index.html"));
+        assert_eq!(info.version, None);
+    }
+
+    #[test]
     fn missing_plist_returns_none() {
         let dir = tempfile::tempdir().expect("tempdir");
         let info = read_info_plist(dir.path()).expect("no debe fallar");

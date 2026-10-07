@@ -19,5 +19,8 @@ Fixtures actuales:
   `type = 'table'`, así que sale CoreData). Es formato **tarix** (sin
   `Documents/`, con `tarix.tgz` de ~170 MB): fuera del MVP, el escaneo lo
   registra como `MissingDocuments` sin tumbarse.
-- `Python_3.docset`: pendiente (el mirror devolvió HTML: el nombre
-  `Python_3` no existe como feed; conseguir por otra vía).
+- `Python_3.docset`: conseguido por otra vía. `Info.plist` con
+  `CFBundleName=Python`, plataforma `python`, home `doc/index.html`.
+  Esquema **Core Data** (14695 entradas). Como el C++, es formato tarix
+  (sin `Documents/`): el escaneo lo registra sin tumbarse; el `.dsidx`
+  sí se lee en los tests de índice y búsqueda.

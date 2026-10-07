@@ -456,6 +456,21 @@ mod tests {
     }
 
     #[test]
+    fn real_python_index_is_core_data() {
+        let data = read_fixture(
+            "tests/fixtures/Python_3.docset/Contents/Resources/docSet.dsidx",
+            "python_3",
+            IndexSchema::CoreData,
+        );
+        assert_eq!(data.entries.len(), 14695);
+        assert_eq!(data.skipped_nulls, 0);
+        let kinds = kinds_of(&data);
+        for expected in ["Class", "Function", "Method"] {
+            assert!(kinds.contains(&expected), "falta tipo {expected}");
+        }
+    }
+
+    #[test]
     fn reading_does_not_create_files_next_to_docset() {
         let resources = Path::new("tests/fixtures/CSS.docset/Contents/Resources");
         let before = snapshot_names(resources);

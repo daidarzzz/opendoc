@@ -1,4 +1,9 @@
-//! Índice en memoria y matching difuso (`nucleo`) para la búsqueda
-//! interactiva de la Command Palette.
+//! Búsqueda en memoria (`search/`).
 //!
-//! No usar `LIKE` en SQL para la búsqueda interactiva (SPEC §4.2).
+//! La búsqueda interactiva se hace aquí, no con `LIKE` en SQL (SPEC §4.2).
+
+pub mod index;
+pub mod query;
+
+pub use index::{IndexedEntry, SearchIndex};
+pub use query::{search, SearchResult};
