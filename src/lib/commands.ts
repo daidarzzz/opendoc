@@ -1,11 +1,15 @@
 // Wrappers tipados de los comandos Tauri. Único sitio con invoke()
 // (los componentes usan estas funciones, nunca invoke() directo).
+// El diálogo nativo (plugin-dialog) también vive aquí por la misma razón.
 import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
 import type {
   Docset,
   ScanReport,
   SearchRequest,
   SearchResponse,
+  Settings,
+  ThemeMode,
 } from "./types";
 
 /** Lista los docsets cargados (vacío hasta setDocsetsDir). */
@@ -42,4 +46,25 @@ export async function searchDocs(
 /** URL opendoc://<id>/<home> de la página de inicio. */
 export async function getDocsetHome(docsetId: string): Promise<string> {
   return invoke<string>("get_docset_home", { docsetId });
+}
+
+/** Ajustes actuales (tema y carpeta de docsets). */
+export async function getSettings(): Promise<Settings> {
+  return invoke<Settings>("get_settings");
+}
+
+/** Cambia el tema (persiste solo si cambió). */
+export async function setTheme(theme: ThemeMode): Promise<Settings> {
+  return invoke<Settings>("set_theme", { theme });
+}
+
+/** Diálogo nativo para elegir la carpeta de docsets (null = cancelado). */
+export async function chooseFolder(): Promise<string | null> {
+  const picked: unknown = await open({ directory: true, multiple: false });
+  if (typeof picked === "string") return picked;
+  if (Array.isArray(picked)) {
+    const first: unknown = picked[0];
+    return typeof first === "string" ? first : null;
+  }
+  return null;
 }

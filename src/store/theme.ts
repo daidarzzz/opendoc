@@ -1,37 +1,62 @@
-// Tema claro/oscuro (clase `dark` de Tailwind).
-// Persistencia en localStorage como interino; T9 la lleva al backend.
+// Tema (T9): el backend guarda el modo; aquí se aplica y se reacciona.
+// - Anti-flash: al importar se aplica prefers-color-scheme de inmediato;
+//   al llegar el valor guardado (init) se corrige si difiere.
+// - Con System se reacciona en vivo a cambios del SO.
 import { create } from "zustand";
+import { getSettings, setTheme } from "../lib/commands";
+import type { ThemeMode } from "../lib/types";
 
-export type ThemeMode = "light" | "dark";
-
-const STORAGE_KEY = "opendoc-theme";
-
-function initial(): ThemeMode {
-  const saved = window.localStorage.getItem(STORAGE_KEY);
-  if (saved === "light" || saved === "dark") return saved;
+function systemTheme(): "light" | "dark" {
   return window.matchMedia("(prefers-color-scheme: dark)").matches
     ? "dark"
     : "light";
 }
 
-function apply(mode: ThemeMode): void {
-  document.documentElement.classList.toggle("dark", mode === "dark");
-  window.localStorage.setItem(STORAGE_KEY, mode);
+function applyResolved(mode: ThemeMode): void {
+  const resolved = mode === "system" ? systemTheme() : mode;
+  document.documentElement.classList.toggle("dark", resolved === "dark");
 }
 
 interface ThemeState {
   mode: ThemeMode;
-  toggle: () => void;
+  loaded: boolean;
+  init: () => Promise<void>;
+  cycle: () => Promise<void>;
 }
 
-apply(initial());
+// Sin flash: sistema de inmediato; init() corrige con lo guardado.
+applyResolved("system");
 
-export const useTheme = create<ThemeState>()((set) => ({
-  mode: initial(),
-  toggle: () =>
-    set((s) => {
-      const mode: ThemeMode = s.mode === "dark" ? "light" : "dark";
-      apply(mode);
-      return { mode };
-    }),
+export const useTheme = create<ThemeState>()((set, get) => ({
+  mode: "system",
+  loaded: false,
+  init: async () => {
+    try {
+      const settings = await getSettings();
+      set({ mode: settings.theme, loaded: true });
+      applyResolved(settings.theme);
+    } catch {
+      set({ loaded: true });
+    }
+  },
+  cycle: async () => {
+    const order: ThemeMode[] = ["light", "dark", "system"];
+    const next = order[(order.indexOf(get().mode) + 1) % order.length] ?? "light";
+    set({ mode: next });
+    applyResolved(next);
+    try {
+      await setTheme(next);
+    } catch {
+      // Se conserva local; el backend persiste cuando puede.
+    }
+  },
 }));
+
+// Reacción en vivo a cambios del sistema (solo en modo System).
+window
+  .matchMedia("(prefers-color-scheme: dark)")
+  .addEventListener("change", () => {
+    if (useTheme.getState().mode === "system") {
+      applyResolved("system");
+    }
+  });

@@ -7,16 +7,49 @@ pub mod protocol;
 pub mod search;
 pub mod settings;
 
-use commands::{get_docset_home, list_docsets, search, set_docsets_dir, AppState};
+use commands::{
+    get_docset_home, get_settings, list_docsets, search, set_docsets_dir, set_theme, AppState,
+};
+
+/// Carga ajustes + carpeta guardada al arrancar. Nunca tumba el arranque:
+/// sin ajustes, corruptos o con ruta inexistente se arranca vacío (la UI
+/// muestra el banner para elegir carpeta).
+fn load_startup_state(app: &mut tauri::App) {
+    use tauri::Manager;
+    let Some(data_dir) = app.path().app_data_dir().ok() else {
+        return;
+    };
+    let settings_path = settings::settings_file(&data_dir);
+    let settings = settings::load(&settings_path);
+    let dir = settings.docsets_dir.clone();
+    let Some(state) = app.try_state::<AppState>() else {
+        return;
+    };
+    if let Ok(mut guard) = state.settings.lock() {
+        *guard = settings;
+    }
+    if let Some(dir) = dir {
+        if let Ok(loaded) = commands::service::load_docsets_dir(&dir) {
+            if let Ok(mut guard) = state.loaded.lock() {
+                *guard = loaded;
+            }
+        }
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let result = tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
         .manage(AppState::default())
         .register_uri_scheme_protocol("opendoc", protocol::handle)
         .setup(|app| {
+            // Ajustes persistentes (T9): se leen del directorio de datos
+            // de la app. Si la carpeta guardada existe, se precarga para
+            // que el arranque caiga directo en el contenido.
+            load_startup_state(app);
             // Ventana creada en código (no en tauri.conf.json) para poder
             // enganchar on_navigation: los enlaces externos del iframe van
             // al navegador del sistema y nunca se cargan en el visor.
@@ -50,7 +83,9 @@ pub fn run() {
             list_docsets,
             set_docsets_dir,
             search,
-            get_docset_home
+            get_docset_home,
+            get_settings,
+            set_theme
         ])
         .run(tauri::generate_context!());
     if let Err(e) = result {

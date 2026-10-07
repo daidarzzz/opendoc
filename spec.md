@@ -83,6 +83,8 @@ list_docsets	n/a	Vec<Docset>
 set_docsets_dir	path	ScanReport (docsets + issues)
 search	SearchRequest { request_id, query, docset_ids?, limit? }	SearchResponse { request_id (eco), results }
 get_docset_home	docset_id	URL opendoc://...
+get_settings	n/a	Settings { version, docsets_dir?, theme }
+set_theme	theme	Settings (persiste solo si cambió)
 
 Los tipos se comparten con el frontend (generar bindings, por ejemplo con specta/tauri-specta o ts-rs, o mantenerlos a mano y sincronizados).
 

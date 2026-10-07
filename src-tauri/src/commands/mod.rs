@@ -1,5 +1,6 @@
-//! Comandos Tauri finos (contrato SPEC §4.4): `list_docsets`,
-//! `set_docsets_dir`, `search`, `get_docset_home`.
+//! Comandos Tauri finos (contrato SPEC §4.4 + ajustes T9): `list_docsets`,
+//! `set_docsets_dir`, `search`, `get_docset_home`, `get_settings`,
+//! `set_theme`.
 //!
 //! Solo delegan en `service.rs` (testeable sin Tauri). Si se toca este
 //! contrato, actualizar `src/lib/types.ts` y la tabla de SPEC §4.4.
@@ -44,6 +45,7 @@ pub fn list_docsets(state: State<'_, AppState>) -> Vec<crate::docset::Docset> {
 #[tauri::command]
 pub async fn set_docsets_dir(
     state: State<'_, AppState>,
+    app: tauri::AppHandle,
     path: String,
 ) -> Result<crate::docset::ScanReport, ApiError> {
     dlog!("[opendoc] set_docsets_dir <- {path}");
@@ -59,6 +61,7 @@ pub async fn set_docsets_dir(
         loaded.issues.len()
     );
     let report = service::load_report(&loaded);
+    let source_dir = loaded.source_dir.clone();
     state
         .loaded
         .lock()
@@ -66,7 +69,33 @@ pub async fn set_docsets_dir(
         .map_err(|e| ApiError::LoadFailed {
             message: e.to_string(),
         })?;
+    persist_docsets_dir(&state, &app, &source_dir);
     Ok(report)
+}
+
+/// Guarda `docsets_dir` en ajustes si cambió. Nunca falla hacia fuera
+/// (un fallo de disco no debe tumbar una carga correcta).
+fn persist_docsets_dir(
+    state: &State<'_, AppState>,
+    app: &tauri::AppHandle,
+    source_dir: &std::path::Path,
+) {
+    use tauri::Manager;
+    let Ok(data_dir) = app.path().app_data_dir() else {
+        return;
+    };
+    let settings_path = crate::settings::settings_file(&data_dir);
+    let settings = match state.settings.lock() {
+        Ok(mut guard) => {
+            if guard.docsets_dir.as_deref() == Some(source_dir) {
+                return;
+            }
+            guard.docsets_dir = Some(source_dir.to_path_buf());
+            guard.clone()
+        }
+        Err(_) => return,
+    };
+    let _ = crate::settings::save_if_changed(&settings_path, &settings);
 }
 
 /// Búsqueda rápida con eco de `request_id` (la UI descarta obsoletas).
@@ -106,4 +135,45 @@ pub fn get_docset_home(state: State<'_, AppState>, docset_id: String) -> Result<
         Err(e) => dlog!("[opendoc] home {docset_id} -> ERROR {e}"),
     }
     res
+}
+
+/// Ajustes actuales (tema y carpeta de docsets).
+#[tauri::command]
+pub fn get_settings(state: State<'_, AppState>) -> crate::settings::Settings {
+    state
+        .settings
+        .lock()
+        .map(|settings| settings.clone())
+        .unwrap_or_default()
+}
+
+/// Cambia el tema y lo persiste (solo si cambió).
+#[tauri::command]
+pub fn set_theme(
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+    theme: crate::settings::ThemeMode,
+) -> Result<crate::settings::Settings, ApiError> {
+    let settings = state
+        .settings
+        .lock()
+        .map(|mut guard| {
+            guard.theme = theme;
+            guard.clone()
+        })
+        .map_err(|e| ApiError::LoadFailed {
+            message: e.to_string(),
+        })?;
+    {
+        use tauri::Manager;
+        if let Ok(data_dir) = app.path().app_data_dir() {
+            let path = crate::settings::settings_file(&data_dir);
+            crate::settings::save_if_changed(&path, &settings).map_err(|e| {
+                ApiError::LoadFailed {
+                    message: e.to_string(),
+                }
+            })?;
+        }
+    }
+    Ok(settings)
 }

@@ -1,23 +1,35 @@
-// Barra lateral: docsets (navegación), estado, tema.
+// Barra lateral: docsets (navegación), carpeta, estado, tema.
 import { useDocsets } from "../store/docsets";
 import { useTheme } from "../store/theme";
 import { useViewer } from "../store/viewer";
 
+const THEME_LABEL = { light: "Claro", dark: "Oscuro", system: "Sistema" } as const;
+
 export function Sidebar() {
-  const { docsets, issues, status, error } = useDocsets();
+  const { docsets, issues, status, error, dirMissing, savedDir, choose } =
+    useDocsets();
   const { current, openDoc } = useViewer();
-  const { mode, toggle } = useTheme();
+  const { mode, cycle } = useTheme();
 
   return (
     <aside className="flex w-64 shrink-0 flex-col border-r border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-950">
       <div className="flex items-center justify-between p-3">
         <h1 className="text-sm font-semibold">OpenDoc</h1>
         <button
-          onClick={toggle}
-          title="Cambiar tema"
+          onClick={() => void cycle()}
+          title="Cambiar tema (Claro / Oscuro / Sistema)"
           className="rounded px-2 py-1 text-xs text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800"
         >
-          {mode === "dark" ? "Claro" : "Oscuro"}
+          {THEME_LABEL[mode]}
+        </button>
+      </div>
+
+      <div className="px-3 pb-2">
+        <button
+          onClick={() => void choose()}
+          className="w-full rounded border border-gray-300 px-2 py-1.5 text-left text-xs hover:bg-gray-200 dark:border-gray-700 dark:hover:bg-gray-800"
+        >
+          Carpeta…
         </button>
       </div>
 
@@ -48,6 +60,17 @@ export function Sidebar() {
 
       <div className="border-t border-gray-200 p-3 text-xs text-gray-500 dark:border-gray-800">
         <p>{status}</p>
+        {dirMissing && (
+          <div className="mt-1 rounded bg-yellow-100 p-2 text-yellow-900 dark:bg-yellow-900 dark:text-yellow-100">
+            <p>Carpeta no disponible{savedDir ? `: ${savedDir}` : ""}.</p>
+            <button
+              onClick={() => void choose()}
+              className="mt-1 underline"
+            >
+              Elegir otra carpeta
+            </button>
+          </div>
+        )}
         {issues.length > 0 && <p>{issues.length} issues (ver consola T6)</p>}
         {error !== "" && <p className="text-red-500">{error}</p>}
       </div>

@@ -7,11 +7,13 @@
 // documentada es allow-same-origin (sigue sin acceso al padre: orígenes
 // distintos en dev y en prod).
 import { useEffect, useState } from "react";
+import { useDocsets } from "../store/docsets";
 import { usePalette } from "../store/palette";
 import { useViewer } from "../store/viewer";
 
 export function Viewer() {
   const { current, error } = useViewer();
+  const { docsets, loading, dirMissing, savedDir, choose } = useDocsets();
   const setOpen = usePalette((s) => s.setOpen);
   const [loaded, setLoaded] = useState(false);
   const viewerUrl = current?.viewerUrl;
@@ -20,6 +22,39 @@ export function Viewer() {
     setLoaded(false);
   }, [viewerUrl]);
 
+  if (docsets.length === 0 && !loading) {
+    return (
+      <main className="flex flex-1 flex-col items-center justify-center p-8">
+        {dirMissing ? (
+          <>
+            <p className="text-sm text-gray-500">
+              La carpeta guardada no está disponible
+              {savedDir ? `: ${savedDir}` : ""} (¿disco desconectado?).
+            </p>
+            <button
+              onClick={() => void choose()}
+              className="mt-3 rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+            >
+              Elegir otra carpeta
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-gray-500">
+              Elige tu carpeta de docsets para empezar.
+            </p>
+            <button
+              onClick={() => void choose()}
+              className="mt-3 rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+            >
+              Elegir carpeta
+            </button>
+          </>
+        )}
+        {error !== "" && <p className="mt-2 text-sm text-red-500">{error}</p>}
+      </main>
+    );
+  }
   if (!current) {
     return (
       <main className="flex flex-1 flex-col items-center justify-center p-8">

@@ -64,3 +64,13 @@ export type ApiError =
   | { kind: "unknown_docset"; id: string }
   | { kind: "no_home_page"; id: string }
   | { kind: "load_failed"; message: string };
+
+/** Tema guardado (settings::ThemeMode). */
+export type ThemeMode = "light" | "dark" | "system";
+
+/** Ajustes persistentes (settings::Settings). */
+export interface Settings {
+  version: number;
+  docsets_dir: string | null;
+  theme: ThemeMode;
+}
