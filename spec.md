@@ -109,13 +109,15 @@ Pestañas e historial (atrás/adelante).
 Favoritos y recientes.
 Tabla de contenidos de la página actual.
 Filtro por docset y por prefijo de búsqueda.
-Ajustes persistentes (tema, fuente, atajos).
+Ajustes persistentes (tema, fuente, atajos; sustituyen la autocarga TEMP y el localStorage interino de T7).
+Soporte de docsets tarix con extracción completa en caché: descargar el .tgz, extraer Documents/ + metadatos y reutilizar el escáner/lector actuales (más limpieza de <dash_entry_*>, ya hecha en T7b). La extracción bajo demanda por rangos (tarindex) queda como optimización posterior.
+Seguridad en la extracción: validar que ninguna entrada del tgz salga de la carpeta destino (.., rutas absolutas, symlinks) y limitar el tamaño total extraído.
 v0.3: Gestión de docsets
 Catálogo de docsets (feeds de Kapeli y mirrors, con caché).
 Descarga, descompresión (tar.gz) e instalación con progreso.
 Actualización y borrado de docsets.
+Riesgo legal: la licencia de Kapeli prohíbe usar sus docsets en aplicaciones de terceros sin permiso; el gestor usará una abstracción de proveedores (instalar desde archivo local, DevDocs, Kapeli solo con permiso). Sin implementar todavía.
 v1.0: Objetivo final
-Soporte de docsets tarix.
 Temas personalizables y CSS inyectado para modo oscuro en la documentación.
 Resaltado de sintaxis refinado.
 Instaladores para Windows, macOS y Linux (objetivo: ~10-15 MB, RAM en reposo < 50-80 MB).
@@ -125,4 +127,5 @@ Documentación de usuario y CI con builds multiplataforma.
 Búsqueda < 50 ms; arranque en pocos cientos de ms.
 Sin unwrap() en código de producción; errores tipados con thiserror.
 Los docsets son entrada no confiable: validar rutas, tolerar índices corruptos sin caerse.
+Al extraer un tgz, ninguna entrada puede salir de la carpeta destino (.., rutas absolutas, symlinks) y el total extraído está topado.
 Cada módulo de Rust con tests; los de docsets usan fixtures reales en tests/fixtures/.
