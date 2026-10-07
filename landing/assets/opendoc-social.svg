@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#eceee9"/>
+  <path d="M785 0h415v630H785z" fill="#172130"/>
+  <path d="M78 72h42l24 24v56H78z" fill="none" stroke="#0e1726" stroke-width="6"/>
+  <path d="M120 73v24h24M93 112h34M93 126h34" fill="none" stroke="#0e1726" stroke-width="5" stroke-linecap="square"/>
+  <path d="M135 105v20" stroke="#ffe14d" stroke-width="7"/>
+  <text x="165" y="130" fill="#0e1726" font-family="Arial, sans-serif" font-size="48" font-weight="700">OpenDoc</text>
+  <text x="78" y="285" fill="#0e1726" font-family="Arial, sans-serif" font-size="76" font-weight="700" letter-spacing="-4">La página que buscas,</text>
+  <text x="78" y="375" fill="#0e1726" font-family="Arial, sans-serif" font-size="76" font-weight="700" letter-spacing="-4">sin salir del teclado.</text>
+  <text x="82" y="445" fill="#4c5964" font-family="Arial, sans-serif" font-size="27">Visor offline para docsets Dash y Zeal.</text>
+  <rect x="840" y="152" width="298" height="330" rx="6" fill="#101a27" stroke="#354150" stroke-width="2"/>
+  <path d="M840 208h298" stroke="#354150" stroke-width="2"/>
+  <circle cx="870" cy="180" r="7" fill="#2c6e5b"/>
+  <text x="894" y="187" fill="#b5c0c6" font-family="monospace" font-size="16">BUSCAR EN TUS DOCSETS</text>
+  <text x="867" y="250" fill="#f3f5ef" font-family="monospace" font-size="24">⌕  grid</text>
+  <rect x="856" y="270" width="266" height="52" rx="3" fill="#26374a"/>
+  <rect x="856" y="270" width="4" height="52" fill="#ffe14d"/>
+  <text x="876" y="303" fill="#f3f5ef" font-family="monospace" font-size="20">grid</text>
+  <rect x="876" y="287" width="42" height="2" fill="#ffe14d"/>
+  <text x="1035" y="302" fill="#a8b1ba" font-family="monospace" font-size="14">CSS</text>
+  <text x="876" y="359" fill="#f3f5ef" font-family="monospace" font-size="18">grid-area</text>
+  <text x="1035" y="359" fill="#a8b1ba" font-family="monospace" font-size="14">CSS</text>
+  <text x="876" y="404" fill="#f3f5ef" font-family="monospace" font-size="18">grid-template-columns</text>
+  <text x="1035" y="445" fill="#a8b1ba" font-family="monospace" font-size="14">↑↓  mover    ↵  abrir</text>
+</svg>

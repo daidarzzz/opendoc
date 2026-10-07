@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="OpenDoc es un visor de documentación offline para docsets Dash y Zeal. Busca con el teclado y abre la página que necesitas.">
+  <meta name="theme-color" content="#eceee9" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0e1726" media="(prefers-color-scheme: dark)">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="OpenDoc — documentación, al instante">
+  <meta property="og:description" content="Visor de documentación offline para docsets Dash y Zeal. Busca con el teclado.">
+  <meta property="og:image" content="assets/opendoc-social.svg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="OpenDoc — documentación, al instante">
+  <meta name="twitter:description" content="Visor offline para docsets Dash y Zeal.">
+  <meta name="twitter:image" content="assets/opendoc-social.svg">
+  <title>OpenDoc — documentación, al instante</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Schibsted+Grotesk:wght@500;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#contenido">Saltar al contenido</a>
+  <header class="site-header">
+    <a class="brand" href="#inicio" aria-label="OpenDoc, inicio">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M7 3.5h12l7 7V28H7z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19 4v7h7M11 16h10M11 20h10M11 24h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/><path d="M23 14v7" stroke="var(--marker)" stroke-width="3"/></svg>
+      <span>OpenDoc</span>
+    </a>
+    <nav class="main-nav" aria-label="Navegación principal">
+      <a href="#descargar">Descargar</a><a href="#funciones">Funciones</a><a href="#ruta">Hoja de ruta</a><a href="https://github.com/daidarzzz/opendoc">GitHub</a>
+    </nav>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Cambiar tema" title="Cambiar tema">Sistema</button>
+  </header>
+
+  <main id="contenido">
+    <!-- Titulares considerados: «Busca en tus docsets. Abre la referencia.» / «Documentación offline. Búsqueda al instante.» / «Abre la respuesta, no otra pestaña.» Se elige el primero: nombra las dos acciones principales y describe el flujo real. -->
+    <section class="hero wrap" id="inicio" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="live-dot" aria-hidden="true"></span> Visor offline. v0.1</p>
+        <h1 id="hero-title">Busca en tus docsets.<br>Abre la referencia.</h1>
+        <p class="hero-lead">OpenDoc reúne tus docsets Dash y Zeal en un visor de escritorio. Pulsa <kbd>Ctrl</kbd><span class="key-plus">+</span><kbd>K</kbd>, escribe y abre la referencia que necesitas.</p>
+        <div class="hero-actions"><a class="button button-primary" id="hero-download" href="#descargar">Ver descargas</a><a class="text-link" href="#funciones">Conocer OpenDoc</a></div>
+        <p class="hero-note">La app no incluye docsets. Tú eliges tu carpeta.</p>
+      </div>
+      <div class="demo-wrap" aria-label="Demo de búsqueda">
+        <div class="demo-topline"><span>PRUEBA LA BÚSQUEDA</span><span class="demo-live"><i aria-hidden="true"></i> interactiva</span></div>
+        <div class="palette" id="palette">
+          <label class="search-row" for="search-input"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg><input id="search-input" type="text" role="combobox" aria-autocomplete="list" aria-controls="search-results" aria-expanded="true" aria-activedescendant="" placeholder="Prueba: grid, dict, fetch…" autocomplete="off"><kbd class="search-shortcut">Ctrl / ⌘ K</kbd></label>
+          <div class="result-heading"><span id="result-count">50 ENTRADAS DE EJEMPLO</span><span>FLECHAS PARA MOVERTE</span></div>
+          <ul class="results" id="search-results" role="listbox" aria-label="Resultados de búsqueda" aria-live="polite"></ul>
+          <div class="empty-state" id="empty-state" hidden>No hay coincidencias. Prueba otra búsqueda.</div>
+          <div class="palette-bottom"><span><kbd>↑</kbd><kbd>↓</kbd> mover</span><span><kbd>↵</kbd> vista previa</span><span><kbd>Esc</kbd> limpiar</span></div>
+          <div class="preview" id="preview" aria-live="polite"><span class="preview-label">VISTA PREVIA</span><div class="preview-content"><strong>Elige un resultado</strong><p>La descripción y el ejemplo aparecen aquí.</p><code>Empieza a escribir arriba.</code></div></div>
+        </div>
+        <p class="demo-caption">Demo con 50 entradas de ejemplo; la app real indexa tus docsets.</p>
+      </div>
+    </section>
+
+    <section class="download-section" id="descargar" aria-labelledby="download-title">
+      <div class="wrap download-inner">
+        <div class="section-heading download-heading"><div><p class="section-kicker">Instaladores</p><h2 id="download-title">Descarga OpenDoc</h2></div><p id="release-version" class="release-version">Consulta las releases disponibles</p></div>
+        <div class="download-grid" id="download-grid">
+          <article class="download-option" data-platform="windows"><div class="platform-title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.4 10.7 4v7.5H3zm9.2-1.6L21 2.5v9h-8.8zM3 12.9h7.7v7.4L3 19zm9.2 0H21v9l-8.8-1.3z"/></svg><h3>Windows</h3><span class="detected-label" hidden>Tu sistema</span></div><a class="button download-button" href="https://github.com/daidarzzz/opendoc/releases">Ver descargas</a><p class="asset-meta">Instalador <span data-asset-meta="windows">en GitHub Releases</span></p></article>
+          <article class="download-option" data-platform="mac"><div class="platform-title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.4 12.8c0-2.2 1.8-3.2 1.9-3.3a4.2 4.2 0 0 0-3.3-1.8c-1.4-.1-2.7.8-3.4.8-.7 0-1.8-.8-3-.8a4.5 4.5 0 0 0-3.8 2.3c-1.6 2.8-.4 6.9 1.1 9.1.7 1.1 1.6 2.3 2.7 2.2 1.1 0 1.5-.7 2.9-.7s1.8.7 3 .7c1.2 0 2-.9 2.7-2 .8-1.2 1.2-2.4 1.2-2.5s-2.3-.9-2.3-4zM14 6.2a4.1 4.1 0 0 0 1-3 4.3 4.3 0 0 0-2.8 1.5 3.9 3.9 0 0 0-1 3 3.6 3.6 0 0 0 2.8-1.5z"/></svg><h3>macOS</h3><span class="detected-label" hidden>Tu sistema</span></div><a class="button download-button" href="https://github.com/daidarzzz/opendoc/releases">Ver descargas</a><p class="asset-meta">Imagen de disco <span data-asset-meta="mac">en GitHub Releases</span></p></article>
+          <article class="download-option" data-platform="linux"><div class="platform-title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a5 5 0 0 0-5 5v3.1c0 1.2-.5 2.1-1.5 3.2C4.3 14.5 4 15.5 4 17a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3c0-1.5-.3-2.5-1.5-3.7-1-1.1-1.5-2-1.5-3.2V7a5 5 0 0 0-5-5zm-2 8V7a2 2 0 1 1 4 0v3zm-2 3h8m-7 4h.1m5.8 0h.1"/></svg><h3>Linux</h3><span class="detected-label" hidden>Tu sistema</span></div><a class="button download-button" href="https://github.com/daidarzzz/opendoc/releases">Ver descargas</a><p class="asset-meta">AppImage / deb / rpm <span data-asset-meta="linux">en GitHub Releases</span></p></article>
+        </div>
+        <div class="release-notes"><p><strong>Windows:</strong> SmartScreen puede avisar porque el ejecutable no está firmado. Puedes continuar desde «Más información» y «Ejecutar de todas formas».</p><p><strong>macOS y Linux:</strong> los instaladores existen, pero se han probado menos que en Windows. En macOS, si Gatekeeper avisa, abre la app con clic derecho y elige «Abrir». Si algo falla, <a href="https://github.com/daidarzzz/opendoc/issues">cuéntanos en GitHub</a>.</p></div>
+      </div>
+    </section>
+
+    <section class="moments wrap" id="funciones" aria-labelledby="moments-title">
+      <div class="section-heading moments-heading"><div><p class="section-kicker">En el día a día</p><h2 id="moments-title">Una búsqueda lleva a la página.</h2></div><p>Sin cambiar de herramienta ni perder el hilo.</p></div>
+      <div class="moment-list">
+        <article class="moment moment-search"><div class="moment-copy"><span class="moment-index">Búsqueda</span><h3>Escribe como recuerdas.</h3><p>La búsqueda difusa encuentra nombres aunque no escribas todo. Las coincidencias aparecen mientras tecleas.</p></div><div class="mini-ui mini-search" aria-label="Ejemplo dibujado de resultados de búsqueda"><div class="mini-search-input"><span>ƒ</span> arr<strong>map</strong><kbd>Ctrl K</kbd></div><div class="mini-result is-current"><b>Array.map()</b><small>Method, JavaScript</small><mark>arr</mark>ay.map</div><div class="mini-result"><b>Array.from()</b><small>Method, JavaScript</small>Array.from</div><div class="mini-result"><b>map()</b><small>Function, Python</small>map(function, iterable)</div></div></article>
+        <article class="moment moment-page"><div class="moment-copy"><span class="moment-index">Lectura</span><h3>Salta al fragmento útil.</h3><p>Abre la referencia en el visor integrado. Los enlaces externos siguen en tu navegador.</p></div><div class="mini-ui mini-document" aria-label="Ejemplo dibujado de una página de documentación"><div class="doc-toolbar"><span class="doc-dot"></span><span>javascript / Array / map</span><span>⌘</span></div><div class="doc-body"><aside><i></i><i></i><i class="active"></i><i></i></aside><div><span class="doc-breadcrumb">Array</span><h4>map()</h4><p>Returns a new array with the results of calling a function for every element.</p><pre>const doubled = numbers.<mark>map</mark>(n =&gt; n * 2)</pre></div></div></div></article>
+        <article class="moment moment-theme"><div class="moment-copy"><span class="moment-index">Lectura cómoda</span><h3>Elige cómo ves la app.</h3><p>Tema claro, oscuro o el mismo que usa tu sistema. El tema oscuro del contenido aún es provisional.</p></div><div class="mini-ui mini-settings" aria-label="Ejemplo dibujado del selector de tema"><div class="settings-title">Apariencia <span>Preferencia</span></div><div class="theme-choice"><span class="theme-swatch light-swatch"></span> Claro <kbd>1</kbd></div><div class="theme-choice chosen"><span class="theme-swatch dark-swatch"></span> Oscuro <span class="check">✓</span></div><div class="theme-choice"><span class="theme-swatch system-swatch"></span> Sistema <kbd>3</kbd></div></div></article>
+        <article class="moment moment-large"><div class="moment-copy"><span class="moment-index">Docsets grandes</span><h3>La búsqueda sigue en memoria.</h3><p>En una prueba de release con 300 000 entradas, la búsqueda tardó unos 37 ms.</p></div><div class="mini-ui mini-benchmark" aria-label="Prueba de búsqueda ilustrada"><div><span>ENTRADAS</span><strong>300 000</strong></div><div><span>ÚLTIMA BÚSQUEDA</span><strong>37 <small>ms</small></strong></div><div class="bench-track"><i></i></div><p>Dato medido en build release</p></div></article>
+      </div>
+    </section>
+
+    <section class="under-hood" aria-labelledby="hood-title">
+      <div class="wrap hood-inner"><div class="hood-intro"><p class="section-kicker">Bajo el capó</p><h2 id="hood-title">Lo que pasa con tus archivos.</h2><p>El visor trabaja con docsets locales. Estos son algunos límites y decisiones concretas.</p></div>
+        <dl class="hood-list"><div><dt>El contenido queda aislado</dt><dd>Se abre en un iframe con sandbox. El protocolo bloquea rutas peligrosas, rutas absolutas, enlaces simbólicos y codificaciones dobles.</dd></div><div><dt>tarix usa una caché propia</dt><dd>Los docsets tarix se extraen una sola vez a una caché de OpenDoc, sin modificar la carpeta original.</dd></div><div><dt>Un error no cierra todo</dt><dd>Si un docset está corrupto, OpenDoc registra la incidencia y continúa con los demás.</dd></div><div><dt>Usa el WebView del sistema</dt><dd>La app no incluye Chromium. Busca en índices que carga en memoria.</dd></div></dl>
+      </div>
+    </section>
+
+    <section class="compat wrap" aria-labelledby="compat-title"><div><p class="section-kicker">Compatibilidad</p><h2 id="compat-title">Tus docsets, tu carpeta.</h2></div><div class="compat-copy"><p>OpenDoc lee índices estándar <code>searchIndex</code>, Core Data y docsets tarix.</p><p>No incluye docsets y todavía no tiene gestor de descargas. Apunta la app a la carpeta donde guardas los tuyos.</p><p>OpenDoc no es un fork ni está afiliado a Zeal o Dash. Los docsets conservan las licencias de sus autores.</p></div></section>
+
+    <section class="roadmap" id="ruta" aria-labelledby="road-title"><div class="wrap roadmap-inner"><div class="section-heading"><div><p class="section-kicker">Qué sigue</p><h2 id="road-title">En desarrollo, paso a paso.</h2></div><p>La v0.1 ya está publicada. Lo demás aún no está disponible.</p></div><ol class="timeline"><li class="timeline-now"><span class="version">v0.1</span><div><h3>Disponible ahora</h3><p>Visor offline, búsqueda difusa, lectura de docsets y tema claro, oscuro o del sistema.</p><a href="https://github.com/daidarzzz/opendoc/releases">Ver releases</a></div><span class="timeline-state">Disponible</span></li><li><span class="version">v0.2</span><div><h3>Navegación diaria</h3><p>Tipos con contadores e iconos, pestañas, historial, favoritos y filtro por docset.</p></div><span class="timeline-state">Planeado</span></li><li><span class="version">v0.3</span><div><h3>Gestor de descargas</h3><p>Proveedores intercambiables para obtener docsets.</p></div><span class="timeline-state">Planeado</span></li><li><span class="version">v1.0</span><div><h3>Acabado y escala</h3><p>Temas por docset, resaltado refinado y pruebas con más de 20 docsets.</p></div><span class="timeline-state">Planeado</span></li></ol></div></section>
+  </main>
+
+  <footer class="site-footer"><div class="wrap footer-top"><a class="brand" href="#inicio"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M7 3.5h12l7 7V28H7z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19 4v7h7M11 16h10M11 20h10M11 24h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/><path d="M23 14v7" stroke="var(--marker)" stroke-width="3"/></svg><span>OpenDoc</span></a><nav aria-label="Enlaces del proyecto"><a href="https://github.com/daidarzzz/opendoc">Repositorio</a><a href="https://github.com/daidarzzz/opendoc/releases">Releases</a><a href="https://github.com/daidarzzz/opendoc/issues">Avisar de un problema</a></nav><p>Proyecto independiente. Sin afiliación con Zeal o Dash. La licencia del código está por definir.</p><p>Las documentaciones mantienen las licencias de sus autores.</p></div></footer>
+</body>
+</html>
