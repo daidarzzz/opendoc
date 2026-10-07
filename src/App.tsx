@@ -1,6 +1,6 @@
 // Pantalla de prueba TEMPORAL de T6 (se reemplaza en T7).
 // Prueba el backend desde la ventana: cargar carpeta, buscar, ver home.
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   getDocsetHome,
   listDocsets,
@@ -10,40 +10,71 @@ import {
 import { toViewerUrl } from "./lib/opendocUrl";
 import type { Docset, ScanIssue, SearchResult } from "./lib/types";
 
+// TEMP T6: carpeta por defecto para probar sin pegar la ruta.
+// Desaparece en T7 (UI real) / T9 (persistencia de ajustes).
+const DEFAULT_DIR =
+  "C:\\Users\\david\\Documents\\Projects\\opendoc\\src-tauri\\tests\\fixtures";
+
 function errText(e: unknown): string {
   return e instanceof Error ? e.message : JSON.stringify(e);
 }
 
 export default function App() {
-  const [dir, setDir] = useState("");
+  const [dir, setDir] = useState(DEFAULT_DIR);
   const [docsets, setDocsets] = useState<Docset[]>([]);
   const [issues, setIssues] = useState<ScanIssue[]>([]);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [home, setHome] = useState<string>("");
   const [error, setError] = useState<string>("");
+  const [status, setStatus] = useState<string>("iniciando…");
   const seq = useRef(0);
 
-  async function load() {
+  async function loadDir(raw: string) {
     setError("");
+    // Normaliza: sin espacios ni comillas de "Copiar como ruta".
+    const clean = raw.trim().replace(/^["']+|["']+$/g, "");
+    if (clean === "") {
+      setError("pega primero la ruta de la carpeta de docsets");
+      return;
+    }
+    setStatus(`cargando ${clean}…`);
     try {
-      const report = await setDocsetsDir(dir);
+      const report = await setDocsetsDir(clean);
       setDocsets(report.docsets);
       setIssues(report.issues);
       setResults([]);
+      setStatus(
+        `cargados ${report.docsets.length} docsets, ${report.issues.length} issues`,
+      );
     } catch (e) {
+      setStatus("error al cargar");
       setError(errText(e));
     }
+  }
+
+  async function load() {
+    await loadDir(dir);
   }
 
   async function refresh() {
     setError("");
     try {
-      setDocsets(await listDocsets());
+      const list = await listDocsets();
+      setDocsets(list);
+      setStatus(`listos ${list.length} docsets (0 = sin cargar)`);
     } catch (e) {
+      setStatus("error al listar");
       setError(errText(e));
     }
   }
+
+  // Al arrancar: autocarga la carpeta por defecto (TEMP) y prueba el
+  // puente invoke sin necesidad de pulsar nada.
+  useEffect(() => {
+    void loadDir(DEFAULT_DIR);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function onQuery(q: string) {
     setQuery(q);
@@ -73,17 +104,38 @@ export default function App() {
       <h1>OpenDoc (prueba T6)</h1>
 
       <section>
-        <input
-          value={dir}
-          onChange={(e) => setDir(e.currentTarget.value)}
-          placeholder="Ruta de la carpeta de docsets"
-          style={{ width: 420 }}
-        />
-        <button onClick={load}>Cargar</button>
-        <button onClick={refresh}>Refrescar</button>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            setStatus("submit!");
+            void load();
+          }}
+        >
+          <input
+            value={dir}
+            onChange={(e) => setDir(e.currentTarget.value)}
+            placeholder="Ruta de la carpeta de docsets"
+            style={{ width: 420 }}
+          />
+          <button
+            type="submit"
+            onClick={() => setStatus("clic Cargar!")}
+          >
+            Cargar
+          </button>
+        </form>
+        <button
+          onClick={() => {
+            setStatus("clic Refrescar!");
+            void refresh();
+          }}
+        >
+          Refrescar
+        </button>
       </section>
 
       {error !== "" && <p style={{ color: "red" }}>{error}</p>}
+      <p>estado: {status}</p>
 
       <section>
         <h2>Docsets ({docsets.length})</h2>

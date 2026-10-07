@@ -1,0 +1,7 @@
+# El watcher de `tauri dev` recompila/reinicia al cambiar ficheros en
+# src-tauri/. Leer un índice SQLite toca su -shm (incluso en modo solo
+# lectura), así que los fixtures reiniciarían la app en bucle.
+tests/fixtures/
+*.shm
+*.wal
+*.journal
