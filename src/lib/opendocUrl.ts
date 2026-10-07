@@ -18,3 +18,8 @@ export async function toViewerUrl(backendUrl: string): Promise<string> {
   }
   return backendUrl;
 }
+
+/** URL backend de una entrada concreta del índice. */
+export function docsetEntryUrl(docsetId: string, entryPath: string): string {
+  return `${SCHEME}${docsetId}/${entryPath}`;
+}

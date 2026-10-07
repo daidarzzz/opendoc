@@ -90,10 +90,15 @@ fn serve_inner(
 
 /// Respuesta HTTP. El `fallback` es infalible (el builder solo falla con
 /// constantes inválidas, que no usamos).
+/// `Access-Control-Allow-Origin: *`: el iframe tiene origen opaco
+/// (sandbox sin same-origin) y las fuentes (@font-face) y fetch() exigen
+/// CORS incluso en mismo host; `*` es seguro aquí (sin credenciales ni
+/// cookies; este host solo existe dentro del webview).
 fn response(status: u16, mime: &'static str, body: Vec<u8>) -> tauri::http::Response<Vec<u8>> {
     tauri::http::Response::builder()
         .status(status)
         .header("Content-Type", mime)
+        .header("Access-Control-Allow-Origin", "*")
         .body(body)
         .unwrap_or_else(|_| tauri::http::Response::new(Vec::new()))
 }
@@ -175,6 +180,13 @@ mod tests {
         let ok = serve_file(&docsets, "demo", "a.html");
         assert_eq!(ok.status(), 200);
         assert_eq!(ok.headers().get("Content-Type").expect("mime"), "text/html");
+        // CORS para el iframe de origen opaco (fuentes web y fetch).
+        assert_eq!(
+            ok.headers()
+                .get("Access-Control-Allow-Origin")
+                .expect("cors"),
+            "*"
+        );
         assert_eq!(serve_file(&docsets, "demo", "sub").status(), 200);
         assert_eq!(serve_file(&docsets, "demo", "").status(), 200);
         assert_eq!(serve_file(&docsets, "demo", "nope.html").status(), 404);

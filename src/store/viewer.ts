@@ -2,7 +2,7 @@
 // El <iframe> con el visor llega en T8; aquí solo se resuelve la URL.
 import { create } from "zustand";
 import { getDocsetHome } from "../lib/commands";
-import { toViewerUrl } from "../lib/opendocUrl";
+import { docsetEntryUrl, toViewerUrl } from "../lib/opendocUrl";
 import { useDocsets } from "./docsets";
 
 export interface CurrentDoc {
@@ -15,13 +15,13 @@ export interface CurrentDoc {
 interface ViewerState {
   current: CurrentDoc | null;
   error: string;
-  openDoc: (docsetId: string) => Promise<void>;
+  openDoc: (docsetId: string, entry?: { name: string; path: string }) => Promise<void>;
 }
 
 export const useViewer = create<ViewerState>()((set) => ({
   current: null,
   error: "",
-  openDoc: async (docsetId: string) => {
+  openDoc: async (docsetId: string, entry?: { name: string; path: string }) => {
     const doc = useDocsets
       .getState()
       .docsets.find((d) => d.id === docsetId);
@@ -30,12 +30,15 @@ export const useViewer = create<ViewerState>()((set) => ({
       return;
     }
     try {
-      const homeUrl = await getDocsetHome(docsetId);
+      // Con entrada se navega directo a ella; si no, a la home.
+      const homeUrl = entry
+        ? docsetEntryUrl(docsetId, entry.path)
+        : await getDocsetHome(docsetId);
       const viewerUrl = await toViewerUrl(homeUrl);
       set({
         current: {
           docsetId,
-          name: doc.name,
+          name: entry?.name ?? doc.name,
           homeUrl,
           viewerUrl,
         },

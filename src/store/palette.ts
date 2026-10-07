@@ -60,7 +60,9 @@ export const usePalette = create<PaletteState>()((set, get) => {
       const chosen = results[activeIndex];
       if (!chosen) return;
       set({ open: false, activeIndex: 0 });
-      void useViewer.getState().openDoc(chosen.docset_id);
+      void useViewer
+        .getState()
+        .openDoc(chosen.docset_id, { name: chosen.name, path: chosen.path });
     },
   };
 });
