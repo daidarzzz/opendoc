@@ -158,7 +158,7 @@ fn read_standard(
                 docset_id: docset_id.to_string(),
                 kind: normalize_kind(&kind),
                 name,
-                path,
+                path: clean_index_path(&path),
             }),
             _ => skipped_nulls += 1,
         }
@@ -213,9 +213,11 @@ fn read_core_data(
         })?;
         match (name, kind, path) {
             (Some(name), Some(kind), Some(path)) => {
+                // Limpieza ANTES del ancla: el `#...` se añade después.
+                let clean = clean_index_path(&path);
                 let full_path = match anchor {
-                    Some(a) if !a.is_empty() => format!("{path}#{a}"),
-                    _ => path,
+                    Some(a) if !a.is_empty() => format!("{clean}#{a}"),
+                    _ => clean,
                 };
                 entries.push(Entry {
                     docset_id: docset_id.to_string(),
@@ -274,6 +276,21 @@ pub fn normalize_kind(raw: &str) -> String {
     .to_string()
 }
 
+/// Quita metadatos Apple incrustados (`<dash_entry_*...>`) del inicio de
+/// una ruta del índice. Solo recorta grupos `<...>` iniciales, en bucle;
+/// el resto —incluida un ancla `#...`— se conserva intacto. Sin `<`
+/// inicial o sin `>` de cierre, devuelve la ruta tal cual.
+pub fn clean_index_path(raw: &str) -> String {
+    let mut rest = raw;
+    while let Some(stripped) = rest.strip_prefix('<') {
+        match stripped.find('>') {
+            Some(end) => rest = &stripped[end + 1..],
+            None => break,
+        }
+    }
+    rest.to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -284,13 +301,14 @@ mod tests {
         let conn = Connection::open(&path).expect("crear dsidx");
         conn.execute_batch(
             "CREATE TABLE searchIndex(id INTEGER PRIMARY KEY, name TEXT, type TEXT, path TEXT);
-             INSERT INTO searchIndex(name, type, path) VALUES
-               ('printf', 'Function', 'man/printf.html'),
-               ('malloc', 'func', 'man/malloc.html'),
-               ('Xyz', 'Doohickey', 'x/xyz.html'),
-               ('SinTipo', '', 'x/sintipo.html'),
-               (NULL, 'Guide', 'x/nulo.html'),
-               ('SinRuta', 'Guide', NULL);",
+              INSERT INTO searchIndex(name, type, path) VALUES
+                ('printf', 'Function', 'man/printf.html'),
+                ('malloc', 'func', 'man/malloc.html'),
+                ('Xyz', 'Doohickey', 'x/xyz.html'),
+                ('SinTipo', '', 'x/sintipo.html'),
+                ('ConMeta', 'Guide', '<dash_entry_name=ConMeta>x/conmeta.html'),
+                (NULL, 'Guide', 'x/nulo.html'),
+                ('SinRuta', 'Guide', NULL);",
         )
         .expect("poblar dsidx");
         drop(conn);
@@ -305,7 +323,7 @@ mod tests {
         let data = read_index(&dsidx, "test").expect("leer índice");
         assert_eq!(data.schema, IndexSchema::Standard);
         assert_eq!(data.skipped_nulls, 2);
-        assert_eq!(data.entries.len(), 4);
+        assert_eq!(data.entries.len(), 5);
         assert_eq!(data.entries[0].name, "printf");
         assert_eq!(data.entries[0].kind, "Function");
         assert_eq!(data.entries[0].path, "man/printf.html");
@@ -313,6 +331,8 @@ mod tests {
         assert_eq!(data.entries[1].kind, "Function"); // 'func' → Function
         assert_eq!(data.entries[2].kind, "Doohickey"); // original conservado
         assert_eq!(data.entries[3].kind, "Unknown"); // tipo vacío
+        assert_eq!(data.entries[4].name, "ConMeta");
+        assert_eq!(data.entries[4].path, "x/conmeta.html"); // metadatos fuera
     }
 
     #[test]
@@ -348,6 +368,27 @@ mod tests {
         assert_eq!(normalize_kind("WeirdType"), "WeirdType");
         assert_eq!(normalize_kind(""), "Unknown");
         assert_eq!(normalize_kind("   "), "Unknown");
+    }
+
+    #[test]
+    fn clean_index_path_cases() {
+        // Multi-grupo al inicio.
+        assert_eq!(
+            clean_index_path("<dash_entry_a=1><dash_entry_b=2>doc/f.html"),
+            "doc/f.html"
+        );
+        // Ya limpia: intacta.
+        assert_eq!(clean_index_path("doc/f.html"), "doc/f.html");
+        // Sin cierre: intacta (no corromper).
+        assert_eq!(clean_index_path("<sin-cerrar"), "<sin-cerrar");
+        // El ancla se conserva (la limpieza es solo al inicio).
+        assert_eq!(
+            clean_index_path("<dash_entry_a=1>doc/f.html#frag"),
+            "doc/f.html#frag"
+        );
+        // `<` no inicial: intacto.
+        assert_eq!(clean_index_path("doc/a<b.html"), "doc/a<b.html");
+        assert_eq!(clean_index_path(""), "");
     }
 
     /// Crea un `.dsidx` sintético mínimo con esquema Core Data: un token
@@ -436,6 +477,11 @@ mod tests {
         for preserved in ["Element", "Keyword", "Type"] {
             assert!(kinds.contains(&preserved), "falta tipo {preserved}");
         }
+        // CSS no trae metadatos incrustados: el lector es no-op aquí.
+        assert!(
+            data.entries.iter().all(|e| !e.path.contains('<')),
+            "CSS debería tener rutas limpias"
+        );
     }
 
     #[test]
@@ -468,6 +514,45 @@ mod tests {
         for expected in ["Class", "Function", "Method"] {
             assert!(kinds.contains(&expected), "falta tipo {expected}");
         }
+    }
+
+    #[test]
+    fn real_python_paths_all_resolve_after_cleaning() {
+        // Extrae tarix.tgz a Temp (se borra solo al terminar el test).
+        let dir = tempfile::tempdir().expect("tempdir");
+        extract_tarix(
+            Path::new("tests/fixtures/Python_3.docset/Contents/Resources/tarix.tgz"),
+            dir.path(),
+        );
+        let docs = dir
+            .path()
+            .join("Python.docset/Contents/Resources/Documents");
+        assert!(docs.is_dir(), "Documents/ extraído");
+
+        let data = read_index(
+            Path::new("tests/fixtures/Python_3.docset/Contents/Resources/docSet.dsidx"),
+            "python_3",
+        )
+        .expect("leer índice Python");
+        assert_eq!(data.entries.len(), 14695);
+        // El `#ancla` no es parte del fichero: se quita para comprobar.
+        let missing: Vec<&str> = data
+            .entries
+            .iter()
+            .map(|e| e.path.split('#').next().unwrap_or(&e.path))
+            .filter(|p| !docs.join(p).is_file())
+            .collect();
+        assert!(missing.is_empty(), "rutas sin fichero: {missing:?}");
+    }
+
+    /// Extrae un `.tgz` de docset (solo tests; la extracción de producción
+    /// llega en v0.2 con validación de seguridad).
+    #[cfg(test)]
+    fn extract_tarix(tgz: &Path, dest: &Path) {
+        let file = std::fs::File::open(tgz).expect("abrir tgz");
+        let gz = flate2::read::GzDecoder::new(file);
+        let mut archive = tar::Archive::new(gz);
+        archive.unpack(dest).expect("extraer tgz");
     }
 
     #[test]
