@@ -45,7 +45,15 @@ pub fn parse_opendoc_uri(uri: &tauri::http::Uri) -> Option<(String, String)> {
 /// Sirve un fichero de docset como respuesta HTTP (puro, testeable).
 pub fn serve_file(docsets: &[Docset], id: &str, raw_path: &str) -> tauri::http::Response<Vec<u8>> {
     match serve_inner(docsets, id, raw_path) {
-        Ok((bytes, mime)) => response(200, mime, bytes),
+        Ok((bytes, mime)) => response(
+            200,
+            mime,
+            if mime == "text/html" {
+                inject_theme_support(&bytes)
+            } else {
+                bytes
+            },
+        ),
         Err(ServeError::UnknownDocset) => {
             response(404, "text/plain", b"docset desconocido".to_vec())
         }
@@ -88,7 +96,53 @@ fn serve_inner(
     Ok((bytes, resolved.mime))
 }
 
-/// Respuesta HTTP. El `fallback` es infalible (el builder solo falla con
+/// Soporte de tema oscuro provisional (hasta temas por docset en v1.0).
+/// Inyecta SIEMPRE en `text/html` un bloque constante: un `<style>` con el
+/// filtro invertido bajo `html[data-opendoc-theme="dark"]` (reinvirtiendo
+/// img/video/canvas/svg) y un `<script>` mínimo que pone/quita ese atributo
+/// al recibir `{type:"opendoc-theme", value:"dark"|"light"}` solo desde
+/// `window.parent`. Sin el atributo no cambia nada visualmente.
+/// Punto de inserción: antes de `</head>` (insensible a caso) o, si no hay,
+/// tras el BOM / al inicio. Solo ASCII: no re-codifica el documento.
+pub const THEME_STYLE: &str = "<style>html[data-opendoc-theme=\"dark\"]{filter:invert(1) hue-rotate(180deg);}html[data-opendoc-theme=\"dark\"] img,html[data-opendoc-theme=\"dark\"] video,html[data-opendoc-theme=\"dark\"] canvas,html[data-opendoc-theme=\"dark\"] svg{filter:invert(1) hue-rotate(180deg);}</style>";
+pub const THEME_SCRIPT: &str = "<script>(function(){window.addEventListener(\"message\",function(e){if(e.source!==window.parent)return;var d=e.data;if(!d||d.type!==\"opendoc-theme\")return;if(d.value===\"dark\"){document.documentElement.setAttribute(\"data-opendoc-theme\",\"dark\");}else if(d.value===\"light\"){document.documentElement.removeAttribute(\"data-opendoc-theme\");}});})();</script>";
+
+/// BOM UTF-8 (se respeta al insertar al inicio).
+const UTF8_BOM: [u8; 3] = [0xEF, 0xBB, 0xBF];
+
+/// Inserta `THEME_STYLE + THEME_SCRIPT` en un HTML.
+pub fn inject_theme_support(html: &[u8]) -> Vec<u8> {
+    let block = format!("{THEME_STYLE}{THEME_SCRIPT}");
+    let bytes = block.as_bytes();
+    if let Some(pos) = find_head_close(html) {
+        let mut out = Vec::with_capacity(html.len() + bytes.len());
+        out.extend_from_slice(&html[..pos]);
+        out.extend_from_slice(bytes);
+        out.extend_from_slice(&html[pos..]);
+        out
+    } else {
+        let start = if html.starts_with(&UTF8_BOM) {
+            UTF8_BOM.len()
+        } else {
+            0
+        };
+        let mut out = Vec::with_capacity(html.len() + bytes.len());
+        out.extend_from_slice(&html[..start]);
+        out.extend_from_slice(bytes);
+        out.extend_from_slice(&html[start..]);
+        out
+    }
+}
+
+/// Posición de `</head>` insensible a mayúsculas (`None` si no hay).
+fn find_head_close(html: &[u8]) -> Option<usize> {
+    const NEEDLE: &[u8] = b"</head>";
+    html.windows(NEEDLE.len()).position(|w| {
+        w.iter()
+            .zip(NEEDLE.iter())
+            .all(|(a, b)| a.to_ascii_lowercase() == *b)
+    })
+}
 /// constantes inválidas, que no usamos).
 /// `Access-Control-Allow-Origin: *`: el iframe tiene origen opaco
 /// (sandbox sin same-origin) y las fuentes (@font-face) y fetch() exigen
@@ -192,6 +246,50 @@ mod tests {
         assert_eq!(serve_file(&docsets, "demo", "nope.html").status(), 404);
         assert_eq!(serve_file(&docsets, "demo", "../x").status(), 403);
         assert_eq!(serve_file(&docsets, "otro", "a.html").status(), 404);
+    }
+
+    #[test]
+    fn theme_injection_points() {
+        // Antes de </head> (cualquier caso).
+        for html in [
+            "<html><head><title>x</title></head><body></body></html>",
+            "<HTML><HEAD></HEAD><BODY></BODY></HTML>",
+        ] {
+            let out = inject_theme_support(html.as_bytes());
+            let s = String::from_utf8(out).expect("utf8");
+            assert!(s.contains(THEME_STYLE), "{html}");
+            assert!(s.contains(THEME_SCRIPT), "{html}");
+            let style_pos = s.find(THEME_STYLE).expect("style");
+            let head_pos = s.to_lowercase().find("</head>").expect("head");
+            assert!(style_pos < head_pos, "{html}");
+        }
+        // Sin head: al inicio (tras BOM si lo hay).
+        let no_head = "<html><body>hola</body></html>";
+        let out = inject_theme_support(no_head.as_bytes());
+        assert!(String::from_utf8(out)
+            .expect("utf8")
+            .starts_with(THEME_STYLE));
+        let mut bom = vec![0xEF, 0xBB, 0xBF];
+        bom.extend_from_slice(no_head.as_bytes());
+        let out = inject_theme_support(&bom);
+        assert_eq!(&out[..3], &[0xEF, 0xBB, 0xBF]);
+        assert!(String::from_utf8(out[3..].to_vec())
+            .expect("utf8")
+            .starts_with(THEME_STYLE));
+        // El bloque es constante: mismo input, mismo output.
+        assert_eq!(
+            inject_theme_support(no_head.as_bytes()),
+            inject_theme_support(no_head.as_bytes())
+        );
+    }
+
+    #[test]
+    fn non_html_untouched_and_script_shape() {
+        // El script solo acepta forma exacta desde window.parent.
+        assert!(THEME_SCRIPT.contains("e.source!==window.parent"));
+        assert!(THEME_SCRIPT.contains("d.type!==\"opendoc-theme\""));
+        assert!(THEME_SCRIPT.contains("data-opendoc-theme"));
+        assert!(THEME_STYLE.contains("invert(1) hue-rotate(180deg)"));
     }
 
     #[test]

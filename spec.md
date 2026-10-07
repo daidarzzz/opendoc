@@ -122,7 +122,7 @@ Descarga, descompresión (tar.gz) e instalación con progreso.
 Actualización y borrado de docsets.
 Riesgo legal: la licencia de Kapeli prohíbe usar sus docsets en aplicaciones de terceros sin permiso; el gestor usará una abstracción de proveedores (instalar desde archivo local, DevDocs, Kapeli solo con permiso). Sin implementar todavía.
 v1.0: Objetivo final
-Temas personalizables y CSS inyectado para modo oscuro en la documentación.
+Temas personalizables y CSS inyectado para modo oscuro en la documentación (el modo oscuro actual del visor es provisional: filtro de inversión inyectado; se sustituye por temas por docset).
 Resaltado de sintaxis refinado.
 Instaladores para Windows, macOS y Linux (objetivo: ~10-15 MB, RAM en reposo < 50-80 MB).
 Rendimiento verificado con 20+ docsets cargados.

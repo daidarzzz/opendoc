@@ -6,21 +6,52 @@
 // el contenido queda confinado. Si un docset se rompe, la escalada
 // documentada es allow-same-origin (sigue sin acceso al padre: orígenes
 // distintos en dev y en prod).
-import { useEffect, useState } from "react";
+//
+// Tema oscuro provisional (protocol inyecta style+script constantes):
+// tras cada load del iframe y al cambiar el tema resuelto se envía
+// {type:"opendoc-theme", value:"dark"|"light"}. El script del docset solo
+// acepta mensajes de window.parent.
+import { useEffect, useRef, useState } from "react";
 import { useDocsets } from "../store/docsets";
 import { usePalette } from "../store/palette";
+import { useTheme } from "../store/theme";
 import { useViewer } from "../store/viewer";
 
 export function Viewer() {
   const { current, error } = useViewer();
   const { docsets, loading, dirMissing, savedDir, choose } = useDocsets();
   const setOpen = usePalette((s) => s.setOpen);
+  const mode = useTheme((s) => s.mode);
   const [loaded, setLoaded] = useState(false);
   const viewerUrl = current?.viewerUrl;
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  // Sistema en vivo para el tema resuelto que va al iframe.
+  const [systemDark, setSystemDark] = useState(
+    () => window.matchMedia("(prefers-color-scheme: dark)").matches,
+  );
 
   useEffect(() => {
     setLoaded(false);
   }, [viewerUrl]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = (e: MediaQueryListEvent) => setSystemDark(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  const resolved = mode === "system" ? (systemDark ? "dark" : "light") : mode;
+
+  // En cada carga del iframe (incluye navegaciones internas) y cada
+  // cambio de tema: mensaje de formato exacto al docset.
+  useEffect(() => {
+    if (!loaded || !viewerUrl) return;
+    iframeRef.current?.contentWindow?.postMessage(
+      { type: "opendoc-theme", value: resolved },
+      "*",
+    );
+  }, [loaded, viewerUrl, resolved]);
 
   if (docsets.length === 0 && !loading) {
     return (
@@ -78,6 +109,7 @@ export function Viewer() {
         <p className="p-4 text-sm text-gray-500">Cargando {current.name}…</p>
       )}
       <iframe
+        ref={iframeRef}
         key={current.viewerUrl}
         src={current.viewerUrl}
         title={`Documentación de ${current.name}`}
