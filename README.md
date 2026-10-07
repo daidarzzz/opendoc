@@ -1,7 +1,132 @@
-# Tauri + React + Typescript
+# OpenDoc
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+**Un visor de documentación offline, rápido y moderno.** Busca en milisegundos entre miles de funciones, clases y guías, sin conexión y con una interfaz cuidada.
 
-## Recommended IDE Setup
+OpenDoc lee el formato **docset** (el mismo que usan Dash y Zeal), así que puedes apuntarlo a tu carpeta de docsets y empezar a buscar.
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+> **Estado: v0.1 (MVP) en desarrollo.** Funciona y se puede compilar, pero todavía no hay gestor de descargas. Consulta la [hoja de ruta](#hoja-de-ruta).
+
+## Por qué existe
+
+Zeal es una herramienta excelente, pero su interfaz (C++/Qt) se siente anticuada y es poco personalizable. OpenDoc nace como un cliente nuevo, escrito desde cero (no es un fork), con tres ideas:
+
+- **Rápido de verdad:** arranque casi instantáneo, búsqueda en memoria y poco consumo de RAM.
+- **Cuidado en lo visual:** tema claro/oscuro, paleta de comandos y teclado primero, al estilo de Obsidian o VS Code.
+- **Compatible:** lee los docsets que ya tengas, incluidos los de formato *tarix*.
+
+## Funciones actuales
+
+- **Paleta de comandos** (`Ctrl+K` / `Cmd+K`) con búsqueda difusa en vivo y teclado completo (↑/↓, Enter, Esc).
+- **Búsqueda en memoria** con `nucleo`: coincidencia exacta > prefijo > difusa, con prioridad por tipo (clases y funciones antes que secciones). Medido: ~37 ms con 300.000 entradas en build release.
+- **Visor integrado** con protocolo propio `opendoc://` y `<iframe>` aislado (`sandbox`), protegido contra rutas maliciosas (`..`, rutas absolutas, enlaces simbólicos, codificaciones dobles).
+- **Compatibilidad con docsets:**
+  - Índice `searchIndex` y esquema Core Data (`ZTOKEN`…), detectado automáticamente.
+  - Lectura de `Info.plist`.
+  - Docsets **tarix**: se extraen una sola vez a una caché propia, con validación de seguridad y sin tocar tu carpeta de docsets.
+- **Tema claro / oscuro / sistema**, con ajustes persistentes. (El modo oscuro del contenido de la documentación es una solución provisional.)
+- **Enlaces externos** abiertos en el navegador del sistema, no dentro del visor.
+- **Robusto:** un docset corrupto o raro se registra como incidencia y no tumba el resto.
+
+## Stack
+
+| Capa | Tecnología |
+|---|---|
+| Frontend | React + TypeScript + Tailwind CSS v3 (Vite) |
+| Backend | Rust (`rusqlite`, `plist`, `nucleo-matcher`, `flate2`/`tar`) |
+| Puente | Tauri v2 |
+
+Tauri usa el WebView del sistema (WebView2 en Windows), por lo que el instalador es pequeño y el consumo de memoria bajo.
+
+## Requisitos
+
+- [Node.js](https://nodejs.org/) (probado con v24) y npm.
+- [Rust](https://rustup.rs/) estable.
+- **Windows:** Build Tools de Visual Studio con la carga de trabajo de C++, y WebView2 (incluido en Windows 11 y Windows 10 actualizado).
+- **Linux / macOS:** las dependencias de Tauri v2 de tu plataforma. Ver la [guía oficial](https://v2.tauri.app/start/prerequisites/). *Aún no se ha probado fuera de Windows.*
+
+## Primeros pasos
+
+```bash
+git clone <url-del-repositorio>
+cd opendoc
+npm install
+npm run tauri dev
+```
+
+La primera compilación tarda unos minutos (compila el backend en Rust). Después, el frontend se recarga en caliente.
+
+> Usa siempre `npm run tauri dev`. `npm run dev` abre solo el frontend en el navegador y los comandos de Rust no funcionan ahí.
+
+### Añadir docsets
+
+OpenDoc **no incluye docsets**. Al abrirlo por primera vez te pedirá elegir la carpeta donde los tienes (cada docset es una carpeta `.docset`). Puedes usar la misma carpeta que usa Zeal u otra de tu elección.
+
+- Los docsets *tarix* aparecen como **"Por instalar"**: el botón *Instalar* los extrae a la caché de la app (puede tardar un minuto en los más grandes y ocupar cientos de MB).
+- Si un docset no aparece, revisa la lista de incidencias en la barra lateral: indica qué le falta.
+
+> Un gestor de descargas dentro de la app está planificado. Mientras tanto, consigue los docsets por tu cuenta y respeta la licencia de cada fuente: algunos catálogos restringen su uso en aplicaciones de terceros.
+
+### Compilar el instalador
+
+```bash
+npm run tauri build
+```
+
+El resultado queda en `src-tauri/target/release/` (`opendoc.exe`) y los instaladores en `src-tauri/target/release/bundle/`. El ejecutable no está firmado, por lo que Windows SmartScreen puede mostrar un aviso la primera vez.
+
+## Desarrollo
+
+```bash
+cargo test   --manifest-path src-tauri/Cargo.toml          # tests de Rust
+cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+cargo fmt    --manifest-path src-tauri/Cargo.toml -- --check
+npx tsc --noEmit                                           # typecheck del frontend
+```
+
+Los tests que usan docsets reales (`CSS.docset`, `Python_3.docset`, `C++.docset`) buscan los archivos en `src-tauri/tests/fixtures/` y **se omiten con un aviso** si no están, así que `cargo test` pasa en un clon limpio. Cómo conseguirlos: ver `src-tauri/tests/fixtures/README.md`.
+
+### Estructura
+
+```
+opendoc/
+├── SPEC.md               # Especificación técnica y hoja de ruta
+├── AGENTS.md             # Guía para agentes de código
+├── src/                  # Frontend React + TypeScript
+│   ├── components/       # Paleta, barra lateral, visor
+│   ├── lib/              # Wrappers tipados de los comandos de Tauri
+│   └── store/            # Estado (docsets, paleta, tema, visor)
+└── src-tauri/
+    └── src/
+        ├── docset/       # Escaneo, Info.plist, índices, tarix
+        ├── search/       # Índice en memoria y búsqueda difusa
+        ├── protocol/     # Protocolo opendoc:// y seguridad de rutas
+        ├── commands/     # Comandos de Tauri (finos)
+        └── settings/     # Ajustes persistentes
+```
+
+La lógica vive en módulos de Rust independientes de Tauri y con tests; los comandos solo delegan.
+
+## Hoja de ruta
+
+- [x] **v0.1 (MVP):** escaneo de docsets, índices (estándar y Core Data), búsqueda difusa, paleta de comandos, visor seguro, tarix, ajustes y tema.
+- [ ] **v0.2:** navegación por tipos con contadores (estilo Zeal) e iconos, pestañas, historial, favoritos, filtro por docset (`py: format`), cancelar extracciones.
+- [ ] **v0.3:** gestor de descargas con un clic, con una abstracción de *proveedores* (instalar desde archivo, DevDocs, feeds propios).
+- [ ] **v1.0:** temas por docset, resaltado de sintaxis refinado, instaladores multiplataforma y rendimiento verificado con 20+ docsets.
+
+El detalle completo está en [`SPEC.md`](./SPEC.md).
+
+## Limitaciones conocidas
+
+- Solo probado en **Windows**. En Linux, WebKitGTK puede comportarse distinto; está pendiente de verificar.
+- No hay gestor de descargas todavía.
+- El modo oscuro del contenido de los docsets aplica un filtro de inversión de color; es provisional y puede deformar algunas imágenes o diagramas.
+- Los docsets *tarix* ocupan bastante en disco una vez extraídos (decenas o cientos de MB cada uno).
+
+## Licencia
+
+*Por decidir.* Hasta que se publique un archivo `LICENSE`, no se concede ningún permiso de uso o redistribución del código.
+
+## Agradecimientos
+
+- [Zeal](https://zealdocs.org/) y [Dash](https://kapeli.com/dash) por popularizar el formato docset y la idea del navegador de documentación offline. OpenDoc es un proyecto independiente y no está afiliado a ninguno de los dos.
+- Las documentaciones que cargues pertenecen a sus autores y mantienen sus propias licencias.
