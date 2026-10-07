@@ -16,6 +16,7 @@ use std::path::Path;
 #[cfg(test)]
 use std::path::PathBuf;
 
+use super::index::read_index;
 use super::model::{Docset, IssueKind, ScanError, ScanIssue, ScanReport};
 use super::plist::{apply_to_docset, read_info_plist};
 
@@ -121,9 +122,25 @@ pub fn scan_dir(root: &Path) -> Result<ScanReport, ScanError> {
             Ok(Some(info)) => apply_to_docset(&mut docset, &info),
             Ok(None) => {}
             Err(_) => report.issues.push(ScanIssue {
-                path: root_path,
+                path: root_path.clone(),
                 kind: IssueKind::InvalidInfoPlist,
             }),
+        }
+        // Sin página de inicio aún → primera entrada del índice (T4).
+        // Índice ilegible → issue, el docset se conserva sin home.
+        if docset.home_path.is_none() {
+            let dsidx = contents_path.join("Resources/docSet.dsidx");
+            match read_index(&dsidx, &docset.id) {
+                Ok(data) => {
+                    if let Some(first) = data.entries.first() {
+                        docset.home_path = Some(first.path.clone());
+                    }
+                }
+                Err(_) => report.issues.push(ScanIssue {
+                    path: root_path,
+                    kind: IssueKind::InvalidIndex,
+                }),
+            }
         }
         report.docsets.push(docset);
     }
@@ -198,14 +215,22 @@ fn mkdirs(base: &Path, parts: &str) {
 }
 
 /// Crea un esqueleto de docset. Con `complete = true` incluye
-/// `Resources/Documents/` y un `docSet.dsidx` vacío (sin abrirlo: T4).
+/// `Resources/Documents/` y un `docSet.dsidx` mínimo válido (esquema
+/// estándar con una entrada, para que el fallback de home funcione).
 #[cfg(test)]
 fn make_docset(root: &Path, name: &str, complete: bool) -> PathBuf {
     let docset = root.join(name);
     mkdirs(&docset, "Contents/Resources");
     if complete {
         mkdirs(&docset, "Contents/Resources/Documents");
-        fs::write(docset.join("Contents/Resources/docSet.dsidx"), []).expect("dsidx");
+        let conn = rusqlite::Connection::open(docset.join("Contents/Resources/docSet.dsidx"))
+            .expect("abrir dsidx");
+        conn.execute_batch(
+            "CREATE TABLE searchIndex(id INTEGER PRIMARY KEY, name TEXT, type TEXT, path TEXT);
+             INSERT INTO searchIndex(name, type, path) VALUES ('home', 'Guide', 'home/page.html');",
+        )
+        .expect("poblar dsidx");
+        drop(conn);
     }
     docset
 }
@@ -229,7 +254,8 @@ mod tests {
         assert_eq!(docset.platform, None);
         assert_eq!(docset.version, None);
         assert_eq!(docset.bundle_id, None);
-        assert_eq!(docset.home_path, None);
+        // Sin plist ni index.html: el home sale de la primera entrada.
+        assert_eq!(docset.home_path.as_deref(), Some("home/page.html"));
         assert_eq!(docset.root_path, dir.path().join("Python_3.docset"));
         assert_eq!(
             docset.contents_path,
@@ -372,11 +398,14 @@ mod tests {
         assert_eq!(report.docsets.len(), 1);
         assert_eq!(report.issues.len(), 1);
         assert_eq!(report.issues[0].kind, IssueKind::InvalidInfoPlist);
-        // Se conservan los valores por defecto de T2.
+        // Se conservan los valores por defecto de T2 (+ home del índice).
         assert_eq!(report.docsets[0].name, "Roto");
         assert_eq!(report.docsets[0].id, "roto");
         assert_eq!(report.docsets[0].platform, None);
-        assert_eq!(report.docsets[0].home_path, None);
+        assert_eq!(
+            report.docsets[0].home_path.as_deref(),
+            Some("home/page.html")
+        );
     }
 
     #[test]
@@ -414,6 +443,45 @@ mod tests {
             css.home_path.as_deref(),
             Some("developer.mozilla.org/en-US/docs/Web/CSS/Reference.html")
         );
+    }
+
+    #[test]
+    fn home_falls_back_to_first_index_entry() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        // Sin plist y sin index.html: el home sale del índice.
+        let docset = dir.path().join("Idx.docset");
+        mkdirs(&docset, "Contents/Resources/Documents");
+        let conn = rusqlite::Connection::open(docset.join("Contents/Resources/docSet.dsidx"))
+            .expect("abrir dsidx");
+        conn.execute_batch(
+            "CREATE TABLE searchIndex(id INTEGER PRIMARY KEY, name TEXT, type TEXT, path TEXT);
+             INSERT INTO searchIndex(name, type, path) VALUES
+               ('printf', 'Function', 'man/printf.html'),
+               ('malloc', 'Function', 'man/malloc.html');",
+        )
+        .expect("poblar dsidx");
+        drop(conn);
+
+        let report = scan_dir(dir.path()).expect("scan");
+        assert!(report.issues.is_empty());
+        assert_eq!(
+            report.docsets[0].home_path.as_deref(),
+            Some("man/printf.html")
+        );
+    }
+
+    #[test]
+    fn tarix_style_docset_without_documents_becomes_issue() {
+        // C++.docset es formato tarix (sin Documents/): fuera del MVP,
+        // pero el escaneo lo registra sin tumbarse.
+        let report = scan_dir(Path::new("tests/fixtures")).expect("scan fixtures");
+        let issue = report
+            .issues
+            .iter()
+            .find(|i| i.path.ends_with("C++.docset"))
+            .expect("issue para C++");
+        assert_eq!(issue.kind, IssueKind::MissingDocuments);
+        assert!(report.docsets.iter().all(|d| d.id != "c"));
     }
 
     #[test]

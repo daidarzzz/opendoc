@@ -12,7 +12,12 @@ sanfrancisco, london, newyork, tokyo, frankfurt, sydney, singapore).
 
 Fixtures actuales:
 
-- `CSS.docset`: feed `CSS` (esquema por detectar en T4 vía `sqlite_master`;
-  trae `docSet.dsidx` y restos Core Data `docSet.mom`/`Tokens.xml`).
+- `CSS.docset`: feed `CSS`. Esquema **Core Data** (1249 entradas, tipos
+  `Class/Function/Guide/Property` + propios `Element/Keyword/Type`).
+- `C++.docset`: de Zeal. Esquema **Core Data** (7225 entradas) con trampa:
+  trae además `CREATE VIEW searchIndex` (la detección solo mira
+  `type = 'table'`, así que sale CoreData). Es formato **tarix** (sin
+  `Documents/`, con `tarix.tgz` de ~170 MB): fuera del MVP, el escaneo lo
+  registra como `MissingDocuments` sin tumbarse.
 - `Python_3.docset`: pendiente (el mirror devolvió HTML: el nombre
   `Python_3` no existe como feed; conseguir por otra vía).

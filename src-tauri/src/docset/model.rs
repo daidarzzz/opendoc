@@ -31,6 +31,19 @@ pub struct Docset {
     pub contents_path: PathBuf,
 }
 
+/// Una entrada del índice normalizada (SPEC §3.3, ambos esquemas).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Entry {
+    /// Slug del docset al que pertenece.
+    pub docset_id: String,
+    /// Nombre mostrado.
+    pub name: String,
+    /// Tipo normalizado (`Class`, `Function`...) u original si no se reconoce.
+    pub kind: String,
+    /// Ruta relativa a `Documents/`, con ancla `#...` si la hay.
+    pub path: String,
+}
+
 /// Motivo por el que una entrada `*.docset` se saltó durante el escaneo.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IssueKind {
@@ -45,6 +58,9 @@ pub enum IssueKind {
     /// `Contents/Info.plist` existe pero es ilegible (se conservan los
     /// valores por defecto del escaneo).
     InvalidInfoPlist,
+    /// El `docSet.dsidx` es ilegible o su esquema no se reconoce (el
+    /// docset se conserva sin página de inicio del índice).
+    InvalidIndex,
     /// No se pudo leer una entrada de la carpeta raíz.
     EntryUnreadable,
 }
@@ -62,6 +78,9 @@ impl std::fmt::Display for IssueKind {
             }
             IssueKind::InvalidInfoPlist => {
                 write!(f, "Contents/Info.plist ilegible")
+            }
+            IssueKind::InvalidIndex => {
+                write!(f, "índice ilegible o no reconocido")
             }
             IssueKind::EntryUnreadable => {
                 write!(f, "no se pudo leer la entrada")

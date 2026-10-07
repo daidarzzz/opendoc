@@ -5,9 +5,11 @@
 //! Los docsets son entrada no confiable: lo corrupto se registra en
 //! `ScanReport::issues` sin abortar el escaneo.
 
+pub mod index;
 pub mod model;
 pub mod plist;
 pub mod scanner;
 
-pub use model::{Docset, ScanError, ScanIssue, ScanReport};
+pub use index::{read_index, IndexData, IndexError, IndexSchema};
+pub use model::{Docset, Entry, ScanError, ScanIssue, ScanReport};
 pub use scanner::scan_dir;
