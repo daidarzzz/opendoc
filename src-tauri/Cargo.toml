@@ -26,6 +26,7 @@ thiserror = "2"
 plist = "1"
 rusqlite = { version = "0.40.2", features = ["bundled"] }
 nucleo-matcher = "0.3.1"
+tauri-plugin-os = "2"
 
 [dev-dependencies]
 flate2 = "1.1.10"

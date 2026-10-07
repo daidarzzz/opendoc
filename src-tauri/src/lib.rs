@@ -11,8 +11,10 @@ use commands::{get_docset_home, list_docsets, search, set_docsets_dir, AppState}
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let result = tauri::Builder::default()
+        .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_opener::init())
         .manage(AppState::default())
+        .register_uri_scheme_protocol("opendoc", protocol::handle)
         .invoke_handler(tauri::generate_handler![
             list_docsets,
             set_docsets_dir,

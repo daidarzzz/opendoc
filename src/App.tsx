@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { CommandPalette } from "./components/CommandPalette";
 import { Sidebar } from "./components/Sidebar";
-import { ViewerPlaceholder } from "./components/ViewerPlaceholder";
+import { Viewer } from "./components/Viewer";
 import { useGlobalKeys } from "./hooks/useGlobalKeys";
 import { DEFAULT_DIR, useDocsets } from "./store/docsets";
 
@@ -19,7 +19,7 @@ export default function App() {
   return (
     <div className="flex h-screen bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100">
       <Sidebar />
-      <ViewerPlaceholder />
+      <Viewer />
       <CommandPalette />
     </div>
   );

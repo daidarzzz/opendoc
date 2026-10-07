@@ -31,12 +31,13 @@ export const useViewer = create<ViewerState>()((set) => ({
     }
     try {
       const homeUrl = await getDocsetHome(docsetId);
+      const viewerUrl = await toViewerUrl(homeUrl);
       set({
         current: {
           docsetId,
           name: doc.name,
           homeUrl,
-          viewerUrl: toViewerUrl(homeUrl),
+          viewerUrl,
         },
         error: "",
       });
