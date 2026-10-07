@@ -14,44 +14,32 @@
 import { useEffect, useRef, useState } from "react";
 import { useDocsets } from "../store/docsets";
 import { usePalette } from "../store/palette";
-import { useTheme } from "../store/theme";
 import { useViewer } from "../store/viewer";
 
 export function Viewer() {
   const { current, error } = useViewer();
   const { docsets, loading, dirMissing, savedDir, choose } = useDocsets();
   const setOpen = usePalette((s) => s.setOpen);
-  const mode = useTheme((s) => s.mode);
   const [loaded, setLoaded] = useState(false);
   const viewerUrl = current?.viewerUrl;
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  // Sistema en vivo para el tema resuelto que va al iframe.
-  const [systemDark, setSystemDark] = useState(
-    () => window.matchMedia("(prefers-color-scheme: dark)").matches,
-  );
 
   useEffect(() => {
     setLoaded(false);
   }, [viewerUrl]);
 
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = (e: MediaQueryListEvent) => setSystemDark(e.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
-
-  const resolved = mode === "system" ? (systemDark ? "dark" : "light") : mode;
-
-  // En cada carga del iframe (incluye navegaciones internas) y cada
-  // cambio de tema: mensaje de formato exacto al docset.
+  // TEMP: tema oscuro del visor DESACTIVADO (la inversión por filtro se
+  // ve bugueada; se retomará en v1.0 con temas por docset). El protocolo
+  // sigue inyectando style+script, pero siempre pedimos "light", así que
+  // el atributo data-opendoc-theme nunca se aplica. Para reactivarlo:
+  // mandar el tema resuelto (ver git history de este fix).
   useEffect(() => {
     if (!loaded || !viewerUrl) return;
     iframeRef.current?.contentWindow?.postMessage(
-      { type: "opendoc-theme", value: resolved },
+      { type: "opendoc-theme", value: "light" },
       "*",
     );
-  }, [loaded, viewerUrl, resolved]);
+  }, [loaded, viewerUrl]);
 
   if (docsets.length === 0 && !loading) {
     return (

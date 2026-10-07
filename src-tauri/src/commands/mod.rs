@@ -25,7 +25,7 @@ macro_rules! dlog {
 }
 #[cfg(not(debug_assertions))]
 macro_rules! dlog {
-    ($($t:tt)*) => {};
+    ($($t:tt)*) => {{}};
 }
 
 /// Lista los docsets cargados (vacío hasta el primer `set_docsets_dir`).
@@ -139,8 +139,8 @@ pub async fn extract_tarix(
     })?;
     match installed {
         Ok(installed) => service::apply_installed(&mut loaded, installed),
-        Err(e) => {
-            dlog!("[opendoc] tarix {docset_id}: {e}");
+        Err(_e) => {
+            dlog!("[opendoc] tarix {docset_id}: {_e}");
             if let Some(pending) = loaded.pending.iter().find(|p| p.id == docset_id).cloned() {
                 service::fail_pending(&mut loaded, &pending);
             }
