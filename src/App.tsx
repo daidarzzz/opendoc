@@ -1,51 +1,131 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+// Pantalla de prueba TEMPORAL de T6 (se reemplaza en T7).
+// Prueba el backend desde la ventana: cargar carpeta, buscar, ver home.
+import { useRef, useState } from "react";
+import {
+  getDocsetHome,
+  listDocsets,
+  searchDocs,
+  setDocsetsDir,
+} from "./lib/commands";
+import { toViewerUrl } from "./lib/opendocUrl";
+import type { Docset, ScanIssue, SearchResult } from "./lib/types";
 
-function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+function errText(e: unknown): string {
+  return e instanceof Error ? e.message : JSON.stringify(e);
+}
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
+export default function App() {
+  const [dir, setDir] = useState("");
+  const [docsets, setDocsets] = useState<Docset[]>([]);
+  const [issues, setIssues] = useState<ScanIssue[]>([]);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [home, setHome] = useState<string>("");
+  const [error, setError] = useState<string>("");
+  const seq = useRef(0);
+
+  async function load() {
+    setError("");
+    try {
+      const report = await setDocsetsDir(dir);
+      setDocsets(report.docsets);
+      setIssues(report.issues);
+      setResults([]);
+    } catch (e) {
+      setError(errText(e));
+    }
+  }
+
+  async function refresh() {
+    setError("");
+    try {
+      setDocsets(await listDocsets());
+    } catch (e) {
+      setError(errText(e));
+    }
+  }
+
+  async function onQuery(q: string) {
+    setQuery(q);
+    const mySeq = ++seq.current;
+    try {
+      const res = await searchDocs(q, { limit: 20 });
+      if (mySeq !== seq.current) return; // Respuesta obsoleta: se descarta.
+      setResults(res.results);
+    } catch (e) {
+      if (mySeq !== seq.current) return;
+      setError(errText(e));
+    }
+  }
+
+  async function showHome(docsetId: string) {
+    setError("");
+    try {
+      const backend = await getDocsetHome(docsetId);
+      setHome(`${backend}  ->  ${toViewerUrl(backend)}`);
+    } catch (e) {
+      setError(errText(e));
+    }
   }
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+    <main style={{ padding: 16, fontFamily: "sans-serif" }}>
+      <h1>OpenDoc (prueba T6)</h1>
 
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
+      <section>
         <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
+          value={dir}
+          onChange={(e) => setDir(e.currentTarget.value)}
+          placeholder="Ruta de la carpeta de docsets"
+          style={{ width: 420 }}
         />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
+        <button onClick={load}>Cargar</button>
+        <button onClick={refresh}>Refrescar</button>
+      </section>
+
+      {error !== "" && <p style={{ color: "red" }}>{error}</p>}
+
+      <section>
+        <h2>Docsets ({docsets.length})</h2>
+        <ul>
+          {docsets.map((d) => (
+            <li key={d.id}>
+              {d.name} [{d.id}]
+              <button onClick={() => showHome(d.id)}>home</button>
+            </li>
+          ))}
+        </ul>
+        {issues.length > 0 && (
+          <>
+            <h2>Issues ({issues.length})</h2>
+            <ul>
+              {issues.map((i, n) => (
+                <li key={n}>
+                  {i.kind}: {i.path}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+        {home !== "" && <p>home: {home}</p>}
+      </section>
+
+      <section>
+        <h2>Buscar</h2>
+        <input
+          value={query}
+          onChange={(e) => onQuery(e.currentTarget.value)}
+          placeholder="grid, radius, format..."
+          style={{ width: 420 }}
+        />
+        <ul>
+          {results.map((r, n) => (
+            <li key={`${r.docset_id}:${r.name}:${n}`}>
+              {r.name} — {r.kind} [{r.docset_id}]
+            </li>
+          ))}
+        </ul>
+      </section>
     </main>
   );
 }
-
-export default App;

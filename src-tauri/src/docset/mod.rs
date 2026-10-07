@@ -11,5 +11,5 @@ pub mod plist;
 pub mod scanner;
 
 pub use index::{read_index, IndexData, IndexError, IndexSchema};
-pub use model::{Docset, Entry, ScanError, ScanIssue, ScanReport};
+pub use model::{Docset, Entry, IssueKind, ScanError, ScanIssue, ScanReport};
 pub use scanner::scan_dir;

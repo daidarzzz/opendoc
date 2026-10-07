@@ -45,7 +45,7 @@ pub struct Entry {
 }
 
 /// Motivo por el que una entrada `*.docset` se saltó durante el escaneo.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum IssueKind {
     /// Existe un `*.docset` que no es un directorio.
     NotDirectory,
@@ -90,7 +90,7 @@ impl std::fmt::Display for IssueKind {
 }
 
 /// Entrada problemática registrada sin abortar el escaneo.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ScanIssue {
     /// Ruta de la entrada que causó el problema.
     pub path: PathBuf,
@@ -99,7 +99,7 @@ pub struct ScanIssue {
 }
 
 /// Resultado del escaneo de una carpeta de docsets.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ScanReport {
     /// Docsets válidos, ordenados por nombre (orden determinista).
     pub docsets: Vec<Docset>,

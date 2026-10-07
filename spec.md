@@ -79,9 +79,9 @@ El protocolo debe: resolver rutas dentro de Documents/ sin permitir path travers
 Inyección opcional de CSS en el iframe para tema oscuro (fase posterior).
 4.4 Comandos Tauri (contrato inicial)
 Comando	Entrada	Salida
-list_docsets	n/a	Vec<DocsetInfo>
-set_docsets_dir	path	Result<()>
-search	query, docset_ids?, limit	Vec<SearchResult>
+list_docsets	n/a	Vec<Docset>
+set_docsets_dir	path	ScanReport (docsets + issues)
+search	SearchRequest { request_id, query, docset_ids?, limit? }	SearchResponse { request_id (eco), results }
 get_docset_home	docset_id	URL opendoc://...
 
 Los tipos se comparten con el frontend (generar bindings, por ejemplo con specta/tauri-specta o ts-rs, o mantenerlos a mano y sincronizados).

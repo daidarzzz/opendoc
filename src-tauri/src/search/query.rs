@@ -366,8 +366,9 @@ mod tests {
         assert!(worst.as_secs() < 1, "búsqueda lenta: {worst:?}");
     }
 
-    /// Escala: medido en release build=17.9ms búsqueda=37.4ms (< 50ms);
-    /// en debug build=123ms búsqueda=626ms (los asserts son cotas debug).
+    /// Escala: medido en release build=17.9ms búsqueda=37.4ms (< 50ms).
+    /// En debug con [profile.dev.package."*"] opt-level=3: build~130ms,
+    /// búsqueda~340ms a 300k (los asserts son cotas debug amplias).
     #[test]
     fn large_synthetic_index_scales() {
         let kinds = ["Class", "Function", "Method", "Property", "Guide"];
