@@ -128,7 +128,7 @@ La lógica vive en módulos de Rust independientes de Tauri y con tests; los com
 - [ ] **v0.3:** gestión de docsets: por decidir (aplazado).
 - [ ] **v1.0:** temas por docset, resaltado de sintaxis refinado, instaladores multiplataforma y rendimiento verificado con 20+ docsets.
 
-El detalle completo está en [`spec.md`](./spec.md).
+El detalle completo está en [`SPEC.md`](./SPEC.md).
 
 ## Limitaciones conocidas
 
