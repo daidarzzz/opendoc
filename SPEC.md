@@ -85,9 +85,13 @@ search	SearchRequest { request_id, query, docset_ids?, limit? } (query admite `a
 list_kinds	docset_id	Vec<KindInfo { kind, label, inferred, count }> (orden fijo de comunes + inferidas + resto A-Z)
 list_entries	docset_id, kind, offset?, limit? (defecto 0/100, tope 500)	Vec<NavEntry { docset_id, name, kind, path, url }> (orden plegado; tipo inexistente → vacío)
 get_docset_home	docset_id	URL opendoc://...
-get_settings	n/a	Settings { version, docsets_dir?, theme }
+get_settings	n/a	Settings { version, docsets_dir?, theme, feed_url?, catalog_fetched_at? }
 set_theme	theme	Settings (persiste solo si cambió)
 extract_tarix	docset_id	ScanReport (async; ExtractionInProgress si hay otra en curso)
+get_catalog_status	n/a	CatalogStatus { repo?, fetched_at?, count } (caché local, sin red)
+set_feed_repo	repo	Settings (valida owner/repo o URL y persiste)
+refresh_catalog	n/a	CatalogSummary { repo, count, skipped, fetched_at } (async; NoFeedRepo sin repo)
+list_catalog	query?	Vec<FeedEntry { id, name, version, urls }> (caché, offline)
 
 Los tipos se comparten con el frontend (generar bindings, por ejemplo con specta/tauri-specta o ts-rs, o mantenerlos a mano y sincronizados).
 

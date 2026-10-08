@@ -48,6 +48,12 @@ pub struct Settings {
     /// Tema guardado.
     #[serde(default, deserialize_with = "theme_or_default")]
     pub theme: ThemeMode,
+    /// Repo de feeds (`owner/repo` o URL; `None` = sin configurar).
+    #[serde(default, deserialize_with = "url_or_none")]
+    pub feed_url: Option<String>,
+    /// Epoch de la última descarga del catálogo (`None` = nunca).
+    #[serde(default, deserialize_with = "u64_or_none")]
+    pub catalog_fetched_at: Option<u64>,
 }
 
 /// `u32` o default (nunca tumba el parseo).
@@ -62,6 +68,21 @@ fn version_or_default<'de, D: serde::Deserializer<'de>>(d: D) -> Result<u32, D::
 fn dir_or_none<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<PathBuf>, D::Error> {
     let v = serde_json::Value::deserialize(d)?;
     Ok(v.as_str().filter(|s| !s.is_empty()).map(PathBuf::from))
+}
+
+/// String no vacío (recortado) o `None` (tipos raros → `None`, no error).
+fn url_or_none<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<String>, D::Error> {
+    let v = serde_json::Value::deserialize(d)?;
+    Ok(v.as_str()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string))
+}
+
+/// `u64` o `None` (nunca tumba el parseo).
+fn u64_or_none<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<u64>, D::Error> {
+    let v = serde_json::Value::deserialize(d)?;
+    Ok(v.as_u64())
 }
 
 /// `"light"`/`"dark"` o `System` para cualquier otra cosa.
@@ -80,6 +101,8 @@ impl Default for Settings {
             version: SETTINGS_VERSION,
             docsets_dir: None,
             theme: ThemeMode::default(),
+            feed_url: None,
+            catalog_fetched_at: None,
         }
     }
 }
@@ -173,6 +196,8 @@ mod tests {
             version: SETTINGS_VERSION,
             docsets_dir: Some(PathBuf::from("C:/docs")),
             theme: ThemeMode::Dark,
+            feed_url: Some("zealdocs/feeds".to_string()),
+            catalog_fetched_at: Some(1_700_000_000),
         };
         assert!(save_if_changed(&path, &settings).expect("guardar"));
         assert_eq!(load(&path), settings);
@@ -205,6 +230,27 @@ mod tests {
             original
         );
         assert_eq!(load(&path), Settings::default(), "el fresco debe parsear");
+    }
+
+    #[test]
+    fn feed_fields_roundtrip_and_tolerate_garbage() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = write_raw(
+            dir.path(),
+            r#"{"version": 1, "feed_url": "  zealdocs/feeds  ", "catalog_fetched_at": 1700000000}"#,
+        );
+        let settings = load(&path);
+        assert_eq!(settings.feed_url.as_deref(), Some("zealdocs/feeds"));
+        assert_eq!(settings.catalog_fetched_at, Some(1_700_000_000));
+        // Raros → None sin tumbar el resto.
+        let path = write_raw(
+            dir.path(),
+            r#"{"version": 1, "feed_url": "", "catalog_fetched_at": "ayer", "theme": "dark"}"#,
+        );
+        let settings = load(&path);
+        assert_eq!(settings.feed_url, None);
+        assert_eq!(settings.catalog_fetched_at, None);
+        assert_eq!(settings.theme, ThemeMode::Dark);
     }
 
     #[test]

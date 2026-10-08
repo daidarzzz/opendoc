@@ -1,6 +1,7 @@
 // Módulos de lógica de OpenDoc (independientes de Tauri y testeables).
 // Fases posteriores: `download` (catálogo/descargas, v0.3), pestañas/favoritos (v0.2, frontend).
 pub mod browse;
+pub mod catalog;
 pub mod commands;
 pub mod docset;
 pub mod navigation;
@@ -9,8 +10,9 @@ pub mod search;
 pub mod settings;
 
 use commands::{
-    extract_tarix, get_docset_home, get_settings, list_docsets, list_entries, list_kinds, search,
-    set_docsets_dir, set_theme, AppState,
+    extract_tarix, get_catalog_status, get_docset_home, get_settings, list_catalog, list_docsets,
+    list_entries, list_kinds, refresh_catalog, search, set_docsets_dir, set_feed_repo, set_theme,
+    AppState,
 };
 
 /// Carga ajustes + carpeta guardada al arrancar. Nunca tumba el arranque:
@@ -100,7 +102,11 @@ pub fn run() {
             get_docset_home,
             get_settings,
             set_theme,
-            extract_tarix
+            extract_tarix,
+            get_catalog_status,
+            set_feed_repo,
+            refresh_catalog,
+            list_catalog
         ])
         .run(tauri::generate_context!());
     if let Err(e) = result {

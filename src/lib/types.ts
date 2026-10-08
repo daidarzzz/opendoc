@@ -106,7 +106,9 @@ export type ApiError =
   | { kind: "unknown_docset"; id: string }
   | { kind: "no_home_page"; id: string }
   | { kind: "load_failed"; message: string }
-  | { kind: "extraction_in_progress"; id: string };
+  | { kind: "extraction_in_progress"; id: string }
+  | { kind: "no_feed_repo" }
+  | { kind: "feed_failed"; message: string };
 
 /** Tema guardado (settings::ThemeMode). */
 export type ThemeMode = "light" | "dark" | "system";
@@ -116,6 +118,10 @@ export interface Settings {
   version: number;
   docsets_dir: string | null;
   theme: ThemeMode;
+  /** Repo de feeds (`owner/repo`), null = sin configurar. */
+  feed_url: string | null;
+  /** Epoch de la última descarga del catálogo, null = nunca. */
+  catalog_fetched_at: number | null;
 }
 
 /** Una parada del historial de pestaña (URL canónica opendoc://). */
@@ -135,4 +141,27 @@ export interface Tab {
   pendingUrl: string | null;
   /** Scroll guardado por URL (acotado). */
   scrolls: Record<string, number>;
+}
+
+/** Una entrada del catálogo (catalog::FeedEntry). */
+export interface FeedEntry {
+  id: string;
+  name: string;
+  version: string;
+  urls: string[];
+}
+
+/** Estado del catálogo (commands::CatalogStatus). */
+export interface CatalogStatus {
+  repo: string | null;
+  fetched_at: number | null;
+  count: number;
+}
+
+/** Resumen tras refrescar (commands::CatalogSummary). */
+export interface CatalogSummary {
+  repo: string;
+  count: number;
+  skipped: number;
+  fetched_at: number;
 }

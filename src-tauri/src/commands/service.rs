@@ -9,6 +9,8 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 use crate::browse::{KindInfo, NavEntry, DEFAULT_BROWSE_LIMIT, MAX_BROWSE_LIMIT};
+use crate::catalog::feed::{fetch_catalog, http_client, normalize_repo, FeedEntry};
+use crate::catalog::{catalog_file, load_catalog, now_epoch, save_catalog, Catalog};
 use crate::docset::{
     apply_to_docset, read_index, read_info_plist, scan_dir, Docset, Entry, IssueKind, PendingTarix,
     ScanIssue, ScanReport, TarixLimits,
@@ -378,6 +380,76 @@ fn find_docset<'a>(docsets: &'a [Docset], docset_id: &str) -> Result<&'a Docset,
         .ok_or_else(|| ApiError::UnknownDocset {
             id: docset_id.to_string(),
         })
+}
+
+/// Estado del catálogo para la UI (repo, última descarga, entradas).
+#[derive(Debug, Clone, Serialize)]
+pub struct CatalogStatus {
+    /// Repo configurado (`owner/name`).
+    pub repo: Option<String>,
+    /// Epoch de la última descarga.
+    pub fetched_at: Option<u64>,
+    /// Entradas en caché (0 sin caché).
+    pub count: usize,
+}
+
+/// Resumen tras refrescar el catálogo.
+#[derive(Debug, Clone, Serialize)]
+pub struct CatalogSummary {
+    /// Repo normalizado descargado.
+    pub repo: String,
+    /// Entradas guardadas.
+    pub count: usize,
+    /// XML saltados (ilegibles o sin versión/URLs).
+    pub skipped: usize,
+    /// Epoch de la descarga.
+    pub fetched_at: u64,
+}
+
+/// Lee el estado sin red (caché local; offline funciona).
+pub fn catalog_status(settings: &crate::settings::Settings, data_dir: &Path) -> CatalogStatus {
+    let cached = load_catalog(&catalog_file(data_dir));
+    CatalogStatus {
+        repo: settings.feed_url.clone(),
+        fetched_at: settings.catalog_fetched_at,
+        count: cached.map(|c| c.entries.len()).unwrap_or(0),
+    }
+}
+
+/// Entradas en caché con filtro opcional por nombre (insensible a caso).
+/// Sin caché → vacío (no error).
+pub fn list_catalog_entries(data_dir: &Path, query: Option<&str>) -> Vec<FeedEntry> {
+    let mut entries = load_catalog(&catalog_file(data_dir))
+        .map(|c| c.entries)
+        .unwrap_or_default();
+    if let Some(q) = query.map(str::trim).filter(|q| !q.is_empty()) {
+        let lower = q.to_lowercase();
+        entries.retain(|e| e.name.to_lowercase().contains(&lower));
+    }
+    entries
+}
+
+/// Descarga y guarda el catálogo (lento: solo desde `spawn_blocking`).
+/// No toca ajustes: el comando actualiza `catalog_fetched_at` al guardar.
+pub fn refresh_catalog_data(data_dir: &Path, repo_raw: &str) -> Result<(Catalog, usize), ApiError> {
+    let repo = normalize_repo(repo_raw).map_err(|e| ApiError::FeedFailed {
+        message: e.to_string(),
+    })?;
+    let client = http_client().map_err(|e| ApiError::FeedFailed {
+        message: e.to_string(),
+    })?;
+    let (entries, skipped) = fetch_catalog(&client, &repo).map_err(|e| ApiError::FeedFailed {
+        message: e.to_string(),
+    })?;
+    let catalog = Catalog {
+        repo: repo.path(),
+        fetched_at: now_epoch(),
+        entries,
+    };
+    save_catalog(&catalog_file(data_dir), &catalog).map_err(|e| ApiError::FeedFailed {
+        message: e.to_string(),
+    })?;
+    Ok((catalog, skipped))
 }
 
 /// URL `opendoc://<id>/<home>` de la página de inicio (el protocolo se
@@ -770,6 +842,73 @@ mod tests {
             docset_url("css", "a/b.html#frag"),
             "opendoc://css/a/b.html#frag"
         );
+    }
+
+    /// Caché sintética en Temp para status/listado.
+    fn write_sample_catalog(dir: &Path) {
+        use crate::catalog::feed::FeedEntry;
+        use crate::catalog::{save_catalog, Catalog};
+        let catalog = Catalog {
+            repo: "alguien/feeds".to_string(),
+            fetched_at: 1_700_000_000,
+            entries: vec![
+                FeedEntry {
+                    id: "CSS".to_string(),
+                    name: "CSS".to_string(),
+                    version: "1".to_string(),
+                    urls: vec!["https://a.example/CSS.tgz".to_string()],
+                },
+                FeedEntry {
+                    id: "Python_3".to_string(),
+                    name: "Python_3".to_string(),
+                    version: "2".to_string(),
+                    urls: vec!["https://a.example/Python.tgz".to_string()],
+                },
+            ],
+        };
+        save_catalog(&crate::catalog::catalog_file(dir), &catalog).expect("guardar caché");
+    }
+
+    #[test]
+    fn catalog_status_empty_without_cache() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let status = catalog_status(&crate::settings::Settings::default(), dir.path());
+        assert_eq!(status.repo, None);
+        assert_eq!(status.fetched_at, None);
+        assert_eq!(status.count, 0);
+    }
+
+    #[test]
+    fn catalog_status_and_list_from_cache() {
+        use crate::settings::Settings;
+        let dir = tempfile::tempdir().expect("tempdir");
+        write_sample_catalog(dir.path());
+        let settings = Settings {
+            feed_url: Some("alguien/feeds".to_string()),
+            catalog_fetched_at: Some(1_700_000_000),
+            ..Settings::default()
+        };
+        let status = catalog_status(&settings, dir.path());
+        assert_eq!(status.repo.as_deref(), Some("alguien/feeds"));
+        assert_eq!(status.fetched_at, Some(1_700_000_000));
+        assert_eq!(status.count, 2);
+        // Sin filtro: todo; con filtro: substring insensible a caso.
+        assert_eq!(list_catalog_entries(dir.path(), None).len(), 2);
+        let found = list_catalog_entries(dir.path(), Some("pyt"));
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].id, "Python_3");
+        assert!(list_catalog_entries(dir.path(), Some("  ")).len() == 2);
+        assert!(list_catalog_entries(dir.path(), Some("zzz")).is_empty());
+    }
+
+    #[test]
+    fn refresh_without_network_fails_typed() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        // Repo con formato imposible: falla antes de tocar la red.
+        let err = refresh_catalog_data(dir.path(), "///").expect_err("repo inválido");
+        assert!(matches!(err, ApiError::FeedFailed { .. }));
+        // Sin caché previa no se crea nada en el fallo.
+        assert!(!crate::catalog::catalog_file(dir.path()).exists());
     }
 
     #[test]

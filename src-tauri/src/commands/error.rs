@@ -39,4 +39,13 @@ pub enum ApiError {
         /// Id del docset.
         id: String,
     },
+    /// No hay repositorio de feeds configurado.
+    #[error("sin repositorio de feeds (configúralo primero)")]
+    NoFeedRepo,
+    /// Fallo descargando o parseando el catálogo de feeds.
+    #[error("fallo del catálogo: {message}")]
+    FeedFailed {
+        /// Detalle del fallo.
+        message: String,
+    },
 }

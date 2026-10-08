@@ -148,6 +148,128 @@ pub async fn extract_tarix(
     }
     Ok(service::load_report(&loaded))
 }
+
+/// Directorio de datos de la app (caché del catálogo, ajustes...).
+fn data_dir_of(app: &tauri::AppHandle) -> Result<std::path::PathBuf, ApiError> {
+    use tauri::Manager;
+    app.path().app_data_dir().map_err(|e| ApiError::LoadFailed {
+        message: e.to_string(),
+    })
+}
+
+/// Estado del catálogo (repo, última descarga, entradas en caché). Sin red.
+#[tauri::command]
+pub fn get_catalog_status(
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+) -> Result<service::CatalogStatus, ApiError> {
+    let data_dir = data_dir_of(&app)?;
+    let settings = state
+        .settings
+        .lock()
+        .map(|guard| guard.clone())
+        .map_err(|e| ApiError::LoadFailed {
+            message: e.to_string(),
+        })?;
+    Ok(service::catalog_status(&settings, &data_dir))
+}
+
+/// Configura el repo de feeds (`owner/repo` o URL). Valida y persiste.
+#[tauri::command]
+pub fn set_feed_repo(
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+    repo: String,
+) -> Result<crate::settings::Settings, ApiError> {
+    let normalized = crate::catalog::feed::normalize_repo(&repo)
+        .map_err(|e| ApiError::FeedFailed {
+            message: e.to_string(),
+        })?
+        .path();
+    let data_dir = data_dir_of(&app)?;
+    let settings = state
+        .settings
+        .lock()
+        .map(|mut guard| {
+            guard.feed_url = Some(normalized);
+            guard.catalog_fetched_at = None;
+            guard.clone()
+        })
+        .map_err(|e| ApiError::LoadFailed {
+            message: e.to_string(),
+        })?;
+    crate::settings::save_if_changed(&crate::settings::settings_file(&data_dir), &settings)
+        .map_err(|e| ApiError::LoadFailed {
+            message: e.to_string(),
+        })?;
+    Ok(settings)
+}
+
+/// Descarga el catálogo (largo, no bloquea). Sin repo → `NoFeedRepo`.
+/// En fallo de red se conserva la caché anterior.
+#[tauri::command]
+pub async fn refresh_catalog(
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+) -> Result<service::CatalogSummary, ApiError> {
+    dlog!("[opendoc] refresh_catalog");
+    let data_dir = data_dir_of(&app)?;
+    let repo = state
+        .settings
+        .lock()
+        .map_err(|e| ApiError::LoadFailed {
+            message: e.to_string(),
+        })?
+        .feed_url
+        .clone()
+        .ok_or(ApiError::NoFeedRepo)?;
+    let (catalog, skipped) = tauri::async_runtime::spawn_blocking(move || {
+        service::refresh_catalog_data(&data_dir, &repo)
+    })
+    .await
+    .map_err(|e| ApiError::LoadFailed {
+        message: e.to_string(),
+    })??;
+    let summary = service::CatalogSummary {
+        repo: catalog.repo.clone(),
+        count: catalog.entries.len(),
+        skipped,
+        fetched_at: catalog.fetched_at,
+    };
+    let settings = state
+        .settings
+        .lock()
+        .map(|mut guard| {
+            guard.catalog_fetched_at = Some(catalog.fetched_at);
+            guard.clone()
+        })
+        .map_err(|e| ApiError::LoadFailed {
+            message: e.to_string(),
+        })?;
+    {
+        use tauri::Manager;
+        if let Ok(data_dir) = app.path().app_data_dir() {
+            let path = crate::settings::settings_file(&data_dir);
+            crate::settings::save_if_changed(&path, &settings).map_err(|e| {
+                ApiError::LoadFailed {
+                    message: e.to_string(),
+                }
+            })?;
+        }
+    }
+    Ok(summary)
+}
+
+/// Entradas en caché con búsqueda opcional (offline: sin red).
+#[tauri::command]
+pub fn list_catalog(
+    app: tauri::AppHandle,
+    query: Option<String>,
+) -> Result<Vec<crate::catalog::FeedEntry>, ApiError> {
+    let data_dir = data_dir_of(&app)?;
+    Ok(service::list_catalog_entries(&data_dir, query.as_deref()))
+}
+
 /// Guarda `docsets_dir` en ajustes si cambió. Nunca falla hacia fuera
 /// (un fallo de disco no debe tumbar una carga correcta).
 fn persist_docsets_dir(

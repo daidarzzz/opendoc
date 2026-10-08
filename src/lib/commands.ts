@@ -4,7 +4,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type {
+  CatalogStatus,
+  CatalogSummary,
   Docset,
+  FeedEntry,
   KindInfo,
   NavEntry,
   ScanReport,
@@ -63,6 +66,26 @@ export async function getSettings(): Promise<Settings> {
 /** Cambia el tema (persiste solo si cambió). */
 export async function setTheme(theme: ThemeMode): Promise<Settings> {
   return invoke<Settings>("set_theme", { theme });
+}
+
+/** Estado del catálogo (repo, última descarga, entradas en caché). */
+export async function getCatalogStatus(): Promise<CatalogStatus> {
+  return invoke<CatalogStatus>("get_catalog_status");
+}
+
+/** Configura el repo de feeds (`owner/repo` o URL). Valida y persiste. */
+export async function setFeedRepo(repo: string): Promise<Settings> {
+  return invoke<Settings>("set_feed_repo", { repo });
+}
+
+/** Descarga el catálogo (largo, no bloquea). Sin repo → `no_feed_repo`. */
+export async function refreshCatalog(): Promise<CatalogSummary> {
+  return invoke<CatalogSummary>("refresh_catalog");
+}
+
+/** Entradas en caché con búsqueda opcional (offline: sin red). */
+export async function listCatalog(query?: string): Promise<FeedEntry[]> {
+  return invoke<FeedEntry[]>("list_catalog", { query: query ?? null });
 }
 
 /** Tipos con conteo de un docset, en orden de muestra. */
