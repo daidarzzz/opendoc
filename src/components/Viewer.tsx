@@ -7,6 +7,7 @@
 // controles, scrollY finito en rango y teclas a ≤10/s.
 import { useEffect, useRef, useState } from "react";
 import { TabsBar } from "./TabsBar";
+import { Welcome } from "./Welcome";
 import { useDocsets } from "../store/docsets";
 import { usePalette } from "../store/palette";
 import { useTabs } from "../store/tabs";
@@ -28,7 +29,6 @@ export function Viewer() {
   const openTabUrl = useTabs((s) => s.openTabUrl);
   const newTab = useTabs((s) => s.newTab);
   const { docsets, loading, dirMissing, savedDir, choose } = useDocsets();
-  const setOpen = usePalette((s) => s.setOpen);
   const [src, setSrc] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -127,17 +127,7 @@ export function Viewer() {
       {!active?.current || !docsetLoaded ? (
         <div className="flex flex-1 flex-col items-center justify-center p-8">
           {!active?.current ? (
-            <>
-              <p className="text-sm text-gray-500">
-                Pulsa Ctrl+K (Cmd+K en macOS) para buscar…
-              </p>
-              <button
-                onClick={() => setOpen(true)}
-                className="mt-3 rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
-              >
-                Buscar
-              </button>
-            </>
+            <Welcome docCount={docsets.length} />
           ) : (
             <p className="text-sm text-yellow-700 dark:text-yellow-300">
               El docset de esta pestaña ya no está cargado. Elige la carpeta
