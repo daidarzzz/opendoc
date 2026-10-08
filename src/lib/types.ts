@@ -71,6 +71,8 @@ export interface SearchResponse {
 export interface KindInfo {
   kind: string;
   label: string;
+  /** Etiqueta inferida (no oficial en Dash): mostrar el código original. */
+  inferred: boolean;
   count: number;
 }
 

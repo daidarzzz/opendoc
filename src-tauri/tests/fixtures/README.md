@@ -43,3 +43,6 @@ Fixtures actuales:
   Esquema **Core Data** (14695 entradas). Como el C++, es formato tarix
   (sin `Documents/`): el escaneo lo registra sin tumbarse; el `.dsidx`
   sí se lee en los tests de índice y búsqueda.
+- `Swift.docset`: primer docset real con esquema **estándar**
+  (`searchIndex`, 9467 entradas). Trae `icon.png` + `icon@2x.png` en la
+  raíz. Como CSS, tiene `Documents/` y se carga al arrancar.

@@ -25,6 +25,9 @@ pub struct KindInfo {
     pub kind: String,
     /// Etiqueta visible en inglés (`Methods`).
     pub label: String,
+    /// `true` si la etiqueta es inferida (no oficial en Dash): la UI
+    /// muestra el código original como texto secundario.
+    pub inferred: bool,
     /// Número de entradas de este tipo en el docset.
     pub count: usize,
 }
@@ -44,14 +47,14 @@ pub struct NavEntry {
     pub url: String,
 }
 
-/// Tabla fija de (tipo, etiqueta): los comunes salen en este orden; lo no
-/// listado se muestra tal cual al final, en orden alfabético. Inventario
-/// real (Paso 0): CSS trae Property/Guide/Function/Class/Type/Element/
-/// Keyword; C++ Function/Operator/Macro/Guide/File/Keyword/Enum/Tag/
-/// Attribute/Struct/Global/Directive más códigos Apple (`clm`, `cl`,
-/// `tdef`, `clconst`, `instp`); Python_3 Method/Function/Attribute/
-/// Section/Class/Macro/Option/Module/Exception/Guide/Constant/Type/
-/// Variable/Statement/Struct/Enum.
+/// Tabla fija de (tipo, etiqueta): los comunes salen en este orden, luego
+/// las inferidas (`INFERRED_LABELS`); lo no listado se muestra tal cual al
+/// final, en orden alfabético. Inventario real (Paso 0): CSS trae
+/// Property/Guide/Function/Class/Type/Element/Keyword; C++ Function/
+/// Operator/Macro/Guide/File/Keyword/Enum/Tag/Attribute/Struct/Global/
+/// Directive más códigos Apple (`cl`, `clm`, `clconst`, `tdef`, `instp`);
+/// Python_3 Method/Function/Attribute/Section/Class/Macro/Option/Module/
+/// Exception/Guide/Constant/Type/Variable/Statement/Struct/Enum.
 const KIND_LABELS: &[(&str, &str)] = &[
     ("Class", "Classes"),
     ("Struct", "Structs"),
@@ -89,20 +92,48 @@ const KIND_LABELS: &[(&str, &str)] = &[
     ("Directive", "Directives"),
 ];
 
-/// Posición en el orden fijo; lo desconocido va al final (`usize::MAX`).
+/// Etiquetas inferidas (NO oficiales en Dash): códigos estilo Apple que
+/// aparecen en docsets reales (C++ trae `cl`/`clm`/`clconst`/`tdef`/`instp`;
+/// la guía oficial https://kapeli.com/docsets §13.5.1 no los lista).
+/// Significado comprobado con 10 ejemplos por código en las fixtures:
+/// `cl` son tipos (`weak_ptr`, `Namespace`, rangos…), `clm` mezcla
+/// funciones miembro (`::swap`, `::find`) y tipos miembro (`::iterator`,
+/// `::sentinel`), de ahí Members y no Methods; `clconst` son constantes
+/// (`npos`, `*_v`, `seq`/`par`); `tdef` son alias (`int8_t`,
+/// `conditional_t`).
+/// `instp` (2 casos: `path::format`, `text_encoding::id`, enums miembro)
+/// queda ambiguo y se muestra tal cual, como cualquier código no listado.
+const INFERRED_LABELS: &[(&str, &str)] = &[
+    ("cl", "Classes"),
+    ("clm", "Members"),
+    ("clconst", "Constants"),
+    ("tdef", "Typedefs"),
+];
+
+/// Posición en el orden fijo: tabla oficial, luego inferidas en este
+/// orden, luego lo desconocido (`usize::MAX`, alfabético entre sí).
 fn kind_seq(kind: &str) -> usize {
-    KIND_LABELS
-        .iter()
-        .position(|(k, _)| *k == kind)
-        .unwrap_or(usize::MAX)
+    if let Some(pos) = KIND_LABELS.iter().position(|(k, _)| *k == kind) {
+        return pos;
+    }
+    if let Some(pos) = INFERRED_LABELS.iter().position(|(k, _)| *k == kind) {
+        return KIND_LABELS.len() + pos;
+    }
+    usize::MAX
 }
 
-/// Etiqueta visible: la tabla para los comunes, el código tal cual si no.
+/// Etiqueta visible: tabla oficial, inferida si aplica, código tal cual.
 pub fn kind_label(kind: &str) -> String {
     KIND_LABELS
         .iter()
+        .chain(INFERRED_LABELS.iter())
         .find(|(k, _)| *k == kind)
         .map_or_else(|| kind.to_string(), |(_, label)| label.to_string())
+}
+
+/// `true` si la etiqueta es inferida (código Apple, no oficial en Dash).
+pub fn kind_inferred(kind: &str) -> bool {
+    KIND_LABELS.iter().all(|(k, _)| *k != kind) && INFERRED_LABELS.iter().any(|(k, _)| *k == kind)
 }
 
 /// Caché de navegación: orden global + rangos y conteos por (docset, tipo).
@@ -182,6 +213,7 @@ impl BrowseCache {
                     .map(|(kind, count)| KindInfo {
                         kind: kind.to_string(),
                         label: kind_label(kind),
+                        inferred: kind_inferred(kind),
                         count,
                     })
                     .collect(),
@@ -298,10 +330,13 @@ mod tests {
             KindInfo {
                 kind: "Method".to_string(),
                 label: "Methods".to_string(),
+                inferred: false,
                 count: 3,
             }
         );
-        assert_eq!(kinds[2].label, "clm"); // código tal cual
+        assert_eq!(kinds[2].label, "Members"); // clm: inferida
+        assert!(kinds[2].inferred);
+        assert!(!kinds[0].inferred);
         assert!(index.browse_kinds("inexistente").is_empty());
         assert_eq!(index.browse_kinds("otro").len(), 1);
     }
@@ -353,14 +388,60 @@ mod tests {
     }
 
     #[test]
+    fn inferred_before_unknown_alpha() {
+        let index = SearchIndex::build(vec![
+            crate::docset::Entry {
+                docset_id: "d".to_string(),
+                name: "x".to_string(),
+                kind: "zzTop".to_string(),
+                path: "x.html".to_string(),
+            },
+            crate::docset::Entry {
+                docset_id: "d".to_string(),
+                name: "y".to_string(),
+                kind: "tdef".to_string(),
+                path: "y.html".to_string(),
+            },
+            crate::docset::Entry {
+                docset_id: "d".to_string(),
+                name: "z".to_string(),
+                kind: "instp".to_string(),
+                path: "z.html".to_string(),
+            },
+        ]);
+        let kinds = index.browse_kinds("d");
+        let pairs: Vec<(&str, &str, bool)> = kinds
+            .iter()
+            .map(|k| (k.kind.as_str(), k.label.as_str(), k.inferred))
+            .collect();
+        // Inferida (tdef) antes que desconocidos (instp, zzTop: A-Z).
+        assert_eq!(
+            pairs,
+            vec![
+                ("tdef", "Typedefs", true),
+                ("instp", "instp", false),
+                ("zzTop", "zzTop", false),
+            ]
+        );
+    }
+
+    #[test]
     fn labels_cover_table_and_passthrough() {
         assert_eq!(kind_label("Class"), "Classes");
         assert_eq!(kind_label("Property"), "Properties");
         assert_eq!(kind_label("Category"), "Categories");
-        assert_eq!(kind_label("clm"), "clm");
-        assert_eq!(kind_label("tdef"), "tdef");
+        assert_eq!(kind_label("cl"), "Classes");
+        assert_eq!(kind_label("clm"), "Members");
+        assert_eq!(kind_label("clconst"), "Constants");
+        assert_eq!(kind_label("tdef"), "Typedefs");
+        assert_eq!(kind_label("instp"), "instp");
+        assert!(kind_inferred("clm"));
+        assert!(!kind_inferred("Method"));
+        assert!(!kind_inferred("instp"));
         assert!(kind_seq("Class") < kind_seq("Function"));
         assert!(kind_seq("Function") < kind_seq("Property"));
+        assert!(kind_seq("Guide") < kind_seq("cl")); // tabla antes que inferidas
+        assert!(kind_seq("tdef") < kind_seq("instp")); // inferida antes que resto
         assert_eq!(kind_seq("zzz-no-existe"), usize::MAX);
     }
 

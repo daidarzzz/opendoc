@@ -368,6 +368,11 @@ mod tests {
         assert_eq!(normalize_kind("WeirdType"), "WeirdType");
         assert_eq!(normalize_kind(""), "Unknown");
         assert_eq!(normalize_kind("   "), "Unknown");
+        // Códigos estilo Apple: sin normalizar (la etiqueta legible, si la
+        // hay, la pone `browse` como inferida, no oficial en Dash).
+        for code in ["cl", "clm", "clconst", "tdef", "instp"] {
+            assert_eq!(normalize_kind(code), code);
+        }
     }
 
     #[test]

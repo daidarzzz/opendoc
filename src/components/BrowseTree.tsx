@@ -16,7 +16,7 @@ type Row =
   | { type: "kinds-loading"; id: string; docsetId: string }
   | { type: "kinds-error"; id: string; docsetId: string; message: string }
   | { type: "kinds-empty"; id: string; docsetId: string }
-  | { type: "kind"; id: string; docsetId: string; kind: string; label: string; count: number; ki: number; ksize: number; expanded: boolean }
+  | { type: "kind"; id: string; docsetId: string; kind: string; label: string; inferred: boolean; count: number; ki: number; ksize: number; expanded: boolean }
   | { type: "entries-error"; id: string; docsetId: string; kind: string; count: number; message: string }
   | { type: "entry"; id: string; docsetId: string; kind: string; entry: NavEntry; ei: number; esize: number }
   | { type: "skeleton"; id: string; docsetId: string; kind: string; ei: number; esize: number };
@@ -75,7 +75,7 @@ export function BrowseTree() {
         const kExpanded = openKinds.includes(k.kind);
         out.push({
           type: "kind", id: rowId(di, ki, -1), docsetId: d.id, kind: k.kind,
-          label: k.label, count: k.count, ki, ksize: ks.length, expanded: kExpanded,
+          label: k.label, inferred: k.inferred, count: k.count, ki, ksize: ks.length, expanded: kExpanded,
         });
         if (!kExpanded) return;
         const err = entriesError[`${d.id}\n${k.kind}`];
@@ -352,7 +352,12 @@ function RowView({ row, top, active, currentDoc, onToggleDoc, onToggleKind, onAc
         onClick={() => onToggleKind(row.docsetId, row.kind)}
       >
         <span className="w-4 shrink-0 text-xs text-gray-500">{row.expanded ? "▾" : "▸"}</span>
-        <span className="truncate">{row.label}</span>
+        <span className="truncate" title={row.inferred ? `Etiqueta inferida, no oficial en Dash (código: ${row.kind})` : row.label}>
+          {row.label}
+        </span>
+        {row.inferred && (
+          <span className="shrink-0 text-xs italic text-gray-400">{row.kind}</span>
+        )}
         <span className="shrink-0 text-xs text-gray-400">{row.count}</span>
       </div>
     );
