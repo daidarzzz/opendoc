@@ -7,6 +7,7 @@ import {
   setDocsetsDir,
 } from "../lib/commands";
 import type { Docset, PendingTarix, ScanIssue } from "../lib/types";
+import { useBrowse } from "./browse";
 
 interface DocsetsState {
   docsets: Docset[];
@@ -57,6 +58,7 @@ export const useDocsets = create<DocsetsState>()((set) => ({
     set({ error: "", loading: true, status: `cargando ${dir}…` });
     try {
       const report = await setDocsetsDir(dir);
+      useBrowse.getState().reset();
       set({
         docsets: report.docsets,
         pending: report.pending_tarix,
@@ -81,6 +83,7 @@ export const useDocsets = create<DocsetsState>()((set) => ({
       set({ savedDir: settings.docsets_dir });
       try {
         const report = await setDocsetsDir(settings.docsets_dir);
+        useBrowse.getState().reset();
         set({
           docsets: report.docsets,
           pending: report.pending_tarix,
@@ -112,6 +115,7 @@ export const useDocsets = create<DocsetsState>()((set) => ({
     }));
     try {
       const report = await extractTarix(id);
+      useBrowse.getState().reset();
       set((s) => ({
         docsets: report.docsets,
         pending: report.pending_tarix,

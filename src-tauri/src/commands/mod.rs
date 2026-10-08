@@ -1,6 +1,6 @@
-//! Comandos Tauri finos (contrato SPEC §4.4 + ajustes T9): `list_docsets`,
-//! `set_docsets_dir`, `search`, `get_docset_home`, `get_settings`,
-//! `set_theme`.
+//! Comandos Tauri finos (contrato SPEC §4.4 + ajustes T9 + navegación v0.2):
+//! `list_docsets`, `set_docsets_dir`, `search`, `list_kinds`,
+//! `list_entries`, `get_docset_home`, `get_settings`, `set_theme`.
 //!
 //! Solo delegan en `service.rs` (testeable sin Tauri). Si se toca este
 //! contrato, actualizar `src/lib/types.ts` y la tabla de SPEC §4.4.
@@ -193,6 +193,53 @@ pub fn search(
         res.results.len()
     );
     Ok(res)
+}
+
+/// Tipos con conteo de un docset, en orden de muestra (navegación v0.2).
+#[tauri::command]
+pub fn list_kinds(
+    state: State<'_, AppState>,
+    docset_id: String,
+) -> Result<Vec<crate::browse::KindInfo>, ApiError> {
+    let res = state
+        .loaded
+        .lock()
+        .map_err(|e| ApiError::LoadFailed {
+            message: e.to_string(),
+        })
+        .and_then(|loaded| service::browse_kinds(&loaded, &docset_id));
+    match &res {
+        Ok(kinds) => dlog!("[opendoc] kinds {docset_id} -> {} tipos", kinds.len()),
+        Err(e) => dlog!("[opendoc] kinds {docset_id} -> ERROR {e}"),
+    }
+    res
+}
+
+/// Página de entradas de un tipo (navegación v0.2). `offset`/`limit`
+/// opcionales (defecto 0/100, tope 500).
+#[tauri::command]
+pub fn list_entries(
+    state: State<'_, AppState>,
+    docset_id: String,
+    kind: String,
+    offset: Option<usize>,
+    limit: Option<usize>,
+) -> Result<Vec<crate::browse::NavEntry>, ApiError> {
+    let res = state
+        .loaded
+        .lock()
+        .map_err(|e| ApiError::LoadFailed {
+            message: e.to_string(),
+        })
+        .and_then(|loaded| service::browse_entries(&loaded, &docset_id, &kind, offset, limit));
+    match &res {
+        Ok(entries) => dlog!(
+            "[opendoc] entries {docset_id}/{kind} -> {} entradas",
+            entries.len()
+        ),
+        Err(e) => dlog!("[opendoc] entries {docset_id}/{kind} -> ERROR {e}"),
+    }
+    res
 }
 
 /// URL `opendoc://<id>/<home>` (el protocolo se sirve en T8).

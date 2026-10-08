@@ -5,6 +5,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type {
   Docset,
+  KindInfo,
+  NavEntry,
   ScanReport,
   SearchRequest,
   SearchResponse,
@@ -61,6 +63,26 @@ export async function getSettings(): Promise<Settings> {
 /** Cambia el tema (persiste solo si cambió). */
 export async function setTheme(theme: ThemeMode): Promise<Settings> {
   return invoke<Settings>("set_theme", { theme });
+}
+
+/** Tipos con conteo de un docset, en orden de muestra. */
+export async function listKinds(docsetId: string): Promise<KindInfo[]> {
+  return invoke<KindInfo[]>("list_kinds", { docsetId });
+}
+
+/** Página de entradas de un tipo (offset 0, tope 500 en el backend). */
+export async function listEntries(
+  docsetId: string,
+  kind: string,
+  offset?: number,
+  limit?: number,
+): Promise<NavEntry[]> {
+  return invoke<NavEntry[]>("list_entries", {
+    docsetId,
+    kind,
+    offset: offset ?? null,
+    limit: limit ?? null,
+  });
 }
 
 /** Diálogo nativo para elegir la carpeta de docsets (null = cancelado). */

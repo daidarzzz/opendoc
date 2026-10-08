@@ -82,6 +82,8 @@ Comando	Entrada	Salida
 list_docsets	n/a	Vec<Docset>
 set_docsets_dir	path	ScanReport (docsets + pending_tarix + issues)
 search	SearchRequest { request_id, query, docset_ids?, limit? }	SearchResponse { request_id (eco), results }
+list_kinds	docset_id	Vec<KindInfo { kind, label, count }> (orden fijo de comunes + resto A-Z)
+list_entries	docset_id, kind, offset?, limit? (defecto 0/100, tope 500)	Vec<NavEntry { docset_id, name, kind, path, url }> (orden plegado; tipo inexistente → vacío)
 get_docset_home	docset_id	URL opendoc://...
 get_settings	n/a	Settings { version, docsets_dir?, theme }
 set_theme	theme	Settings (persiste solo si cambió)

@@ -8,6 +8,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+use crate::browse::{KindInfo, NavEntry, DEFAULT_BROWSE_LIMIT, MAX_BROWSE_LIMIT};
 use crate::docset::{
     apply_to_docset, read_index, read_info_plist, scan_dir, Docset, Entry, IssueKind, PendingTarix,
     ScanIssue, ScanReport, TarixLimits,
@@ -222,6 +223,40 @@ pub fn search_loaded(loaded: &mut Loaded, req: &SearchRequest) -> SearchResponse
     }
 }
 
+/// Tipos con conteo de un docset, en orden de muestra. Docset
+/// desconocido → `UnknownDocset`; sin entradas → vacío (no error).
+pub fn browse_kinds(loaded: &Loaded, docset_id: &str) -> Result<Vec<KindInfo>, ApiError> {
+    find_docset(&loaded.docsets, docset_id)?;
+    Ok(loaded.index.browse_kinds(docset_id))
+}
+
+/// Página de entradas de un tipo (`limit` con tope 500). Tipo
+/// inexistente → vacío; docset desconocido → `UnknownDocset`.
+pub fn browse_entries(
+    loaded: &Loaded,
+    docset_id: &str,
+    kind: &str,
+    offset: Option<usize>,
+    limit: Option<usize>,
+) -> Result<Vec<NavEntry>, ApiError> {
+    find_docset(&loaded.docsets, docset_id)?;
+    let offset = offset.unwrap_or(0);
+    let limit = limit
+        .unwrap_or(DEFAULT_BROWSE_LIMIT)
+        .clamp(1, MAX_BROWSE_LIMIT);
+    Ok(loaded.index.browse_entries(docset_id, kind, offset, limit))
+}
+
+/// Docset por id o `UnknownDocset`.
+fn find_docset<'a>(docsets: &'a [Docset], docset_id: &str) -> Result<&'a Docset, ApiError> {
+    docsets
+        .iter()
+        .find(|d| d.id == docset_id)
+        .ok_or_else(|| ApiError::UnknownDocset {
+            id: docset_id.to_string(),
+        })
+}
+
 /// URL `opendoc://<id>/<home>` de la página de inicio (el protocolo se
 /// sirve en T8; aquí solo se genera la URL).
 pub fn docset_home_url(docsets: &[Docset], id: &str) -> Result<String, ApiError> {
@@ -295,10 +330,11 @@ mod tests {
         }
         let (_tmp, opts) = test_options();
         let mut loaded = load_docsets_dir(&fixtures_dir(), &opts).expect("cargar fixtures");
-        // Solo CSS es abrible; C++ y Python_3 quedan pendientes (no issues).
-        assert_eq!(loaded.docsets.len(), 1);
-        assert_eq!(loaded.docsets[0].id, "css");
-        assert_eq!(loaded.index.len(), 1249);
+        // CSS y Swift son abribles; C++ y Python_3 quedan pendientes (no issues).
+        let mut ids: Vec<&str> = loaded.docsets.iter().map(|d| d.id.as_str()).collect();
+        ids.sort_unstable();
+        assert_eq!(ids, vec!["css", "swift"]);
+        assert_eq!(loaded.index.len(), 1249 + 9467);
         let mut pending: Vec<&str> = loaded.pending.iter().map(|p| p.id.as_str()).collect();
         pending.sort_unstable();
         assert_eq!(pending, vec!["c", "python-3"]);
@@ -309,7 +345,7 @@ mod tests {
             &SearchRequest {
                 request_id: 7,
                 query: "grid".to_string(),
-                docset_ids: None,
+                docset_ids: Some(vec!["css".to_string()]),
                 limit: None,
             },
         );
@@ -372,6 +408,83 @@ mod tests {
         }];
         let err = docset_home_url(&docsets, "sinhome").expect_err("sin home");
         assert!(matches!(err, ApiError::NoHomePage { .. }));
+    }
+
+    /// `Loaded` mínimo con un docset y tres entradas (dos tipos).
+    fn loaded_with_entries() -> Loaded {
+        use crate::search::SearchIndex;
+        let docset = Docset {
+            id: "d".to_string(),
+            name: "D".to_string(),
+            platform: None,
+            version: None,
+            bundle_id: None,
+            home_path: Some("home.html".to_string()),
+            root_path: PathBuf::from("x"),
+            contents_path: PathBuf::from("x/Contents"),
+        };
+        let index = SearchIndex::build(vec![
+            Entry {
+                docset_id: "d".to_string(),
+                name: "b".to_string(),
+                kind: "Method".to_string(),
+                path: "b.html".to_string(),
+            },
+            Entry {
+                docset_id: "d".to_string(),
+                name: "a".to_string(),
+                kind: "Method".to_string(),
+                path: "a.html".to_string(),
+            },
+            Entry {
+                docset_id: "d".to_string(),
+                name: "g".to_string(),
+                kind: "Guide".to_string(),
+                path: "g.html".to_string(),
+            },
+        ]);
+        Loaded {
+            source_dir: PathBuf::from("x"),
+            docsets: vec![docset],
+            pending: Vec::new(),
+            issues: Vec::new(),
+            index,
+        }
+    }
+
+    #[test]
+    fn browse_kinds_counts_and_unknown_docset() {
+        let loaded = loaded_with_entries();
+        let kinds = browse_kinds(&loaded, "d").expect("tipos");
+        assert_eq!(kinds.len(), 2);
+        assert_eq!(kinds[0].kind, "Method");
+        assert_eq!(kinds[0].label, "Methods");
+        assert_eq!(kinds[0].count, 2);
+        assert_eq!(kinds[1].kind, "Guide");
+        assert_eq!(kinds[1].count, 1);
+        let err = browse_kinds(&loaded, "nope").expect_err("desconocido");
+        assert!(matches!(err, ApiError::UnknownDocset { .. }));
+    }
+
+    #[test]
+    fn browse_entries_pages_and_clamps() {
+        let loaded = loaded_with_entries();
+        // Orden plegado: a, b.
+        let page = browse_entries(&loaded, "d", "Method", Some(0), Some(1)).expect("página");
+        assert_eq!(page.len(), 1);
+        assert_eq!(page[0].name, "a");
+        assert_eq!(page[0].url, "opendoc://d/a.html");
+        let rest = browse_entries(&loaded, "d", "Method", Some(1), None).expect("resto");
+        assert_eq!(rest.len(), 1);
+        assert_eq!(rest[0].name, "b");
+        // Tipo inexistente → vacío; docset inexistente → error.
+        let empty = browse_entries(&loaded, "d", "Clase", None, None).expect("vacío");
+        assert!(empty.is_empty());
+        let err = browse_entries(&loaded, "nope", "Method", None, None).expect_err("desconocido");
+        assert!(matches!(err, ApiError::UnknownDocset { .. }));
+        // El tope se aplica (500 aunque se pidan más).
+        let many = browse_entries(&loaded, "d", "Method", None, Some(9999)).expect("tope");
+        assert_eq!(many.len(), 2);
     }
 
     #[test]

@@ -67,6 +67,22 @@ export interface SearchResponse {
   results: SearchResult[];
 }
 
+/** Un tipo con su etiqueta y conteo (browse::KindInfo). */
+export interface KindInfo {
+  kind: string;
+  label: string;
+  count: number;
+}
+
+/** Una entrada navegable con su URL (browse::NavEntry). */
+export interface NavEntry {
+  docset_id: string;
+  name: string;
+  kind: string;
+  path: string;
+  url: string;
+}
+
 /** Error de un comando (commands::ApiError, tag "kind"). */
 export type ApiError =
   | { kind: "invalid_dir"; path: string }

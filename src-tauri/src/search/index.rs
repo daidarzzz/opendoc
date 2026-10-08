@@ -15,6 +15,7 @@ use std::sync::Arc;
 
 use nucleo_matcher::{Config, Matcher};
 
+use crate::browse::BrowseCache;
 use crate::docset::Entry;
 
 /// Una entrada lista para buscar.
@@ -36,6 +37,9 @@ pub struct SearchIndex {
     pub(crate) matcher: Matcher,
     pub(crate) utf32_buf: Vec<char>,
     pool: HashMap<String, Arc<str>>,
+    /// Navegación por tipos: orden + conteos, reconstruida en cada
+    /// `build`/`extend` (ver `browse`).
+    pub(crate) browse: BrowseCache,
 }
 
 impl SearchIndex {
@@ -46,6 +50,7 @@ impl SearchIndex {
             matcher: Matcher::new(Config::DEFAULT),
             utf32_buf: Vec::with_capacity(256),
             pool: HashMap::new(),
+            browse: BrowseCache::empty(),
         }
     }
 
@@ -58,7 +63,7 @@ impl SearchIndex {
     }
 
     /// Añade entradas compartiendo el internado (p. ej. tarix instalados
-    /// después de la carga inicial).
+    /// después de la carga inicial) y reconstruye la navegación.
     pub fn extend(&mut self, entries: Vec<Entry>) {
         let Self {
             entries: mine,
@@ -71,6 +76,7 @@ impl SearchIndex {
             kind: intern(pool, &e.kind),
             docset_id: intern(pool, &e.docset_id),
         }));
+        self.browse = BrowseCache::rebuild(&self.entries);
     }
 
     /// Número de entradas indexadas.
