@@ -1,13 +1,19 @@
 name: Release
 
-# Builds installers for Windows (.exe/.msi), macOS (.dmg) and Linux
-# (.deb/.AppImage/.rpm) and publishes them as a GitHub Release on every
-# push to master (tag auto-generated: v<version>-build.<run number>).
-# Can also be launched manually from the Actions tab.
+# - `check` y `verify-version` corren en cada push a master, en cada tag
+#   `v*` y en cada lanzamiento manual.
+# - Los instaladores solo se construyen en tags `v*` (se suben a un
+#   borrador de GitHub Release creado una sola vez por `create-release`)
+#   o manualmente desde la pestaña Actions (se suben como artefactos del
+#   workflow, sin crear ni tocar ningún release).
+# - `paths-ignore` solo afecta a pushes de ramas: GitHub no evalúa
+#   filtros de rutas en pushes de tags, así que un tag `v*` siempre
+#   dispara el workflow aunque el commit solo toque .md/docs.
 
 on:
   push:
     branches: [master]
+    tags: ["v*"]
     paths-ignore:
       - "**/*.md"
       - "docs/**"
@@ -15,11 +21,15 @@ on:
       - "LICENSE"
   workflow_dispatch:
 
-# Cancel superseded runs on the same branch (a newer commit makes the
-# older build obsolete).
+permissions:
+  contents: read
+
+# Cancela ejecuciones superadas en ramas (un commit nuevo deja obsoleto
+# el build anterior), pero nunca en tags: un release en curso no debe
+# cancelarse porque se pushee otra cosa.
 concurrency:
   group: release-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
   check:
@@ -56,21 +66,89 @@ jobs:
       - name: Frontend typecheck
         run: npx tsc --noEmit
 
+  verify-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read package versions
+        id: versions
+        run: |
+          python3 - <<'EOF'
+          import json, os, re
+          pkg = json.load(open('package.json'))['version']
+          cargo = re.search(r'^version\s*=\s*"([^"]+)"',
+                            open('src-tauri/Cargo.toml').read(), re.M).group(1)
+          tauri = json.load(open('src-tauri/tauri.conf.json'))['version']
+          print(f"package.json={pkg} Cargo.toml={cargo} tauri.conf.json={tauri}")
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"pkg={pkg}\ncargo={cargo}\ntauri={tauri}\n")
+          EOF
+
+      - name: Tag must match package versions
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          TAG="${{ github.ref_name }}"
+          TAG="${TAG#v}"
+          test "$TAG" = "${{ steps.versions.outputs.pkg }}" || { echo "::error::tag v$TAG != package.json (${{ steps.versions.outputs.pkg }})"; exit 1; }
+          test "$TAG" = "${{ steps.versions.outputs.cargo }}" || { echo "::error::tag v$TAG != src-tauri/Cargo.toml (${{ steps.versions.outputs.cargo }})"; exit 1; }
+          test "$TAG" = "${{ steps.versions.outputs.tauri }}" || { echo "::error::tag v$TAG != src-tauri/tauri.conf.json (${{ steps.versions.outputs.tauri }})"; exit 1; }
+          echo "Tag matches package versions: $TAG"
+
+  create-release:
+    # Crea el borrador UNA vez para que los 4 trabajos de `build` no
+    # compitan creándolo. En lanzamientos manuales no crea nada (salida
+    # vacía) pero termina en éxito para que `build` pueda depender de
+    # este trabajo con un `needs` normal, sin `always()`.
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    needs: [check, verify-version]
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    outputs:
+      release-id: ${{ steps.create.outputs.release-id }}
+    steps:
+      - name: Create draft release
+        id: create
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NOTES="$(cat <<'EOF'
+          Instaladores: Windows (.exe/.msi), macOS (.dmg, Apple Silicon e Intel) y Linux (.deb/.AppImage/.rpm).
+
+          Avisos:
+          - Los ejecutables no están firmados: Windows SmartScreen y macOS Gatekeeper mostrarán advertencias al instalar o abrir la app. Es normal en esta fase del proyecto.
+          - macOS y Linux están poco probados: si algo falla, abre un issue indicando plataforma y versión.
+          EOF
+          )"
+          gh release create "${{ github.ref_name }}" \
+            --draft \
+            --title "OpenDoc ${{ github.ref_name }}" \
+            --notes "$NOTES" \
+            --target "${{ github.sha }}"
+          echo "release-id=$(gh api "repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}" --jq '.id')" >> "$GITHUB_OUTPUT"
+
   build:
-    needs: [check]
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    needs: [check, verify-version, create-release]
     permissions:
       contents: write
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: windows-latest
+          - name: windows
+            platform: windows-latest
             args: ""
-          - platform: macos-latest # Apple Silicon
+          - name: macos-arm # Apple Silicon
+            platform: macos-latest
             args: ""
-          - platform: macos-latest # Intel
+          - name: macos-intel
+            platform: macos-latest
             args: "--target x86_64-apple-darwin"
-          - platform: ubuntu-22.04
+          - name: linux
+            platform: ubuntu-22.04
             args: ""
     runs-on: ${{ matrix.platform }}
     steps:
@@ -98,9 +176,21 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: v__VERSION__-build.${{ github.run_number }}
-          releaseName: "OpenDoc v__VERSION__ (build ${{ github.run_number }})"
-          releaseBody: "Instaladores automáticos: Windows (.exe/.msi), macOS (.dmg, Apple Silicon e Intel) y Linux (.deb/.AppImage/.rpm)."
-          releaseDraft: false
+          # En tags sube al borrador de `create-release` (con releaseId el
+          # resto de inputs de release se ignoran). En lanzamientos
+          # manuales release-id está vacío (= omitido) y la acción solo
+          # compila, sin subir nada a ningún release.
+          releaseId: ${{ needs.create-release.outputs.release-id }}
+          releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+      - name: Upload installers (manual build only)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: opendoc-${{ matrix.name }}-${{ github.run_number }}
+          path: |
+            src-tauri/target/release/bundle/**/*
+            src-tauri/target/*/release/bundle/**/*
+          if-no-files-found: error
