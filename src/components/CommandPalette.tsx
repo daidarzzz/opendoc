@@ -222,7 +222,7 @@ export function CommandPalette() {
             }
             role="combobox"
             aria-autocomplete="list"
-            className="absolute inset-0 w-full bg-transparent px-4 py-3 text-sm text-transparent outline-none caret-gray-900 selection:bg-transparent dark:caret-gray-100"
+            className="absolute inset-0 w-full bg-transparent px-4 py-3 text-sm text-transparent outline-none caret-gray-900 selection:bg-blue-300/60 dark:caret-gray-100 dark:selection:bg-blue-500/50"
           />
         </div>
         {query.trim() === "" ? (
