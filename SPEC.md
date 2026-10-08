@@ -81,7 +81,7 @@ Inyección opcional de CSS en el iframe para tema oscuro (fase posterior).
 Comando	Entrada	Salida
 list_docsets	n/a	Vec<Docset>
 set_docsets_dir	path	ScanReport (docsets + pending_tarix + issues)
-search	SearchRequest { request_id, query, docset_ids?, limit? }	SearchResponse { request_id (eco), results }
+search	SearchRequest { request_id, query, docset_ids?, limit? } (query admite `a,b:texto`)	SearchResponse { request_id (eco), results, applied [{ token, docset_id, installed }], unknown [claves sin docset] }
 list_kinds	docset_id	Vec<KindInfo { kind, label, inferred, count }> (orden fijo de comunes + inferidas + resto A-Z)
 list_entries	docset_id, kind, offset?, limit? (defecto 0/100, tope 500)	Vec<NavEntry { docset_id, name, kind, path, url }> (orden plegado; tipo inexistente → vacío)
 get_docset_home	docset_id	URL opendoc://...

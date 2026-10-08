@@ -1,8 +1,11 @@
 // Command Palette: Ctrl/Cmd+K, resultados en vivo, teclado completo.
+// Filtros por docset (`cpp:vector`): chips con icono dentro del campo,
+// fantasma de Tab-completado, aviso con filtro vacío.
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import { usePalette } from "../store/palette";
 import { useDocsets } from "../store/docsets";
 import type { SearchResult } from "../lib/types";
+import { filterKeys, ghostFor, tailAfterColon } from "../lib/paletteFilter";
 import { DocsetIcon } from "./DocsetIcon";
 
 // Fila memoizada: el icono se resuelve por docset_id desde un mapa (las
@@ -60,23 +63,38 @@ export function CommandPalette() {
     open,
     query,
     results,
+    applied,
+    unknown,
     activeIndex,
     setOpen,
     setQuery,
     moveActive,
     chooseActive,
+    removeFilter,
+    removeLastFilter,
   } = usePalette();
   const inputRef = useRef<HTMLInputElement>(null);
   const docsets = useDocsets((s) => s.docsets);
+  const pending = useDocsets((s) => s.pending);
 
-  // Mapa id -> (icono, nombre): una sola copia de cada data-URL.
+  // Mapa id -> (icono, nombre): una sola copia de cada data-URL (incluye
+  // pendientes para los chips "(sin instalar)").
   const docMeta = useMemo(() => {
     const map = new Map<string, { icon: string | null; name: string }>();
     for (const d of docsets) {
       map.set(d.id, { icon: d.icon, name: d.name });
     }
+    for (const p of pending) {
+      if (!map.has(p.id)) map.set(p.id, { icon: p.icon, name: p.name });
+    }
     return map;
-  }, [docsets]);
+  }, [docsets, pending]);
+
+  const keys = useMemo(
+    () => filterKeys(docsets, pending),
+    [docsets, pending],
+  );
+  const ghost = useMemo(() => ghostFor(query, keys), [query, keys]);
 
   const hover = useCallback((index: number) => {
     usePalette.setState({ activeIndex: index });
@@ -91,7 +109,9 @@ export function CommandPalette() {
 
   if (!open) return null;
 
-  function onKey(e: React.KeyboardEvent) {
+  const completion = ghost !== null ? query + ghost : null;
+
+  function onKey(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "ArrowDown") {
       e.preventDefault();
       moveActive(1);
@@ -104,8 +124,26 @@ export function CommandPalette() {
     } else if (e.key === "Escape") {
       e.preventDefault();
       setOpen(false);
+    } else if (e.key === "Tab") {
+      // Solo con finalización única: si no, Tab conserva su
+      // comportamiento normal (no se atrapa el foco).
+      if (completion !== null) {
+        e.preventDefault();
+        setQuery(completion);
+      }
+    } else if (
+      e.key === "Backspace" &&
+      e.currentTarget.selectionStart === 0 &&
+      e.currentTarget.selectionEnd === 0
+    ) {
+      // Al inicio del campo: quita el último filtro (`cpp,py:x` → `cpp:x`).
+      removeLastFilter();
     }
   }
+
+  const tail = tailAfterColon(query);
+  const noticeMode = tail !== null && tail.trim() === "" && applied.length > 0;
+  const noticeNames = applied.map((f) => docMeta.get(f.docset_id)?.name ?? f.docset_id);
 
   return (
     <div
@@ -120,24 +158,80 @@ export function CommandPalette() {
         className="w-full max-w-xl overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-900"
         onClick={(e) => e.stopPropagation()}
       >
-        <input
-          ref={inputRef}
-          value={query}
-          onChange={(e) => setQuery(e.currentTarget.value)}
-          onKeyDown={onKey}
-          placeholder="Buscar… (Esc para cerrar)"
-          aria-label="Buscar en la documentación"
-          aria-expanded={results.length > 0}
-          aria-activedescendant={
-            results.length > 0 ? `palette-option-${activeIndex}` : undefined
-          }
-          role="combobox"
-          aria-autocomplete="list"
-          className="w-full border-b border-gray-200 bg-transparent px-4 py-3 text-sm outline-none dark:border-gray-700"
-        />
+        {(applied.length > 0 || unknown.length > 0) && (
+          <div
+            role="group"
+            aria-label="Filtros de docsets"
+            className="flex flex-wrap gap-1 px-4 pt-2"
+          >
+            {applied.map((f) => {
+              const meta = docMeta.get(f.docset_id);
+              const name = meta?.name ?? f.docset_id;
+              return (
+                <button
+                  key={f.docset_id}
+                  onClick={() => removeFilter(f.token)}
+                  aria-label={`Filtro: ${name}, quitar`}
+                  title={`Filtro: ${name} (clic para quitar)`}
+                  className="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-900 dark:bg-blue-900 dark:text-blue-100"
+                >
+                  <DocsetIcon icon={meta?.icon ?? null} name={name} size={12} />
+                  <span>{name}</span>
+                  {!f.installed && <span>(sin instalar)</span>}
+                  <span aria-hidden>×</span>
+                </button>
+              );
+            })}
+            {unknown.map((u) => (
+              <button
+                key={`unknown:${u}`}
+                onClick={() => removeFilter(u)}
+                aria-label={`Filtro desconocido: ${u}, quitar`}
+                title="No coincide con ningún docset (clic para quitar)"
+                className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-400 line-through dark:bg-gray-800"
+              >
+                {u} · no encontrado
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="relative border-b border-gray-200 dark:border-gray-700">
+          <div
+            aria-hidden
+            className="pointer-events-none select-none overflow-hidden whitespace-pre px-4 py-3 text-sm"
+          >
+            {query === "" ? (
+              <span className="text-gray-400">Buscar… (Esc para cerrar)</span>
+            ) : (
+              <>
+                <span className="invisible">{query}</span>
+                {ghost !== null && <span className="text-gray-400">{ghost}</span>}
+              </>
+            )}
+          </div>
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={(e) => setQuery(e.currentTarget.value)}
+            onKeyDown={onKey}
+            placeholder=""
+            aria-label="Buscar en la documentación"
+            aria-expanded={results.length > 0}
+            aria-activedescendant={
+              results.length > 0 ? `palette-option-${activeIndex}` : undefined
+            }
+            role="combobox"
+            aria-autocomplete="list"
+            className="absolute inset-0 w-full bg-transparent px-4 py-3 text-sm text-transparent outline-none caret-gray-900 selection:bg-blue-200 dark:caret-gray-100"
+          />
+        </div>
         {query.trim() === "" ? (
           <p className="px-4 py-3 text-xs text-gray-500">
             Escribe para buscar en los docsets cargados.
+          </p>
+        ) : noticeMode ? (
+          <p className="px-4 py-3 text-xs text-gray-500">
+            Buscando en {noticeNames.join(", ")}…
           </p>
         ) : results.length === 0 ? (
           <p className="px-4 py-3 text-xs text-gray-500">Sin resultados.</p>

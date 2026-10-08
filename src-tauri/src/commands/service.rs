@@ -13,7 +13,7 @@ use crate::docset::{
     apply_to_docset, read_index, read_info_plist, scan_dir, Docset, Entry, IssueKind, PendingTarix,
     ScanIssue, ScanReport, TarixLimits,
 };
-use crate::search::{search as search_index, SearchIndex, SearchResult};
+use crate::search::{parse_query, search as search_index, SearchIndex, SearchResult};
 
 use super::error::ApiError;
 use super::state::Loaded;
@@ -45,6 +45,21 @@ pub struct SearchResponse {
     pub request_id: u64,
     /// Resultados ordenados (hasta `limit`).
     pub results: Vec<SearchResult>,
+    /// Filtros del texto (`cpp:`) resueltos, en orden de escritura.
+    pub applied: Vec<AppliedFilter>,
+    /// Claves del texto que no resolvieron a ningún docset.
+    pub unknown: Vec<String>,
+}
+
+/// Un filtro de texto resuelto a un docset (para pintar el chip).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct AppliedFilter {
+    /// Clave tal como se escribió (`cpp`).
+    pub token: String,
+    /// Id del docset.
+    pub docset_id: String,
+    /// `false` si es un tarix pendiente (chip "(sin instalar)", excluido).
+    pub installed: bool,
 }
 
 /// Opciones de carga (la caché vive fuera de la carpeta del usuario).
@@ -209,19 +224,126 @@ pub fn fail_pending(loaded: &mut Loaded, pending: &PendingTarix) {
     }
 }
 
-/// Busca en lo cargado. Nunca falla: sin coincidencias devuelve vacío.
+/// Busca en lo cargado. El texto crudo puede traer filtros (`cpp:…`):
+/// se resuelven, se intersectan con `docset_ids` explícitos y viajan en
+/// la respuesta para los chips. Nunca falla: sin coincidencias, vacío.
 pub fn search_loaded(loaded: &mut Loaded, req: &SearchRequest) -> SearchResponse {
+    let resolved = resolve_query(loaded, &req.query, req.docset_ids.as_deref());
     let limit = req.limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT);
     let results = search_index(
         &mut loaded.index,
-        &req.query,
-        req.docset_ids.as_deref(),
+        &resolved.query,
+        resolved.ids.as_deref(),
         limit,
     );
     SearchResponse {
         request_id: req.request_id,
         results,
+        applied: resolved.applied,
+        unknown: resolved.unknown,
     }
+}
+
+/// Consulta resuelta: texto efectivo + filtros + ids instalados a buscar.
+struct ResolvedQuery {
+    /// Texto sin el prefijo de filtros (o el crudo si nada resolvió).
+    query: String,
+    /// Filtros resueltos en orden (instalados y pendientes).
+    applied: Vec<AppliedFilter>,
+    /// Claves sin docset (vacío si nada resolvió: búsqueda normal).
+    unknown: Vec<String>,
+    /// Ids instalados a buscar (`None` = sin restricción).
+    ids: Option<Vec<String>>,
+}
+
+/// Resuelve los filtros del texto contra cargados y pendientes.
+/// Niveles por token (primero que case gana): platform
+/// (`DocSetPlatformFamily`), nombre en minúsculas (conserva `+`, así
+/// `c++` funciona), y slug SOLO si los dos anteriores no dieron nada para
+/// ese token (el slug de C++ es `c`: `c:` no lo activa si hay familia `c`).
+/// Si NINGUNO resuelve, el texto completo es búsqueda normal sin chips.
+fn resolve_query(loaded: &Loaded, raw: &str, explicit: Option<&[String]>) -> ResolvedQuery {
+    let parsed = parse_query(raw);
+    if parsed.filters.is_empty() {
+        return ResolvedQuery {
+            query: parsed.query,
+            applied: Vec::new(),
+            unknown: Vec::new(),
+            ids: explicit.map(<[String]>::to_vec),
+        };
+    }
+    let mut applied: Vec<AppliedFilter> = Vec::new();
+    let mut unknown: Vec<String> = Vec::new();
+    for token in &parsed.filters {
+        match resolve_token(&loaded.docsets, &loaded.pending, token) {
+            Some((docset_id, installed)) => {
+                if !applied.iter().any(|a| a.docset_id == docset_id) {
+                    applied.push(AppliedFilter {
+                        token: token.clone(),
+                        docset_id,
+                        installed,
+                    });
+                }
+            }
+            None => {
+                if !unknown.contains(token) {
+                    unknown.push(token.clone());
+                }
+            }
+        }
+    }
+    if applied.is_empty() {
+        return ResolvedQuery {
+            query: raw.trim().to_string(),
+            applied: Vec::new(),
+            unknown: Vec::new(),
+            ids: explicit.map(<[String]>::to_vec),
+        };
+    }
+    let mut ids: Vec<String> = applied
+        .iter()
+        .filter(|a| a.installed)
+        .map(|a| a.docset_id.clone())
+        .collect();
+    if let Some(explicit) = explicit {
+        ids.retain(|id| explicit.contains(id));
+    }
+    ResolvedQuery {
+        query: parsed.query,
+        applied,
+        unknown,
+        ids: Some(ids),
+    }
+}
+
+/// Resuelve un token a (id, instalado) o `None`.
+fn resolve_token(
+    docsets: &[Docset],
+    pending: &[PendingTarix],
+    token: &str,
+) -> Option<(String, bool)> {
+    // Nivel 1: platform (familia del Info.plist).
+    if let Some(d) = docsets
+        .iter()
+        .find(|d| d.platform.as_deref().map(str::to_lowercase).as_deref() == Some(token))
+    {
+        return Some((d.id.clone(), true));
+    }
+    // Nivel 2: nombre en minúsculas (con `+`: `c++` vale).
+    if let Some(d) = docsets.iter().find(|d| d.name.to_lowercase() == token) {
+        return Some((d.id.clone(), true));
+    }
+    if let Some(p) = pending.iter().find(|p| p.name.to_lowercase() == token) {
+        return Some((p.id.clone(), false));
+    }
+    // Nivel 3: slug, solo si 1-2 fallaron para este token.
+    if let Some(d) = docsets.iter().find(|d| d.id == token) {
+        return Some((d.id.clone(), true));
+    }
+    if let Some(p) = pending.iter().find(|p| p.id == token) {
+        return Some((p.id.clone(), false));
+    }
+    None
 }
 
 /// Tipos con conteo de un docset, en orden de muestra. Docset
@@ -488,6 +610,158 @@ mod tests {
         // El tope se aplica (500 aunque se pidan más).
         let many = browse_entries(&loaded, "d", "Method", None, Some(9999)).expect("tope");
         assert_eq!(many.len(), 2);
+    }
+
+    /// `Loaded` con conflicto de claves: A con familia `c`, B sin
+    /// familia y un pendiente `C++` con slug `c`.
+    fn loaded_for_filters() -> Loaded {
+        use crate::search::SearchIndex;
+        let docset = |id: &str, name: &str, platform: Option<&str>| Docset {
+            id: id.to_string(),
+            name: name.to_string(),
+            platform: platform.map(str::to_string),
+            version: None,
+            bundle_id: None,
+            home_path: None,
+            icon: None,
+            root_path: PathBuf::from("x"),
+            contents_path: PathBuf::from("x/Contents"),
+        };
+        Loaded {
+            source_dir: PathBuf::from("x"),
+            docsets: vec![docset("a", "Alpha", Some("c")), docset("b", "Beta", None)],
+            pending: vec![PendingTarix {
+                id: "c".to_string(),
+                name: "C++".to_string(),
+                icon: None,
+                root_path: PathBuf::from("x"),
+            }],
+            issues: Vec::new(),
+            index: SearchIndex::new(),
+        }
+    }
+
+    #[test]
+    fn filter_levels_platform_name_then_slug() {
+        let loaded = loaded_for_filters();
+        // Nivel 1: familia gana al slug del pendiente (`c:` → A, no C++).
+        let (id, installed) =
+            super::resolve_token(&loaded.docsets, &loaded.pending, "c").expect("familia c");
+        assert_eq!(id, "a");
+        assert!(installed);
+        // Nivel 2: nombre (`beta`, `c++` pendiente sin instalar).
+        let (id, installed) =
+            super::resolve_token(&loaded.docsets, &loaded.pending, "beta").expect("nombre");
+        assert_eq!(id, "b");
+        assert!(installed);
+        let (id, installed) =
+            super::resolve_token(&loaded.docsets, &loaded.pending, "c++").expect("pendiente");
+        assert_eq!(id, "c");
+        assert!(!installed);
+        // Nivel 3: slug solo si 1-2 fallan (`b` no es familia ni nombre).
+        let (id, _) = super::resolve_token(&loaded.docsets, &loaded.pending, "b").expect("slug");
+        assert_eq!(id, "b");
+        assert!(super::resolve_token(&loaded.docsets, &loaded.pending, "zzz").is_none());
+    }
+
+    #[test]
+    fn resolve_query_partial_and_fallback() {
+        let loaded = loaded_for_filters();
+        // Parcial: resueltas con chip, desconocidas aparte.
+        let r = super::resolve_query(&loaded, "a,zzz:x", None);
+        assert_eq!(r.query, "x");
+        assert_eq!(r.applied.len(), 1);
+        assert_eq!(r.applied[0].docset_id, "a");
+        assert_eq!(r.unknown, vec!["zzz"]);
+        assert_eq!(r.ids, Some(vec!["a".to_string()]));
+        // Pendiente: chip sin instalar, fuera de la búsqueda.
+        let r = super::resolve_query(&loaded, "c++:x", None);
+        assert_eq!(r.applied.len(), 1);
+        assert!(!r.applied[0].installed);
+        assert_eq!(r.ids, Some(vec![]));
+        // Nada resuelve: texto completo como búsqueda normal, sin chips.
+        let r = super::resolve_query(&loaded, "zzz:x", None);
+        assert_eq!(r.query, "zzz:x");
+        assert!(r.applied.is_empty());
+        assert!(r.unknown.is_empty());
+        assert_eq!(r.ids, None);
+        // Intersección con explícitos.
+        let r = super::resolve_query(&loaded, "a,b:x", Some(&["b".to_string()]));
+        assert_eq!(r.ids, Some(vec!["b".to_string()]));
+        // La cola con `:` llega íntegra al último segmento de T5.
+        let r = super::resolve_query(&loaded, "a:std::vector", None);
+        assert_eq!(r.query, "std::vector");
+    }
+
+    #[test]
+    fn prefix_filter_costs_like_plain_search() {
+        use crate::search::index::entry;
+        use crate::search::SearchIndex;
+        use std::time::Instant;
+        // 4 docsets x 25k entradas con familias f1..f4.
+        let mut docsets = Vec::new();
+        let mut raw = Vec::with_capacity(100_000);
+        for d in 0..4 {
+            let id = format!("ds{d}");
+            docsets.push(Docset {
+                id: id.clone(),
+                name: format!("Doc{d}"),
+                platform: Some(format!("f{}", d + 1)),
+                version: None,
+                bundle_id: None,
+                home_path: None,
+                icon: None,
+                root_path: PathBuf::from("x"),
+                contents_path: PathBuf::from("x/Contents"),
+            });
+            for i in 0..25_000_u32 {
+                raw.push(entry(&id, &format!("item_{i:05}"), "Function"));
+            }
+        }
+        let mut loaded = Loaded {
+            source_dir: PathBuf::from("x"),
+            docsets,
+            pending: Vec::new(),
+            issues: Vec::new(),
+            index: SearchIndex::build(raw),
+        };
+        let run = |loaded: &mut Loaded, query: &str, limit: usize| {
+            let start = Instant::now();
+            let res = search_loaded(
+                loaded,
+                &SearchRequest {
+                    request_id: 1,
+                    query: query.to_string(),
+                    docset_ids: None,
+                    limit: Some(limit),
+                },
+            );
+            (res, start.elapsed())
+        };
+        let (plain, plain_t) = run(&mut loaded, "item_001", 500);
+        let (pref, pref_t) = run(&mut loaded, "f1:item_001", 20);
+        eprintln!("100k: plana={plain_t:?} con prefijo={pref_t:?}");
+        assert!(!pref.results.is_empty());
+        assert!(pref.results.iter().all(|r| r.docset_id == "ds0"));
+        assert_eq!(pref.applied.len(), 1);
+        assert_eq!(pref.applied[0].token, "f1");
+        assert!(pref.unknown.is_empty());
+        // El prefijo solo recorta: mismos 20 primeros que la plana
+        // filtrada a ese docset (mismo orden).
+        let plain_names: Vec<&str> = plain
+            .results
+            .iter()
+            .filter(|r| r.docset_id == "ds0")
+            .take(20)
+            .map(|r| r.name.as_str())
+            .collect();
+        let pref_names: Vec<&str> = pref.results.iter().map(|r| r.name.as_str()).collect();
+        assert_eq!(pref_names, plain_names);
+        // Cota amplia (debug es lento): el filtro no debe multiplicar el coste.
+        assert!(
+            pref_t.as_secs() < 5,
+            "búsqueda con prefijo lenta: {pref_t:?} (plana: {plain_t:?})"
+        );
     }
 
     #[test]

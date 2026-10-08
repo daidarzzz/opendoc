@@ -69,6 +69,17 @@ export interface SearchRequest {
 export interface SearchResponse {
   request_id: number;
   results: SearchResult[];
+  /** Filtros del texto resueltos, en orden de escritura. */
+  applied: AppliedFilter[];
+  /** Claves del texto sin docset. Vacío si nada resolvió (búsqueda normal). */
+  unknown: string[];
+}
+
+/** Un filtro de texto resuelto (commands::AppliedFilter). */
+export interface AppliedFilter {
+  token: string;
+  docset_id: string;
+  installed: boolean;
 }
 
 /** Un tipo con su etiqueta y conteo (browse::KindInfo). */

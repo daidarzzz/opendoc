@@ -1,7 +1,8 @@
 // Slice de la Command Palette (Ctrl/Cmd+K).
 import { create } from "zustand";
 import { searchDocs } from "../lib/commands";
-import type { SearchResult } from "../lib/types";
+import { dropTokens } from "../lib/paletteFilter";
+import type { AppliedFilter, SearchResult } from "../lib/types";
 import { useTabs } from "./tabs";
 
 export const PALETTE_LIMIT = 20;
@@ -10,12 +11,18 @@ interface PaletteState {
   open: boolean;
   query: string;
   results: SearchResult[];
+  applied: AppliedFilter[];
+  unknown: string[];
   activeIndex: number;
   setOpen: (open: boolean) => void;
   toggle: () => void;
   setQuery: (query: string) => void;
   moveActive: (delta: number) => void;
   chooseActive: (opts?: { newTab?: boolean }) => void;
+  /** Quita un filtro del texto (`cpp,py:x` − `py` → `cpp:x`). */
+  removeFilter: (token: string) => void;
+  /** Quita el último filtro (`cpp,py:x` → `cpp:x`; `cpp:x` → `x`). */
+  removeLastFilter: () => void;
 }
 
 export const usePalette = create<PaletteState>()((set, get) => {
@@ -24,6 +31,8 @@ export const usePalette = create<PaletteState>()((set, get) => {
     open: false,
     query: "",
     results: [],
+    applied: [],
+    unknown: [],
     activeIndex: 0,
     setOpen: (open: boolean) => {
       set({ open });
@@ -41,10 +50,15 @@ export const usePalette = create<PaletteState>()((set, get) => {
         try {
           const res = await searchDocs(query, { limit: PALETTE_LIMIT });
           if (mySeq !== seq) return; // Obsoleta: se descarta.
-          set({ results: res.results, activeIndex: 0 });
+          set({
+            results: res.results,
+            applied: res.applied,
+            unknown: res.unknown,
+            activeIndex: 0,
+          });
         } catch {
           if (mySeq !== seq) return;
-          set({ results: [] });
+          set({ results: [], applied: [], unknown: [] });
         }
       })();
     },
@@ -67,6 +81,16 @@ export const usePalette = create<PaletteState>()((set, get) => {
           { name: chosen.name, path: chosen.path },
           { newTab: opts?.newTab },
         );
+    },
+    removeFilter: (token: string) => {
+      const next = dropTokens(get().query, (parts) =>
+        parts.filter((p) => p.toLowerCase() !== token.toLowerCase()),
+      );
+      if (next !== null) get().setQuery(next);
+    },
+    removeLastFilter: () => {
+      const next = dropTokens(get().query, (parts) => parts.slice(0, -1));
+      if (next !== null) get().setQuery(next);
     },
   };
 });
