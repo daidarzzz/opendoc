@@ -22,7 +22,7 @@ const PaletteRow = memo(function PaletteRow({
   icon: string | null;
   docName: string;
   onHover: (index: number) => void;
-  onChoose: () => void;
+  onChoose: (opts?: { newTab?: boolean }) => void;
 }) {
   return (
     <li
@@ -33,7 +33,13 @@ const PaletteRow = memo(function PaletteRow({
         active ? "bg-blue-100 dark:bg-blue-900" : ""
       }`}
       onMouseEnter={() => onHover(index)}
-      onClick={onChoose}
+      onClick={() => onChoose()}
+      onAuxClick={(e) => {
+        if (e.button === 1) {
+          e.preventDefault();
+          onChoose({ newTab: true });
+        }
+      }}
     >
       <span className="flex items-center gap-2">
         <DocsetIcon icon={icon} name={docName} />
@@ -91,7 +97,7 @@ export function CommandPalette() {
       moveActive(-1);
     } else if (e.key === "Enter") {
       e.preventDefault();
-      chooseActive();
+      chooseActive({ newTab: e.ctrlKey || e.metaKey });
     } else if (e.key === "Escape") {
       e.preventDefault();
       setOpen(false);

@@ -111,6 +111,7 @@ v0.1: MVP (primer objetivo)
  Tests de Rust para escaneo, lectura de índices y búsqueda.
 v0.2: Uso diario
 Pestañas e historial (atrás/adelante).
+Siguiente (tras V2-3): persistir las pestañas entre sesiones y ejecutar Vitest en el job check del CI.
 Favoritos y recientes.
 Tabla de contenidos de la página actual.
 Filtro por docset y por prefijo de búsqueda.

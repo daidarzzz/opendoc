@@ -2,7 +2,7 @@
 import { create } from "zustand";
 import { searchDocs } from "../lib/commands";
 import type { SearchResult } from "../lib/types";
-import { useViewer } from "./viewer";
+import { useTabs } from "./tabs";
 
 export const PALETTE_LIMIT = 20;
 
@@ -15,7 +15,7 @@ interface PaletteState {
   toggle: () => void;
   setQuery: (query: string) => void;
   moveActive: (delta: number) => void;
-  chooseActive: () => void;
+  chooseActive: (opts?: { newTab?: boolean }) => void;
 }
 
 export const usePalette = create<PaletteState>()((set, get) => {
@@ -55,14 +55,18 @@ export const usePalette = create<PaletteState>()((set, get) => {
         (activeIndex + delta + results.length) % results.length;
       set({ activeIndex: next });
     },
-    chooseActive: () => {
+    chooseActive: (opts) => {
       const { results, activeIndex } = get();
       const chosen = results[activeIndex];
       if (!chosen) return;
       set({ open: false, activeIndex: 0 });
-      void useViewer
+      void useTabs
         .getState()
-        .openDoc(chosen.docset_id, { name: chosen.name, path: chosen.path });
+        .openEntry(
+          chosen.docset_id,
+          { name: chosen.name, path: chosen.path },
+          { newTab: opts?.newTab },
+        );
     },
   };
 });

@@ -5,7 +5,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { BROWSE_PAGE, useBrowse } from "../store/browse";
 import { useDocsets } from "../store/docsets";
-import { useViewer } from "../store/viewer";
+import { useTabs } from "../store/tabs";
 import type { NavEntry } from "../lib/types";
 import { DocsetIcon } from "./DocsetIcon";
 
@@ -41,8 +41,9 @@ export function BrowseTree() {
   const ensureRange = useBrowse((s) => s.ensureRange);
   const retryEntries = useBrowse((s) => s.retryEntries);
   const ensureKinds = useBrowse((s) => s.ensureKinds);
-  const openDoc = useViewer((s) => s.openDoc);
-  const current = useViewer((s) => s.current);
+  const openEntry = useTabs((s) => s.openEntry);
+  const openHome = useTabs((s) => s.openHome);
+  const activeDoc = useTabs((s) => s.tabs.find((t) => t.id === s.activeId)?.docsetId ?? null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -140,15 +141,15 @@ export function BrowseTree() {
     }
   };
 
-  const activate = (idx: number): void => {
+  const activate = (idx: number, newTab = false): void => {
     const r = rows[idx];
     if (!r) return;
     if (r.type === "doc") {
-      void openDoc(r.docsetId);
+      void openHome(r.docsetId, { newTab });
     } else if (r.type === "kind") {
       toggleKind(r.docsetId, r.kind);
     } else if (r.type === "entry") {
-      void openDoc(r.docsetId, { name: r.entry.name, path: r.entry.path });
+      void openEntry(r.docsetId, { name: r.entry.name, path: r.entry.path }, { newTab });
     } else if (r.type === "kinds-error") {
       void ensureKinds(r.docsetId);
     } else if (r.type === "entries-error") {
@@ -197,7 +198,7 @@ export function BrowseTree() {
       }
     } else if (e.key === "Enter") {
       e.preventDefault();
-      activate(activeIdx);
+      activate(activeIdx, e.ctrlKey || e.metaKey);
     } else if (e.key === "Escape") {
       e.preventDefault();
       collapseAll();
@@ -232,11 +233,12 @@ export function BrowseTree() {
               row={r}
               top={(start + k) * ROW_H}
               active={start + k === activeIdx}
-              currentDoc={current?.docsetId ?? null}
+              currentDoc={activeDoc}
               onToggleDoc={toggleDoc}
               onToggleKind={toggleKind}
               onActivate={() => activate(start + k)}
-              onOpenDoc={(docsetId, entry) => void openDoc(docsetId, entry)}
+              onAuxEntry={(docsetId, entry) => void openEntry(docsetId, entry, { newTab: true })}
+              onOpenHome={(docsetId, newTab) => void openHome(docsetId, { newTab })}
             />
           ))}
         </div>
@@ -263,12 +265,11 @@ interface RowViewProps {
   onToggleDoc: (docsetId: string) => void;
   onToggleKind: (docsetId: string, kind: string) => void;
   onActivate: () => void;
-  onOpenDoc: (docsetId: string, entry?: { name: string; path: string }) => void;
+  onAuxEntry: (docsetId: string, entry: { name: string; path: string }) => void;
+  onOpenHome: (docsetId: string, newTab: boolean) => void;
 }
 
-// Fila memoizada: al desplazar, las filas que siguen visibles no se
-// re-renderizan (los objetos Row son estables entre scrolls).
-const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDoc, onToggleKind, onActivate, onOpenDoc }: RowViewProps) {
+const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDoc, onToggleKind, onActivate, onAuxEntry, onOpenHome }: RowViewProps) {
   const base: React.CSSProperties = {
     position: "absolute",
     top,
@@ -303,7 +304,13 @@ const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDo
         </button>
         <DocsetIcon icon={row.icon} name={row.name} />
         <button
-          onClick={() => onOpenDoc(row.docsetId)}
+          onClick={() => onOpenHome(row.docsetId, false)}
+          onAuxClick={(e) => {
+            if (e.button === 1) {
+              e.preventDefault();
+              onOpenHome(row.docsetId, true);
+            }
+          }}
           title={row.name}
           className="flex-1 truncate text-left"
         >
@@ -409,6 +416,12 @@ const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDo
       style={{ ...base, paddingLeft: 44 }}
       className={`flex cursor-pointer items-center rounded text-sm ${hl}`}
       onClick={onActivate}
+      onAuxClick={(e) => {
+        if (e.button === 1) {
+          e.preventDefault();
+          onAuxEntry(row.docsetId, { name: row.entry.name, path: row.entry.path });
+        }
+      }}
       title={row.entry.name}
     >
       <span className="truncate">{row.entry.name}</span>

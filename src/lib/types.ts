@@ -106,3 +106,22 @@ export interface Settings {
   docsets_dir: string | null;
   theme: ThemeMode;
 }
+
+/** Una parada del historial de pestaña (URL canónica opendoc://). */
+export interface TabEntry {
+  url: string;
+  title: string;
+}
+
+/** Pestaña con su historial propio (store tabs, lógica en tabHistory). */
+export interface Tab {
+  id: string;
+  docsetId: string;
+  past: TabEntry[];
+  current: TabEntry | null;
+  future: TabEntry[];
+  /** URL puesta por back/forward/apertura, pendiente de eco del iframe. */
+  pendingUrl: string | null;
+  /** Scroll guardado por URL (acotado). */
+  scrolls: Record<string, number>;
+}

@@ -1,111 +1,195 @@
-// Visor de documentación (T8): el HTML del docset aislado en un <iframe>.
-// sandbox="allow-scripts" y nada más: el JS propio del docset (navegación
-// colapsable, resaltado, searchtools vía <script>) funciona con origen
-// opaco; sin same-origin no hay localStorage/XHR (el docset offline no los
-// necesita; la búsqueda global la da la paleta); sin forms/popups/top-nav
-// el contenido queda confinado. Si un docset se rompe, la escalada
-// documentada es allow-same-origin (sigue sin acceso al padre: orígenes
-// distintos en dev y en prod).
-//
-// Tema oscuro provisional (protocol inyecta style+script constantes):
-// tras cada load del iframe y al cambiar el tema resuelto se envía
-// {type:"opendoc-theme", value:"dark"|"light"}. El script del docset solo
-// acepta mensajes de window.parent.
+// Visor de documentación (T8 + pestañas V2-3): el HTML del docset aislado
+// en un <iframe> (sandbox="allow-scripts", origen opaco). Solo la pestaña
+// activa monta su iframe; las demás guardan URL y scroll.
+// El hijo reporta navegaciones/anclas/scroll/teclas por postMessage
+// (inyectado por el protocolo); aquí se valida todo: fuente = el iframe
+// montado, forma exacta, URLs opendoc de docsets cargados, título ≤200 sin
+// controles, scrollY finito en rango y teclas a ≤10/s.
 import { useEffect, useRef, useState } from "react";
+import { TabsBar } from "./TabsBar";
 import { useDocsets } from "../store/docsets";
 import { usePalette } from "../store/palette";
-import { useViewer } from "../store/viewer";
+import { useTabs } from "../store/tabs";
+import {
+  validateKeyMessage,
+  validateNavMessage,
+  validateScrollMessage,
+} from "../lib/iframeMessages";
+import { toViewerUrl } from "../lib/opendocUrl";
 
 export function Viewer() {
-  const { current, error } = useViewer();
+  const tabs = useTabs((s) => s.tabs);
+  const activeId = useTabs((s) => s.activeId);
+  const tabError = useTabs((s) => s.error);
+  const childNav = useTabs((s) => s.childNav);
+  const childScroll = useTabs((s) => s.childScroll);
+  const childKey = useTabs((s) => s.childKey);
   const { docsets, loading, dirMissing, savedDir, choose } = useDocsets();
   const setOpen = usePalette((s) => s.setOpen);
+  const [src, setSrc] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const viewerUrl = current?.viewerUrl;
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  useEffect(() => {
-    setLoaded(false);
-  }, [viewerUrl]);
+  const active = tabs.find((t) => t.id === activeId);
+  const backendUrl = active?.current?.url ?? null;
+  const docsetLoaded =
+    !active?.current || docsets.some((d) => d.id === active.docsetId);
 
-  // TEMP: tema oscuro del visor DESACTIVADO (la inversión por filtro se
-  // ve bugueada; se retomará en v1.0 con temas por docset). El protocolo
-  // sigue inyectando style+script, pero siempre pedimos "light", así que
-  // el atributo data-opendoc-theme nunca se aplica. Para reactivarlo:
-  // mandar el tema resuelto (ver git history de este fix).
+  // Carga programática (apertura, cambio de pestaña, atrás/adelante):
+  // solo aquí se toca `src`; los reportes del hijo no la cambian.
   useEffect(() => {
-    if (!loaded || !viewerUrl) return;
-    iframeRef.current?.contentWindow?.postMessage(
-      { type: "opendoc-theme", value: "light" },
-      "*",
-    );
-  }, [loaded, viewerUrl]);
+    let alive = true;
+    setLoaded(false);
+    if (!backendUrl) {
+      setSrc(null);
+      return;
+    }
+    void toViewerUrl(backendUrl).then((url) => {
+      if (alive) setSrc(url);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [activeId, backendUrl]);
+
+  // Mensajes del hijo, con validación estricta.
+  useEffect(() => {
+    function onMessage(e: MessageEvent) {
+      const frame = iframeRef.current;
+      if (!frame || e.source !== frame.contentWindow) return;
+      const data: unknown = e.data;
+      if (typeof data !== "object" || data === null) return;
+      const type = (data as Record<string, unknown>)["type"];
+      const ids = useDocsets.getState().docsets.map((d) => d.id);
+      if (type === "opendoc-nav") {
+        const nav = validateNavMessage(data, true, ids);
+        if (nav) childNav(nav.url, nav.title);
+      } else if (type === "opendoc-scroll") {
+        const sc = validateScrollMessage(data, true);
+        const tab = useTabs.getState().active();
+        if (sc && tab?.current) childScroll(tab.current.url, sc.y);
+      } else if (type === "opendoc-key") {
+        const kp = validateKeyMessage(data, true);
+        if (kp) childKey(kp.key, kp.shift);
+      }
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [childNav, childScroll, childKey]);
+
+  // Tras cada carga: tema claro (oscuro desactivado) + scroll guardado.
+  const onIframeLoad = (): void => {
+    setLoaded(true);
+    const win = iframeRef.current?.contentWindow;
+    if (!win) return;
+    win.postMessage({ type: "opendoc-theme", value: "light" }, "*");
+    const tab = useTabs.getState().active();
+    const url = tab?.current?.url;
+    if (url) {
+      const y = tab?.scrolls[url];
+      if (y !== undefined) win.postMessage({ type: "opendoc-scroll-to", y }, "*");
+    }
+  };
 
   if (docsets.length === 0 && !loading) {
     return (
-      <main className="flex flex-1 flex-col items-center justify-center p-8">
-        {dirMissing ? (
-          <>
-            <p className="text-sm text-gray-500">
-              La carpeta guardada no está disponible
-              {savedDir ? `: ${savedDir}` : ""} (¿disco desconectado?).
-            </p>
-            <button
-              onClick={() => void choose()}
-              className="mt-3 rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
-            >
-              Elegir otra carpeta
-            </button>
-          </>
-        ) : (
-          <>
-            <p className="text-sm text-gray-500">
-              Elige tu carpeta de docsets para empezar.
-            </p>
-            <button
-              onClick={() => void choose()}
-              className="mt-3 rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
-            >
-              Elegir carpeta
-            </button>
-          </>
-        )}
-        {error !== "" && <p className="mt-2 text-sm text-red-500">{error}</p>}
-      </main>
-    );
-  }
-  if (!current) {
-    return (
-      <main className="flex flex-1 flex-col items-center justify-center p-8">
-        <p className="text-sm text-gray-500">
-          Pulsa Ctrl+K (Cmd+K en macOS) para buscar…
-        </p>
-        <button
-          onClick={() => setOpen(true)}
-          className="mt-3 rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
-        >
-          Buscar
-        </button>
-        {error !== "" && <p className="mt-2 text-sm text-red-500">{error}</p>}
+      <main className="flex min-w-0 flex-1 flex-col">
+        <FolderPrompt
+          dirMissing={dirMissing}
+          savedDir={savedDir}
+          choose={choose}
+          error={tabError}
+        />
       </main>
     );
   }
 
   return (
-    <main className="flex min-w-0 flex-1 flex-col">
-      {!loaded && (
-        <p className="p-4 text-sm text-gray-500">Cargando {current.name}…</p>
+    <main className="flex min-w-0 flex-1 flex-col" role="tabpanel" id="viewer-panel" aria-label="Visor">
+      <TabsBar />
+      {!active?.current || !docsetLoaded ? (
+        <div className="flex flex-1 flex-col items-center justify-center p-8">
+          {!active?.current ? (
+            <>
+              <p className="text-sm text-gray-500">
+                Pulsa Ctrl+K (Cmd+K en macOS) para buscar…
+              </p>
+              <button
+                onClick={() => setOpen(true)}
+                className="mt-3 rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+              >
+                Buscar
+              </button>
+            </>
+          ) : (
+            <p className="text-sm text-yellow-700 dark:text-yellow-300">
+              El docset de esta pestaña ya no está cargado. Elige la carpeta
+              de docsets para recuperarlo.
+            </p>
+          )}
+          {tabError !== "" && <p className="mt-2 text-sm text-red-500">{tabError}</p>}
+        </div>
+      ) : (
+        <>
+          {!loaded && (
+            <p className="p-4 text-sm text-gray-500">Cargando {active.current.title}…</p>
+          )}
+          <iframe
+            ref={iframeRef}
+            key={`${active.id}:${src ?? ""}`}
+            src={src ?? undefined}
+            title={`Documentación de ${active.current.title}`}
+            sandbox="allow-scripts"
+            className="h-full w-full flex-1 border-0 bg-white"
+            onLoad={onIframeLoad}
+          />
+          {tabError !== "" && <p className="p-2 text-sm text-red-500">{tabError}</p>}
+        </>
       )}
-      <iframe
-        ref={iframeRef}
-        key={current.viewerUrl}
-        src={current.viewerUrl}
-        title={`Documentación de ${current.name}`}
-        sandbox="allow-scripts"
-        className="h-full w-full flex-1 border-0 bg-white"
-        onLoad={() => setLoaded(true)}
-      />
-      {error !== "" && <p className="p-2 text-sm text-red-500">{error}</p>}
     </main>
+  );
+}
+
+function FolderPrompt({
+  dirMissing,
+  savedDir,
+  choose,
+  error,
+}: {
+  dirMissing: boolean;
+  savedDir: string | null;
+  choose: () => Promise<void>;
+  error: string;
+}) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center p-8">
+      {dirMissing ? (
+        <>
+          <p className="text-sm text-gray-500">
+            La carpeta guardada no está disponible
+            {savedDir ? `: ${savedDir}` : ""} (¿disco desconectado?).
+          </p>
+          <button
+            onClick={() => void choose()}
+            className="mt-3 rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+          >
+            Elegir otra carpeta
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="text-sm text-gray-500">
+            Elige tu carpeta de docsets para empezar.
+          </p>
+          <button
+            onClick={() => void choose()}
+            className="mt-3 rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+          >
+            Elegir carpeta
+          </button>
+        </>
+      )}
+      {error !== "" && <p className="mt-2 text-sm text-red-500">{error}</p>}
+    </div>
   );
 }

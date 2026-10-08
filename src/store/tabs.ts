@@ -1,0 +1,217 @@
+// Slice de pestañas con historial propio (v0.2 V2-3).
+// La lógica de pilas es pura (lib/tabHistory); aquí solo orquesta:
+// - las cargas programáticas fijan `pendingUrl` (el eco del iframe se
+//   consume sin apilar de nuevo);
+// - el iframe reporta navegación/scroll/teclas ya validadas por el Viewer;
+// - solo la pestaña activa monta su iframe (las demás guardan URL+scroll).
+// Sin persistencia entre sesiones (siguiente tarea).
+import { create } from "zustand";
+import { getDocsetHome } from "../lib/commands";
+import { docsetEntryUrl, toViewerUrl } from "../lib/opendocUrl";
+import { keyRateAllow } from "../lib/iframeMessages";
+import type { IframeKey } from "../lib/iframeMessages";
+import {
+  appendTab,
+  closeTab as closeTabPure,
+  consumePending,
+  emptyTab,
+  goBack as goBackPure,
+  goForward as goForwardPure,
+  moveTab as moveTabPure,
+  navigateTab,
+  noteScroll,
+  tabWithEntry,
+} from "../lib/tabHistory";
+import type { Tab } from "../lib/types";
+
+export interface OpenOpts {
+  /** Abrir en pestaña nueva en vez de la activa. */
+  newTab?: boolean;
+}
+
+interface TabsState {
+  tabs: Tab[];
+  activeId: string;
+  error: string;
+  /** Teclas reenviadas recientes (tasa ≤10/s, anti-bucle de un docset). */
+  keyTimes: number[];
+  active: () => Tab | undefined;
+  openEntry: (
+    docsetId: string,
+    entry: { name: string; path: string },
+    opts?: OpenOpts,
+  ) => Promise<void>;
+  openHome: (docsetId: string, opts?: OpenOpts) => Promise<void>;
+  activateTab: (id: string) => void;
+  closeTab: (id: string) => void;
+  /** Pestaña vacía nueva (bienvenida) y la activa. */
+  newTab: () => void;
+  moveTab: (id: string, to: number) => void;
+  goBack: () => void;
+  goForward: () => void;
+  childNav: (url: string, title: string | null) => void;
+  childScroll: (url: string, y: number) => void;
+  childKey: (key: IframeKey, shift: boolean) => void;
+}
+
+function errText(e: unknown): string {
+  return e instanceof Error ? e.message : JSON.stringify(e);
+}
+
+/** docsetId de una URL canónica `opendoc://<id>/…`. */
+function docsetOf(url: string): string {
+  return url.slice("opendoc://".length).split("/", 1)[0];
+}
+
+export const useTabs = create<TabsState>()((set, get) => {
+  const fresh = emptyTab();
+  return {
+    tabs: [fresh],
+    activeId: fresh.id,
+    error: "",
+    keyTimes: [],
+
+    active: () => get().tabs.find((t) => t.id === get().activeId),
+
+    openEntry: async (docsetId, entry, opts) => {
+      try {
+        const url = docsetEntryUrl(docsetId, entry.path);
+        await toViewerUrl(url); // Valida el formato (lanza si no es opendoc://).
+        const item = { url, title: entry.name };
+        set((s) => {
+          if (opts?.newTab) {
+            const r = appendTab(s.tabs, s.activeId, {
+              ...tabWithEntry(docsetId, item),
+              pendingUrl: url,
+            });
+            return { tabs: r.tabs, activeId: r.activeId, error: "" };
+          }
+          const tab = s.tabs.find((t) => t.id === s.activeId);
+          if (!tab) return s;
+          const next = { ...navigateTab(tab, item), docsetId, pendingUrl: url };
+          return {
+            tabs: s.tabs.map((t) => (t.id === tab.id ? next : t)),
+            error: "",
+          };
+        });
+      } catch (e) {
+        set({ error: errText(e) });
+      }
+    },
+
+    openHome: async (docsetId, opts) => {
+      try {
+        const url = await getDocsetHome(docsetId);
+        await toViewerUrl(url);
+        // El título real lo confirma el iframe (document.title).
+        const item = { url, title: docsetId };
+        set((s) => {
+          if (opts?.newTab) {
+            const r = appendTab(s.tabs, s.activeId, {
+              ...tabWithEntry(docsetId, item),
+              pendingUrl: url,
+            });
+            return { tabs: r.tabs, activeId: r.activeId, error: "" };
+          }
+          const tab = s.tabs.find((t) => t.id === s.activeId);
+          if (!tab) return s;
+          const next = { ...navigateTab(tab, item), docsetId, pendingUrl: url };
+          return {
+            tabs: s.tabs.map((t) => (t.id === tab.id ? next : t)),
+            error: "",
+          };
+        });
+      } catch (e) {
+        set({ error: errText(e) });
+      }
+    },
+
+    activateTab: (id: string) => {
+      if (get().tabs.some((t) => t.id === id)) set({ activeId: id });
+    },
+
+    closeTab: (id: string) => {
+      const { tabs, activeId } = closeTabPure(get().tabs, get().activeId, id);
+      set({ tabs, activeId });
+    },
+
+    newTab: () => {
+      const s = get();
+      const r = appendTab(s.tabs, s.activeId, emptyTab());
+      set({ tabs: r.tabs, activeId: r.activeId, error: "" });
+    },
+
+    moveTab: (id: string, to: number) => {
+      set((s) => ({ tabs: moveTabPure(s.tabs, id, to) }));
+    },
+
+    goBack: () => {
+      set((s) => {
+        const tab = s.tabs.find((t) => t.id === s.activeId);
+        if (!tab) return s;
+        const next = goBackPure(tab);
+        if (next === tab) return s;
+        return { tabs: s.tabs.map((t) => (t.id === tab.id ? next : t)) };
+      });
+    },
+
+    goForward: () => {
+      set((s) => {
+        const tab = s.tabs.find((t) => t.id === s.activeId);
+        if (!tab) return s;
+        const next = goForwardPure(tab);
+        if (next === tab) return s;
+        return { tabs: s.tabs.map((t) => (t.id === tab.id ? next : t)) };
+      });
+    },
+
+    childNav: (url: string, title: string | null) => {
+      set((s) => {
+        const tab = s.tabs.find((t) => t.id === s.activeId);
+        const current = tab?.current;
+        if (!tab || !current) return s;
+        // Eco de carga programática: solo refresca título y consume.
+        const { tab: cleared, consumed } = consumePending(tab, url);
+        const item = { url: consumed ? current.url : url, title: title ?? current.title };
+        const next = consumed
+          ? { ...cleared, current: item }
+          : { ...navigateTab(cleared, item), docsetId: docsetOf(url) };
+        return { tabs: s.tabs.map((t) => (t.id === tab.id ? next : t)) };
+      });
+    },
+
+    childScroll: (url: string, y: number) => {
+      set((s) => {
+        const tab = s.tabs.find((t) => t.id === s.activeId);
+        if (!tab || tab.current?.url !== url) return s;
+        const next = noteScroll(tab, url, y);
+        return { tabs: s.tabs.map((t) => (t.id === tab.id ? next : t)) };
+      });
+    },
+
+    childKey: (key: IframeKey, shift: boolean) => {
+      const now = Date.now();
+      const { allowed, times } = keyRateAllow(get().keyTimes, now);
+      set({ keyTimes: times });
+      if (!allowed) return;
+      const s = get();
+      if (key === "w") {
+        s.closeTab(s.activeId);
+      } else if (key === "tab") {
+        const idx = s.tabs.findIndex((t) => t.id === s.activeId);
+        const next = shift
+          ? s.tabs[(idx - 1 + s.tabs.length) % s.tabs.length]
+          : s.tabs[(idx + 1) % s.tabs.length];
+        if (next) s.activateTab(next.id);
+      } else if (key === "alt-left") {
+        s.goBack();
+      } else if (key === "alt-right") {
+        s.goForward();
+      } else {
+        const idx = Number(key) - 1;
+        const target = s.tabs[idx];
+        if (target) s.activateTab(target.id);
+      }
+    },
+  };
+});

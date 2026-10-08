@@ -99,13 +99,18 @@ fn serve_inner(
 /// Soporte de tema oscuro provisional (hasta temas por docset en v1.0).
 /// Inyecta SIEMPRE en `text/html` un bloque constante: un `<style>` con el
 /// filtro invertido bajo `html[data-opendoc-theme="dark"]` (reinvirtiendo
-/// img/video/canvas/svg) y un `<script>` mínimo que pone/quita ese atributo
-/// al recibir `{type:"opendoc-theme", value:"dark"|"light"}` solo desde
-/// `window.parent`. Sin el atributo no cambia nada visualmente.
+/// img/video/canvas/svg) y un `<script>` mínimo con cuatro tareas: aplicar
+/// el tema que mande `window.parent`, reportar navegaciones al padre en
+/// `load` y `hashchange` (caza anclas `#...` sin petición nueva), reportar
+/// scroll throttled y restaurarlo a petición, y reenviar solo los atajos
+/// Ctrl/Cmd+W, Ctrl/Cmd+Tab, Ctrl/Cmd+1..9 y Alt+←/→.
+/// El contenido del iframe NO es de fiar: el padre valida todo (origen =
+/// el iframe montado, forma exacta, URLs opendoc de docsets cargados,
+/// título ≤200 sin controles, scrollY finito en rango, teclas a ≤10/s).
 /// Punto de inserción: antes de `</head>` (insensible a caso) o, si no hay,
 /// tras el BOM / al inicio. Solo ASCII: no re-codifica el documento.
 pub const THEME_STYLE: &str = "<style>html[data-opendoc-theme=\"dark\"]{filter:invert(1) hue-rotate(180deg);}html[data-opendoc-theme=\"dark\"] img,html[data-opendoc-theme=\"dark\"] video,html[data-opendoc-theme=\"dark\"] canvas,html[data-opendoc-theme=\"dark\"] svg{filter:invert(1) hue-rotate(180deg);}</style>";
-pub const THEME_SCRIPT: &str = "<script>(function(){window.addEventListener(\"message\",function(e){if(e.source!==window.parent)return;var d=e.data;if(!d||d.type!==\"opendoc-theme\")return;if(d.value===\"dark\"){document.documentElement.setAttribute(\"data-opendoc-theme\",\"dark\");}else if(d.value===\"light\"){document.documentElement.removeAttribute(\"data-opendoc-theme\");}});})();</script>";
+pub const THEME_SCRIPT: &str = r#"<script>(function(){function rep(t,x){x=x||{};x.type=t;window.parent.postMessage(x,"*");}function here(){return {url:String(location.href),title:String(document.title)};}window.addEventListener("message",function(e){if(e.source!==window.parent)return;var d=e.data;if(!d)return;if(d.type==="opendoc-theme"){if(d.value==="dark"){document.documentElement.setAttribute("data-opendoc-theme","dark");}else if(d.value==="light"){document.documentElement.removeAttribute("data-opendoc-theme");}}else if(d.type==="opendoc-scroll-to"){var y=Number(d.y);if(isFinite(y)&&y>=0){window.scrollTo(0,y);}}});window.addEventListener("load",function(){rep("opendoc-nav",here());});window.addEventListener("hashchange",function(){rep("opendoc-nav",here());});var lastY=-1,lastT=0;window.addEventListener("scroll",function(){var y=window.scrollY||window.pageYOffset||0;var t=Date.now();if(t-lastT>250&&y!==lastY){lastT=t;lastY=y;rep("opendoc-scroll",{y:y});}},true);window.addEventListener("keydown",function(e){var k=(e.key||"").toLowerCase();if((e.ctrlKey||e.metaKey)&&!e.altKey&&(k==="w"||k==="tab"||(k.length===1&&k>="1"&&k<="9"))){e.preventDefault();if(e.stopPropagation)e.stopPropagation();rep("opendoc-key",{key:k,shift:!!e.shiftKey});}else if(e.altKey&&!e.ctrlKey&&!e.metaKey&&(e.key==="ArrowLeft"||e.key==="ArrowRight")){e.preventDefault();if(e.stopPropagation)e.stopPropagation();rep("opendoc-key",{key:e.key==="ArrowLeft"?"alt-left":"alt-right",shift:false});}},true);})();</script>"#;
 
 /// BOM UTF-8 (se respeta al insertar al inicio).
 const UTF8_BOM: [u8; 3] = [0xEF, 0xBB, 0xBF];
@@ -288,9 +293,65 @@ mod tests {
     fn non_html_untouched_and_script_shape() {
         // El script solo acepta forma exacta desde window.parent.
         assert!(THEME_SCRIPT.contains("e.source!==window.parent"));
-        assert!(THEME_SCRIPT.contains("d.type!==\"opendoc-theme\""));
+        assert!(THEME_SCRIPT.contains("\"opendoc-theme\""));
         assert!(THEME_SCRIPT.contains("data-opendoc-theme"));
         assert!(THEME_STYLE.contains("invert(1) hue-rotate(180deg)"));
+        // Canal de navegación: reportes + restauración de scroll + teclas.
+        // Sigue siendo una constante sin datos de usuario.
+        assert!(THEME_SCRIPT.starts_with("<script>(function(){"));
+        assert!(THEME_SCRIPT.ends_with("})();</script>"));
+        for token in [
+            "\"opendoc-nav\"",
+            "hashchange",
+            "\"opendoc-scroll\"",
+            "\"opendoc-scroll-to\"",
+            "\"opendoc-key\"",
+            "alt-left",
+            "alt-right",
+        ] {
+            assert!(THEME_SCRIPT.contains(token), "falta {token}");
+        }
+    }
+
+    #[test]
+    fn injection_only_in_html() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        // PNG mínimo: firma + IHDR(1x1) + IEND.
+        let mut png = vec![0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A];
+        png.extend_from_slice(&[0, 0, 0, 13]);
+        png.extend_from_slice(b"IHDR");
+        png.extend_from_slice(&[0, 0, 0, 1, 0, 0, 0, 1, 8, 2, 0, 0, 0]);
+        png.extend_from_slice(&[0, 0, 0, 0]);
+        png.extend_from_slice(b"IEND");
+        let contents = dir.path().join("Contents");
+        let docs = contents.join("Resources/Documents");
+        std::fs::create_dir_all(&docs).expect("mkdirs");
+        std::fs::write(docs.join("i.png"), &png).expect("write");
+        std::fs::write(docs.join("a.html"), "<html><body>x</body></html>").expect("write");
+        let docsets = vec![Docset {
+            id: "demo".to_string(),
+            name: "Demo".to_string(),
+            platform: None,
+            version: None,
+            bundle_id: None,
+            home_path: Some("a.html".to_string()),
+            icon: None,
+            root_path: dir.path().to_path_buf(),
+            contents_path: contents,
+        }];
+        // El binario sale intacto (sin style/script inyectados).
+        let res = serve_file(&docsets, "demo", "i.png");
+        assert_eq!(res.status(), 200);
+        assert_eq!(
+            res.headers().get("Content-Type").expect("mime"),
+            "image/png"
+        );
+        assert_eq!(res.body(), &png);
+        // El HTML sí lleva el bloque.
+        let res = serve_file(&docsets, "demo", "a.html");
+        let body = String::from_utf8(res.body().clone()).expect("utf8");
+        assert!(body.contains(THEME_STYLE));
+        assert!(body.contains("opendoc-nav"));
     }
 
     #[test]
