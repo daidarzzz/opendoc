@@ -1,7 +1,8 @@
 name: Release
 
-# - `check` y `verify-version` corren en cada push a master, en cada tag
-#   `v*` y en cada lanzamiento manual.
+# - `check` corre en cada push a master y en lanzamientos manuales, pero
+#   se salta en tags (el release va directo al build tras `verify-version`).
+#   `verify-version` corre siempre.
 # - Los instaladores solo se construyen en tags `v*` (se suben a un
 #   borrador de GitHub Release creado una sola vez por `create-release`)
 #   o manualmente desde la pestaña Actions (se suben como artefactos del
@@ -33,6 +34,10 @@ concurrency:
 
 jobs:
   check:
+    # En tags se salta entero (tests, clippy, deps): el release va directo
+    # al build tras `verify-version`. Sigue corriendo en cada push a master
+    # y en lanzamientos manuales.
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -101,7 +106,7 @@ jobs:
     # vacía) pero termina en éxito para que `build` pueda depender de
     # este trabajo con un `needs` normal, sin `always()`.
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
-    needs: [check, verify-version]
+    needs: [verify-version]
     permissions:
       contents: write
     runs-on: ubuntu-latest
@@ -135,7 +140,7 @@ jobs:
 
   build:
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
-    needs: [check, verify-version, create-release]
+    needs: [verify-version, create-release]
     permissions:
       contents: write
     strategy:
