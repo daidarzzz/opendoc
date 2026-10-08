@@ -34,6 +34,9 @@ const PaletteRow = memo(function PaletteRow({
       }`}
       onMouseEnter={() => onHover(index)}
       onClick={() => onChoose()}
+      onMouseDown={(e) => {
+        if (e.button === 1) e.preventDefault();
+      }}
       onAuxClick={(e) => {
         if (e.button === 1) {
           e.preventDefault();

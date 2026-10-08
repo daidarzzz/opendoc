@@ -10,6 +10,7 @@ import { getDocsetHome } from "../lib/commands";
 import { docsetEntryUrl, toViewerUrl } from "../lib/opendocUrl";
 import { keyRateAllow } from "../lib/iframeMessages";
 import type { IframeKey } from "../lib/iframeMessages";
+import { OPEN_TAB_RATE_MAX, OPEN_TAB_RATE_WINDOW_MS, rateAllow } from "../lib/iframeMessages";
 import {
   appendTab,
   closeTab as closeTabPure,
@@ -35,6 +36,10 @@ interface TabsState {
   error: string;
   /** Teclas reenviadas recientes (tasa ≤10/s, anti-bucle de un docset). */
   keyTimes: number[];
+  /** Peticiones open-tab recientes (tasa ≤3/s). */
+  openTabTimes: number[];
+  /** Últimas pestañas cerradas con contenido (máx. 10, para reabrir). */
+  closed: Tab[];
   active: () => Tab | undefined;
   openEntry: (
     docsetId: string,
@@ -52,6 +57,13 @@ interface TabsState {
   childNav: (url: string, title: string | null) => void;
   childScroll: (url: string, y: number) => void;
   childKey: (key: IframeKey, shift: boolean) => void;
+  /**
+   * Abre una URL validada en pestaña nueva (enlaces del documento).
+   * Respeta la tasa (3/s) y el tope de 30 pestañas.
+   */
+  openTabUrl: (url: string, fallbackTitle: string) => void;
+  /** Reabre la última pestaña cerrada con contenido (Ctrl+Shift+T). */
+  reopenLast: () => void;
 }
 
 function errText(e: unknown): string {
@@ -63,6 +75,9 @@ function docsetOf(url: string): string {
   return url.slice("opendoc://".length).split("/", 1)[0];
 }
 
+/** Cerradas guardadas para reabrir (Ctrl+Shift+T). */
+const MAX_CLOSED = 10;
+
 export const useTabs = create<TabsState>()((set, get) => {
   const fresh = emptyTab();
   return {
@@ -70,6 +85,8 @@ export const useTabs = create<TabsState>()((set, get) => {
     activeId: fresh.id,
     error: "",
     keyTimes: [],
+    openTabTimes: [],
+    closed: [],
 
     active: () => get().tabs.find((t) => t.id === get().activeId),
 
@@ -131,8 +148,14 @@ export const useTabs = create<TabsState>()((set, get) => {
     },
 
     closeTab: (id: string) => {
-      const { tabs, activeId } = closeTabPure(get().tabs, get().activeId, id);
-      set({ tabs, activeId });
+      const s = get();
+      const closing = s.tabs.find((t) => t.id === id);
+      const { tabs, activeId } = closeTabPure(s.tabs, s.activeId, id);
+      const closed =
+        closing && closing.current
+          ? [...s.closed, closing].slice(-MAX_CLOSED)
+          : s.closed;
+      set({ tabs, activeId, closed });
     },
 
     newTab: () => {
@@ -212,6 +235,40 @@ export const useTabs = create<TabsState>()((set, get) => {
         const target = s.tabs[idx];
         if (target) s.activateTab(target.id);
       }
+    },
+
+    openTabUrl: (url: string, fallbackTitle: string) => {
+      const now = Date.now();
+      const { allowed, times } = rateAllow(
+        get().openTabTimes,
+        now,
+        OPEN_TAB_RATE_MAX,
+        OPEN_TAB_RATE_WINDOW_MS,
+      );
+      set({ openTabTimes: times });
+      if (!allowed) return;
+      const s = get();
+      const r = appendTab(
+        s.tabs,
+        s.activeId,
+        {
+          ...tabWithEntry(docsetOf(url), { url, title: fallbackTitle }),
+          pendingUrl: url,
+        },
+      );
+      set({ tabs: r.tabs, activeId: r.activeId, error: "" });
+    },
+
+    reopenLast: () => {
+      const s = get();
+      const last = s.closed[s.closed.length - 1];
+      if (!last) return;
+      const r = appendTab(
+        s.tabs,
+        s.activeId,
+        { ...last, pendingUrl: last.current?.url ?? null },
+      );
+      set({ tabs: r.tabs, activeId: r.activeId, closed: s.closed.slice(0, -1), error: "" });
     },
   };
 });

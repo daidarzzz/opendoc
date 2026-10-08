@@ -13,6 +13,7 @@ import { useTabs } from "../store/tabs";
 import {
   validateKeyMessage,
   validateNavMessage,
+  validateOpenTabMessage,
   validateScrollMessage,
 } from "../lib/iframeMessages";
 import { toViewerUrl } from "../lib/opendocUrl";
@@ -24,6 +25,8 @@ export function Viewer() {
   const childNav = useTabs((s) => s.childNav);
   const childScroll = useTabs((s) => s.childScroll);
   const childKey = useTabs((s) => s.childKey);
+  const openTabUrl = useTabs((s) => s.openTabUrl);
+  const newTab = useTabs((s) => s.newTab);
   const { docsets, loading, dirMissing, savedDir, choose } = useDocsets();
   const setOpen = usePalette((s) => s.setOpen);
   const [src, setSrc] = useState<string | null>(null);
@@ -70,12 +73,26 @@ export function Viewer() {
         if (sc && tab?.current) childScroll(tab.current.url, sc.y);
       } else if (type === "opendoc-key") {
         const kp = validateKeyMessage(data, true);
-        if (kp) childKey(kp.key, kp.shift);
+        if (!kp) return;
+        // Ctrl/Cmd+T abre pestaña vacía + paleta (no es acción de pestaña).
+        if (kp.key === "t" && !kp.shift) {
+          newTab();
+          usePalette.getState().setOpen(true);
+          return;
+        }
+        childKey(kp.key, kp.shift);
+      } else if (type === "opendoc-open-tab") {
+        const req = validateOpenTabMessage(data, true, ids);
+        if (!req) return;
+        const meta = useDocsets
+          .getState()
+          .docsets.find((d) => d.id === req.url.slice("opendoc://".length).split("/", 1)[0]);
+        openTabUrl(req.url, meta?.name ?? req.url);
       }
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [childNav, childScroll, childKey]);
+  }, [childNav, childScroll, childKey, openTabUrl, newTab]);
 
   // Tras cada carga: tema claro (oscuro desactivado) + scroll guardado.
   const onIframeLoad = (): void => {

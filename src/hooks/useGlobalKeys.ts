@@ -24,6 +24,11 @@ export function useGlobalKeys() {
       const tabs = useTabs.getState();
       if (hit.action === "close-tab") {
         tabs.closeTab(tabs.activeId);
+      } else if (hit.action === "new-tab") {
+        tabs.newTab();
+        usePalette.getState().setOpen(true);
+      } else if (hit.action === "reopen-tab") {
+        tabs.reopenLast();
       } else if (hit.action === "next-tab" || hit.action === "prev-tab") {
         const list = tabs.tabs;
         const idx = list.findIndex((t) => t.id === tabs.activeId);

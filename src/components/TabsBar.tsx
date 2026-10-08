@@ -2,6 +2,7 @@
 // cerrar, nueva pestaña y reordenar por arrastre.
 import { memo, useMemo, useRef } from "react";
 import { useDocsets } from "../store/docsets";
+import { usePalette } from "../store/palette";
 import { useTabs } from "../store/tabs";
 import { DocsetIcon } from "./DocsetIcon";
 
@@ -39,6 +40,18 @@ const TabButton = memo(function TabButton({
       onDragOver={(e) => e.preventDefault()}
       onDrop={onDrop}
       onClick={onActivate}
+      onAuxClick={(e) => {
+        // Clic central sobre la pestaña: la cierra.
+        if (e.button === 1) {
+          e.preventDefault();
+          onClose();
+        }
+      }}
+      // preventDefault en mousedown: sin esto Windows activa el autoscroll
+      // y el auxclick puede no llegar.
+      onMouseDown={(e) => {
+        if (e.button === 1) e.preventDefault();
+      }}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
@@ -153,7 +166,10 @@ export function TabsBar() {
       <button
         aria-label="Nueva pestaña"
         title="Nueva pestaña"
-        onClick={() => newTab()}
+        onClick={() => {
+          newTab();
+          usePalette.getState().setOpen(true);
+        }}
         className="rounded px-2 py-1.5 text-sm text-gray-600 dark:text-gray-300"
       >
         +

@@ -9,12 +9,17 @@ export const MAX_SCROLL_Y = 10_000_000;
 export const KEY_RATE_WINDOW_MS = 1000;
 /** Máximo de teclas reenviadas por ventana (anti-bucle de un docset). */
 export const KEY_RATE_MAX = 10;
+/** Ventana para abrir pestañas desde enlaces del documento. */
+export const OPEN_TAB_RATE_WINDOW_MS = 1000;
+/** Máximo de pestañas abiertas desde el documento por ventana. */
+export const OPEN_TAB_RATE_MAX = 3;
 
 const VIEWER_BASE = "http://opendoc.localhost/";
 const SCHEME = "opendoc://";
 
 export type IframeKey =
   | "w"
+  | "t"
   | "tab"
   | "1"
   | "2"
@@ -72,22 +77,46 @@ export interface ValidNav {
 }
 
 /**
- * Mensaje `opendoc-nav`. Null si: fuente no confiable, forma rota, URL
- * inválida. El título ausente/vacío es válido (se conserva el anterior).
+ * Mensaje con URL (`opendoc-nav` / `opendoc-open-tab`). Null si: fuente no
+ * confiable, forma rota, URL inválida. El título ausente/vacío es válido
+ * (se conserva el anterior).
  */
+function validateUrlMessage(
+  data: unknown,
+  trustedSource: boolean,
+  docsetIds: readonly string[],
+  expectedType: string,
+): ValidNav | null {
+  if (!trustedSource) return null;
+  if (typeof data !== "object" || data === null) return null;
+  const rec = data as Record<string, unknown>;
+  if (rec["type"] !== expectedType) return null;
+  if (typeof rec["url"] !== "string") return null;
+  const backend = toBackendUrl(rec["url"]);
+  if (backend === null || !isValidNavUrl(backend, docsetIds)) return null;
+  return { url: backend, title: sanitizeTitle(rec["title"]) };
+}
+
 export function validateNavMessage(
   data: unknown,
   trustedSource: boolean,
   docsetIds: readonly string[],
 ): ValidNav | null {
-  if (!trustedSource) return null;
-  if (typeof data !== "object" || data === null) return null;
-  const rec = data as Record<string, unknown>;
-  if (rec["type"] !== "opendoc-nav") return null;
-  if (typeof rec["url"] !== "string") return null;
-  const backend = toBackendUrl(rec["url"]);
-  if (backend === null || !isValidNavUrl(backend, docsetIds)) return null;
-  return { url: backend, title: sanitizeTitle(rec["title"]) };
+  return validateUrlMessage(data, trustedSource, docsetIds, "opendoc-nav");
+}
+
+/**
+ * Petición de abrir enlace en pestaña nueva (`opendoc-open-tab`, desde
+ * auxclick/Ctrl+clic en `<a>` internos). Misma validación que nav: SOLO
+ * URLs opendoc de docsets cargados (las externas van al navegador por
+ * on_navigation y nunca llegan aquí como pestaña).
+ */
+export function validateOpenTabMessage(
+  data: unknown,
+  trustedSource: boolean,
+  docsetIds: readonly string[],
+): ValidNav | null {
+  return validateUrlMessage(data, trustedSource, docsetIds, "opendoc-open-tab");
 }
 
 /** Mensaje `opendoc-scroll`. Null si roto o fuera de rango. */
@@ -106,6 +135,7 @@ export function validateScrollMessage(
 function isIframeKey(raw: unknown): raw is IframeKey {
   return (
     raw === "w" ||
+    raw === "t" ||
     raw === "tab" ||
     raw === "alt-left" ||
     raw === "alt-right" ||
@@ -127,18 +157,30 @@ export function validateKeyMessage(
 }
 
 /**
- * Tasa de teclas: como máximo KEY_RATE_MAX por ventana. Devuelve si pasa y
- * la lista podada (pura, testeable).
+ * Tasa genérica: como máximo `max` eventos por ventana. Devuelve si pasa
+ * y la lista podada (pura, testeable).
  */
-export function keyRateAllow(times: number[], now: number): { allowed: boolean; times: number[] } {
-  const recent = times.filter((t) => now - t < KEY_RATE_WINDOW_MS);
-  if (recent.length >= KEY_RATE_MAX) return { allowed: false, times: recent };
+export function rateAllow(
+  times: number[],
+  now: number,
+  max: number,
+  windowMs: number,
+): { allowed: boolean; times: number[] } {
+  const recent = times.filter((t) => now - t < windowMs);
+  if (recent.length >= max) return { allowed: false, times: recent };
   return { allowed: true, times: [...recent, now] };
+}
+
+/** Tasa de teclas: como máximo KEY_RATE_MAX por ventana. */
+export function keyRateAllow(times: number[], now: number): { allowed: boolean; times: number[] } {
+  return rateAllow(times, now, KEY_RATE_MAX, KEY_RATE_WINDOW_MS);
 }
 
 /** Atajo del padre (ventana): tecla normalizada → acción. Puro, testeable. */
 export type ParentShortcut =
   | "close-tab"
+  | "new-tab"
+  | "reopen-tab"
   | "next-tab"
   | "prev-tab"
   | "tab-n"
@@ -169,6 +211,8 @@ export function matchParentShortcut(e: {
   if (!mod || e.altKey) return null;
   const k = e.key.toLowerCase();
   if (k === "w" && !e.shiftKey) return { action: "close-tab" };
+  if (k === "t" && !e.shiftKey) return { action: "new-tab" };
+  if (k === "t" && e.shiftKey) return { action: "reopen-tab" };
   if (k === "tab" && !e.shiftKey) return { action: "next-tab" };
   if (k === "tab" && e.shiftKey) return { action: "prev-tab" };
   if (k.length === 1 && k >= "1" && k <= "9" && !e.shiftKey) {

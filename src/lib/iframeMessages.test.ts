@@ -3,11 +3,15 @@ import {
   isValidNavUrl,
   keyRateAllow,
   matchParentShortcut,
+  OPEN_TAB_RATE_MAX,
+  OPEN_TAB_RATE_WINDOW_MS,
+  rateAllow,
   sanitizeScrollY,
   sanitizeTitle,
   toBackendUrl,
   validateKeyMessage,
   validateNavMessage,
+  validateOpenTabMessage,
   validateScrollMessage,
 } from "./iframeMessages";
 
@@ -101,6 +105,41 @@ describe("validateNavMessage", () => {
   });
 });
 
+describe("validateOpenTabMessage", () => {
+  const open = { type: "opendoc-open-tab", url: "opendoc://css/a.html#frag" };
+
+  it("acepta enlaces internos validados", () => {
+    expect(validateOpenTabMessage(open, true, DOCSETS)).toEqual({
+      url: "opendoc://css/a.html#frag",
+      title: null,
+    });
+  });
+
+  it("rechaza fuente falsificada, externos y rotos", () => {
+    expect(validateOpenTabMessage(open, false, DOCSETS)).toBeNull();
+    expect(
+      validateOpenTabMessage({ type: "opendoc-open-tab", url: "https://evil.com/x" }, true, DOCSETS),
+    ).toBeNull();
+    expect(
+      validateOpenTabMessage({ type: "opendoc-open-tab", url: "opendoc://otro/a.html" }, true, DOCSETS),
+    ).toBeNull();
+    expect(validateOpenTabMessage({ type: "opendoc-open-tab" }, true, DOCSETS)).toBeNull();
+    expect(validateOpenTabMessage({ type: "opendoc-nav", url: "opendoc://css/a.html" }, true, DOCSETS)).toBeNull();
+  });
+});
+
+describe("rateAllow", () => {
+  it("3/s para abrir pestañas desde el documento", () => {
+    let times: number[] = [];
+    for (let i = 0; i < OPEN_TAB_RATE_MAX; i++) {
+      const r = rateAllow(times, i * 100, OPEN_TAB_RATE_MAX, OPEN_TAB_RATE_WINDOW_MS);
+      expect(r.allowed).toBe(true);
+      times = r.times;
+    }
+    expect(rateAllow(times, 400, OPEN_TAB_RATE_MAX, OPEN_TAB_RATE_WINDOW_MS).allowed).toBe(false);
+  });
+});
+
 describe("validateScrollMessage", () => {
   it("acepta y rechaza según forma y rango", () => {
     expect(validateScrollMessage({ type: "opendoc-scroll", y: 50 }, true)).toEqual({ y: 50 });
@@ -120,6 +159,10 @@ describe("validateKeyMessage", () => {
     expect(validateKeyMessage({ type: "opendoc-key", key: "tab", shift: true }, true)).toEqual({
       key: "tab",
       shift: true,
+    });
+    expect(validateKeyMessage({ type: "opendoc-key", key: "t", shift: false }, true)).toEqual({
+      key: "t",
+      shift: false,
     });
     expect(validateKeyMessage({ type: "opendoc-key", key: "5", shift: 1 }, true)).toEqual({
       key: "5",
@@ -163,6 +206,8 @@ describe("matchParentShortcut", () => {
   const base = { key: "", ctrlKey: true, metaKey: false, altKey: false, shiftKey: false };
   it("atajos exactos sin choques", () => {
     expect(matchParentShortcut({ ...base, key: "w" })).toEqual({ action: "close-tab" });
+    expect(matchParentShortcut({ ...base, key: "t" })).toEqual({ action: "new-tab" });
+    expect(matchParentShortcut({ ...base, key: "T", shiftKey: true })).toEqual({ action: "reopen-tab" });
     expect(matchParentShortcut({ ...base, key: "Tab" })).toEqual({ action: "next-tab" });
     expect(matchParentShortcut({ ...base, key: "Tab", shiftKey: true })).toEqual({ action: "prev-tab" });
     expect(matchParentShortcut({ ...base, key: "3" })).toEqual({ action: "tab-n", index: 2 });

@@ -305,6 +305,9 @@ const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDo
         <DocsetIcon icon={row.icon} name={row.name} />
         <button
           onClick={() => onOpenHome(row.docsetId, false)}
+          onMouseDown={(e) => {
+            if (e.button === 1) e.preventDefault();
+          }}
           onAuxClick={(e) => {
             if (e.button === 1) {
               e.preventDefault();
@@ -416,6 +419,9 @@ const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDo
       style={{ ...base, paddingLeft: 44 }}
       className={`flex cursor-pointer items-center rounded text-sm ${hl}`}
       onClick={onActivate}
+      onMouseDown={(e) => {
+        if (e.button === 1) e.preventDefault();
+      }}
       onAuxClick={(e) => {
         if (e.button === 1) {
           e.preventDefault();
