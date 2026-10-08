@@ -112,19 +112,18 @@ Pestañas e historial (atrás/adelante).
 Favoritos y recientes.
 Tabla de contenidos de la página actual.
 Filtro por docset y por prefijo de búsqueda.
-Ajustes persistentes (tema, fuente, atajos; sustituyen la autocarga TEMP y el localStorage interino de T7).
-Soporte de docsets tarix con extracción completa en caché: descargar el .tgz, extraer Documents/ + metadatos y reutilizar el escáner/lector actuales (más limpieza de <dash_entry_*>, ya hecha en T7b). La extracción bajo demanda por rangos (tarindex) queda como optimización posterior.
+Ajustes persistentes (tema, fuente, atajos; sustituyen la autocarga TEMP y el localStorage interino de T7) (hecho en v0.1).
+Soporte de docsets tarix con extracción completa en caché (hecho en v0.1): descargar el .tgz, extraer Documents/ + metadatos y reutilizar el escáner/lector actuales (más limpieza de <dash_entry_*>, ya hecha en T7b). La extracción bajo demanda por rangos (tarindex) queda como optimización posterior.
 Seguridad en la extracción: validar que ninguna entrada del tgz salga de la carpeta destino (.., rutas absolutas, symlinks) y limitar el tamaño total extraído.
 Sin cancelar extracción en v0.2: no hay cancelación (un fallo o cierre nunca deja caché a medias como válida: se extrae a temporal y se renombra al final).
 v0.3: Gestión de docsets
-Catálogo de docsets (feeds de Kapeli y mirrors, con caché).
-Descarga, descompresión (tar.gz) e instalación con progreso.
-Actualización y borrado de docsets.
-Riesgo legal: la licencia de Kapeli prohíbe usar sus docsets en aplicaciones de terceros sin permiso; el gestor usará una abstracción de proveedores (instalar desde archivo local, DevDocs, Kapeli solo con permiso). Sin implementar todavía.
+Gestión de docsets: por decidir (aplazado). No hay arquitectura aprobada (ni catálogo central, ni P2P, ni proveedores concretos): se discutirá antes de escribir código. Lo único decidido:
+Nada de OpenDoc debe depender de los servidores o del catálogo de Kapeli (feeds de Dash) ni redistribuir sus docsets: su licencia prohíbe usarlos en aplicaciones de terceros sin permiso, y no se va a pedir.
+Zeal es GPL-3.0-or-later: no copiar ni traducir su código salvo que OpenDoc sea GPL compatible. Mientras tanto, solo estudiar comportamiento.
 v1.0: Objetivo final
 Temas personalizables y CSS inyectado para modo oscuro en la documentación (el modo oscuro del visor quedó DESACTIVADO: la inversión por filtro se ve bugueada; el mecanismo de inyección permanece para retomarlo con temas por docset).
 Resaltado de sintaxis refinado.
-Instaladores para Windows, macOS y Linux (objetivo: ~10-15 MB, RAM en reposo < 50-80 MB).
+Instaladores para Windows, macOS y Linux (objetivo: ~10-15 MB, RAM en reposo < 50-80 MB) (hecho el CI: builds multiplataforma y release como borrador en tags v*).
 Rendimiento verificado con 20+ docsets cargados.
 Documentación de usuario y CI con builds multiplataforma.
 7. Criterios de calidad

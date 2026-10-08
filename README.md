@@ -23,7 +23,7 @@ Zeal es una herramienta excelente, pero su interfaz (C++/Qt) se siente anticuada
   - Índice `searchIndex` y esquema Core Data (`ZTOKEN`…), detectado automáticamente.
   - Lectura de `Info.plist`.
   - Docsets **tarix**: se extraen una sola vez a una caché propia, con validación de seguridad y sin tocar tu carpeta de docsets.
-- **Tema claro / oscuro / sistema**, con ajustes persistentes. (El modo oscuro del contenido de la documentación es una solución provisional.)
+- **Tema claro / oscuro / sistema** para la aplicación, con ajustes persistentes. Los docsets se muestran siempre con su estilo claro original: el modo oscuro del contenido está desactivado (se retomará con temas por docset).
 - **Enlaces externos** abiertos en el navegador del sistema, no dentro del visor.
 - **Robusto:** un docset corrupto o raro se registra como incidencia y no tumba el resto.
 
@@ -47,7 +47,7 @@ Tauri usa el WebView del sistema (WebView2 en Windows), por lo que el instalador
 ## Primeros pasos
 
 ```bash
-git clone <url-del-repositorio>
+git clone https://github.com/daidarzzz/opendoc.git
 cd opendoc
 npm install
 npm run tauri dev
@@ -64,7 +64,7 @@ OpenDoc **no incluye docsets**. Al abrirlo por primera vez te pedirá elegir la 
 - Los docsets *tarix* aparecen como **"Por instalar"**: el botón *Instalar* los extrae a la caché de la app (puede tardar un minuto en los más grandes y ocupar cientos de MB).
 - Si un docset no aparece, revisa la lista de incidencias en la barra lateral: indica qué le falta.
 
-> Un gestor de descargas dentro de la app está planificado. Mientras tanto, consigue los docsets por tu cuenta y respeta la licencia de cada fuente: algunos catálogos restringen su uso en aplicaciones de terceros.
+> El gestor de descargas dentro de la app está aplazado y por decidir (no hay arquitectura aprobada). Mientras tanto, consigue los docsets por tu cuenta y respeta la licencia de cada fuente: no uses servidores ni catálogos pensados para otras aplicaciones sin permiso, ni redistribuyas sus docsets.
 
 ### Compilar el instalador
 
@@ -72,7 +72,22 @@ OpenDoc **no incluye docsets**. Al abrirlo por primera vez te pedirá elegir la 
 npm run tauri build
 ```
 
-El resultado queda en `src-tauri/target/release/` (`opendoc.exe`) y los instaladores en `src-tauri/target/release/bundle/`. El ejecutable no está firmado, por lo que Windows SmartScreen puede mostrar un aviso la primera vez.
+El resultado queda en `src-tauri/target/release/` (`opendoc.exe`) y los instaladores en `src-tauri/target/release/bundle/`.
+
+> Los ejecutables **no están firmados**: Windows SmartScreen y macOS Gatekeeper mostrarán advertencias al instalar o abrir la app. Además, macOS y Linux están poco probados (el desarrollo se hace en Windows).
+
+### Publicar una versión
+
+Los instaladores se construyen en CI (`.github/workflows/release.yml`): el `check` corre en cada push, pero el build y la publicación solo ocurren en tags `v*`.
+
+```bash
+# 1. Sube la versión en package.json, src-tauri/Cargo.toml y src-tauri/tauri.conf.json
+# 2. Crea y sube el tag (debe coincidir con esas tres versiones)
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
+
+El release se crea como **borrador** y se publica a mano cuando todos los trabajos terminan bien. Desde la pestaña *Actions* (Run workflow) se pueden lanzar builds de prueba sin crear ningún release.
 
 ## Desarrollo
 
@@ -108,18 +123,19 @@ La lógica vive en módulos de Rust independientes de Tauri y con tests; los com
 
 ## Hoja de ruta
 
-- [x] **v0.1 (MVP):** escaneo de docsets, índices (estándar y Core Data), búsqueda difusa, paleta de comandos, visor seguro, tarix, ajustes y tema.
+- [x] **v0.1 (MVP):** escaneo de docsets, índices (estándar y Core Data), búsqueda difusa, paleta de comandos, visor seguro, tarix, ajustes y tema, CI con releases por tags.
 - [ ] **v0.2:** navegación por tipos con contadores (estilo Zeal) e iconos, pestañas, historial, favoritos, filtro por docset (`py: format`), cancelar extracciones.
-- [ ] **v0.3:** gestor de descargas con un clic, con una abstracción de *proveedores* (instalar desde archivo, DevDocs, feeds propios).
+- [ ] **v0.3:** gestión de docsets: por decidir (aplazado).
 - [ ] **v1.0:** temas por docset, resaltado de sintaxis refinado, instaladores multiplataforma y rendimiento verificado con 20+ docsets.
 
-El detalle completo está en [`SPEC.md`](./SPEC.md).
+El detalle completo está en [`spec.md`](./spec.md).
 
 ## Limitaciones conocidas
 
-- Solo probado en **Windows**. En Linux, WebKitGTK puede comportarse distinto; está pendiente de verificar.
-- No hay gestor de descargas todavía.
-- El modo oscuro del contenido de los docsets aplica un filtro de inversión de color; es provisional y puede deformar algunas imágenes o diagramas.
+- Solo probado en **Windows**. macOS y Linux están poco probados; en Linux, WebKitGTK puede comportarse distinto.
+- Los ejecutables no están firmados (avisos de SmartScreen / Gatekeeper).
+- No hay gestor de descargas (aplazado, por decidir).
+- Los docsets se ven siempre con su estilo claro; el modo oscuro del contenido está desactivado.
 - Los docsets *tarix* ocupan bastante en disco una vez extraídos (decenas o cientos de MB cada uno).
 
 ## Licencia
