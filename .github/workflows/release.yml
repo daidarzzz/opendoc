@@ -108,6 +108,10 @@ jobs:
     outputs:
       release-id: ${{ steps.create.outputs.release-id }}
     steps:
+      # `gh release create` exige un repo git (resuelve el remoto y el
+      # commit desde `.git`); sin checkout falla con "not a git repository".
+      - uses: actions/checkout@v4
+
       - name: Create draft release
         id: create
         if: startsWith(github.ref, 'refs/tags/v')
