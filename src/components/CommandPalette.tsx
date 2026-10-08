@@ -198,13 +198,13 @@ export function CommandPalette() {
         <div className="relative border-b border-gray-200 dark:border-gray-700">
           <div
             aria-hidden
-            className="pointer-events-none select-none overflow-hidden whitespace-pre px-4 py-3 text-sm"
+            className="pointer-events-none select-none overflow-hidden whitespace-pre px-4 py-3 text-sm text-gray-900 dark:text-gray-100"
           >
             {query === "" ? (
               <span className="text-gray-400">Buscar… (Esc para cerrar)</span>
             ) : (
               <>
-                <span className="invisible">{query}</span>
+                <span>{query}</span>
                 {ghost !== null && <span className="text-gray-400">{ghost}</span>}
               </>
             )}
