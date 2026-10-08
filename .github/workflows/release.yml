@@ -8,10 +8,56 @@ name: Release
 on:
   push:
     branches: [master]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "landing/**"
+      - "LICENSE"
   workflow_dispatch:
 
+# Cancel superseded runs on the same branch (a newer commit makes the
+# older build obsolete).
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  check:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Linux dependencies (Tauri v2, needed to compile tests)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libgtk-3-dev libxdo-dev libssl-dev
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Rust tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+      - name: Rust lints
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+
+      - name: Rust format
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+
+      - name: Frontend typecheck
+        run: npx tsc --noEmit
+
   build:
+    needs: [check]
     permissions:
       contents: write
     strategy:
