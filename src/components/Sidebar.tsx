@@ -1,5 +1,6 @@
 // Barra lateral: árbol de navegación, carpeta, pendientes, estado, tema.
 import { BrowseTree } from "./BrowseTree";
+import { DocsetIcon } from "./DocsetIcon";
 import { useDocsets } from "../store/docsets";
 import { useTheme } from "../store/theme";
 
@@ -56,7 +57,10 @@ export function Sidebar() {
                     key={p.id}
                     className="flex items-center justify-between rounded px-2 py-1.5 text-sm"
                   >
-                    <span>{p.name}</span>
+                    <span className="flex min-w-0 items-center gap-2">
+                      <DocsetIcon icon={p.icon} name={p.name} />
+                      <span className="truncate">{p.name}</span>
+                    </span>
                     <button
                       onClick={() => void extract(p.id)}
                       disabled={busy}

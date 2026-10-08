@@ -2,17 +2,18 @@
 // lista virtualizada (altura de fila uniforme, esqueleto donde faltan
 // datos). Teclado completo con aria-activedescendant: el foco es estable
 // porque apunta a ids de fila, no a nodos del DOM.
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { BROWSE_PAGE, useBrowse } from "../store/browse";
 import { useDocsets } from "../store/docsets";
 import { useViewer } from "../store/viewer";
 import type { NavEntry } from "../lib/types";
+import { DocsetIcon } from "./DocsetIcon";
 
 const ROW_H = 30;
 const OVERSCAN = 8;
 
 type Row =
-  | { type: "doc"; id: string; docsetId: string; name: string; di: number; setsize: number; expanded: boolean }
+  | { type: "doc"; id: string; docsetId: string; name: string; icon: string | null; di: number; setsize: number; expanded: boolean }
   | { type: "kinds-loading"; id: string; docsetId: string }
   | { type: "kinds-error"; id: string; docsetId: string; message: string }
   | { type: "kinds-empty"; id: string; docsetId: string }
@@ -52,7 +53,7 @@ export function BrowseTree() {
     docsets.forEach((d, di) => {
       const expanded = expandedDocs.includes(d.id);
       out.push({
-        type: "doc", id: rowId(di, -1, -1), docsetId: d.id, name: d.name,
+        type: "doc", id: rowId(di, -1, -1), docsetId: d.id, name: d.name, icon: d.icon,
         di, setsize: docsets.length, expanded,
       });
       if (!expanded) return;
@@ -265,7 +266,9 @@ interface RowViewProps {
   onOpenDoc: (docsetId: string, entry?: { name: string; path: string }) => void;
 }
 
-function RowView({ row, top, active, currentDoc, onToggleDoc, onToggleKind, onActivate, onOpenDoc }: RowViewProps) {
+// Fila memoizada: al desplazar, las filas que siguen visibles no se
+// re-renderizan (los objetos Row son estables entre scrolls).
+const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDoc, onToggleKind, onActivate, onOpenDoc }: RowViewProps) {
   const base: React.CSSProperties = {
     position: "absolute",
     top,
@@ -298,6 +301,7 @@ function RowView({ row, top, active, currentDoc, onToggleDoc, onToggleKind, onAc
         >
           {row.expanded ? "▾" : "▸"}
         </button>
+        <DocsetIcon icon={row.icon} name={row.name} />
         <button
           onClick={() => onOpenDoc(row.docsetId)}
           title={row.name}
@@ -410,4 +414,4 @@ function RowView({ row, top, active, currentDoc, onToggleDoc, onToggleKind, onAc
       <span className="truncate">{row.entry.name}</span>
     </div>
   );
-}
+});

@@ -222,6 +222,7 @@ mod tests {
             version: None,
             bundle_id: None,
             home_path: Some("a.html".to_string()),
+            icon: None,
             root_path: dir.to_path_buf(),
             contents_path: contents,
         }
@@ -307,6 +308,7 @@ mod tests {
             version: None,
             bundle_id: Some("css".to_string()),
             home_path: Some(home.to_string()),
+            icon: None,
             root_path: contents.parent().expect("docset").to_path_buf(),
             contents_path: contents,
         }];
@@ -332,6 +334,7 @@ mod tests {
             version: None,
             bundle_id: None,
             home_path: None,
+            icon: None,
             root_path: PathBuf::from("tests/fixtures/C++.docset"),
             contents_path: contents,
         }];

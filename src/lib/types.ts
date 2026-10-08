@@ -9,6 +9,8 @@ export interface Docset {
   version: string | null;
   bundle_id: string | null;
   home_path: string | null;
+  /** Icono como data-URL o null (genérico). */
+  icon: string | null;
   root_path: string;
   contents_path: string;
 }
@@ -34,6 +36,8 @@ export interface ScanIssue {
 export interface PendingTarix {
   id: string;
   name: string;
+  /** Icono como data-URL o null (genérico). */
+  icon: string | null;
   root_path: string;
 }
 

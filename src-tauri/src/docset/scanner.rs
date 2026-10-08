@@ -105,6 +105,7 @@ pub fn scan_dir(root: &Path) -> Result<ScanReport, ScanError> {
                 report.pending_tarix.push(PendingTarix {
                     id,
                     name: stem.to_string(),
+                    icon: super::icon::icon_data_url_for(&root_path),
                     root_path,
                 });
                 continue;
@@ -130,6 +131,7 @@ pub fn scan_dir(root: &Path) -> Result<ScanReport, ScanError> {
             version: None,
             bundle_id: None,
             home_path: None,
+            icon: super::icon::icon_data_url_for(&root_path),
             root_path: root_path.clone(),
             contents_path: contents_path.clone(),
         };
@@ -511,6 +513,43 @@ mod tests {
                 .all(|i| !i.path.ends_with("C++.docset")),
             "tarix no genera issues"
         );
+    }
+
+    #[test]
+    fn real_fixture_icons_come_from_docset_root() {
+        // C++ y Python_3 traen icon.png en la raíz (también como pendientes
+        // tarix); CSS y Swift no traen y quedan en None (genérico en la UI).
+        if super::super::fixture_or_skip("C++.docset").is_none() {
+            return;
+        }
+        let report = scan_dir(Path::new("tests/fixtures")).expect("scan fixtures");
+        let icon_of = |suffix: &str| {
+            report
+                .docsets
+                .iter()
+                .find(|d| d.root_path.ends_with(suffix))
+                .and_then(|d| d.icon.clone())
+                .or_else(|| {
+                    report
+                        .pending_tarix
+                        .iter()
+                        .find(|p| p.root_path.ends_with(suffix))
+                        .and_then(|p| p.icon.clone())
+                })
+        };
+        for with_icon in ["C++.docset", "Python_3.docset"] {
+            let url = icon_of(with_icon).expect("con icono");
+            assert!(
+                url.starts_with("data:image/png;base64,"),
+                "{with_icon}: data-URL PNG"
+            );
+        }
+        for without_icon in ["CSS.docset", "Swift.docset"] {
+            assert!(
+                icon_of(without_icon).is_none(),
+                "{without_icon}: sin icono → genérico"
+            );
+        }
     }
 
     #[test]

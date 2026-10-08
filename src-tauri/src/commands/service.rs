@@ -154,6 +154,7 @@ pub fn install_pending(
         version: None,
         bundle_id: None,
         home_path: None,
+        icon: pending.icon.clone(),
         root_path: pending.root_path.clone(),
         contents_path: extracted_contents,
     };
@@ -403,6 +404,7 @@ mod tests {
             version: None,
             bundle_id: None,
             home_path: None,
+            icon: None,
             root_path: PathBuf::from("x"),
             contents_path: PathBuf::from("x/Contents"),
         }];
@@ -420,6 +422,7 @@ mod tests {
             version: None,
             bundle_id: None,
             home_path: Some("home.html".to_string()),
+            icon: None,
             root_path: PathBuf::from("x"),
             contents_path: PathBuf::from("x/Contents"),
         };
@@ -572,6 +575,7 @@ mod tests {
         let pending = PendingTarix {
             id: "demo".to_string(),
             name: "Demo".to_string(),
+            icon: None,
             root_path: docset,
         };
         let installed = install_pending(&cache, &pending).expect("instalar");
@@ -607,6 +611,7 @@ mod tests {
         let pending = PendingTarix {
             id: "roto".to_string(),
             name: "Roto".to_string(),
+            icon: None,
             root_path: dir.path().join("Roto.docset"), // sin triada
         };
         let mut loaded = Loaded::default();

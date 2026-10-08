@@ -25,6 +25,9 @@ pub struct Docset {
     /// Página de inicio relativa a `Documents/` (`dashIndexFilePath` o
     /// `index.html`). Lo rellena T3; T4 lo completa si falta.
     pub home_path: Option<String>,
+    /// Icono como data-URL (`icon.png`/`icon@2x.png` de la raíz, ver
+    /// `docset::icon`). `None` → la UI usa un genérico.
+    pub icon: Option<String>,
     /// Ruta a `<Nombre>.docset/`.
     pub root_path: PathBuf,
     /// Ruta a `<Nombre>.docset/Contents/`.
@@ -52,6 +55,9 @@ pub struct PendingTarix {
     pub id: String,
     /// Nombre derivado de la carpeta sin `.docset`.
     pub name: String,
+    /// Icono como data-URL (de la raíz original; el `.tgz` no lo trae).
+    /// `None` → genérico.
+    pub icon: Option<String>,
     /// Ruta a `<Nombre>.docset/`.
     pub root_path: PathBuf,
 }
