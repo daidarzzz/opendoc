@@ -4,7 +4,7 @@
 
 OpenDoc lee el formato **docset** (el mismo que usan Dash y Zeal), así que puedes apuntarlo a tu carpeta de docsets y empezar a buscar.
 
-> **Estado: v0.1 (MVP) en desarrollo.** Funciona y se puede compilar, pero todavía no hay gestor de descargas. Consulta la [hoja de ruta](#hoja-de-ruta).
+> **Versión actual: v0.2.5.** OpenDoc ya incluye pestañas e historial, ajustes y gestión de docsets desde un catálogo configurable. El proyecto sigue en desarrollo; consulta la [hoja de ruta](#hoja-de-ruta).
 
 ## Por qué existe
 
@@ -18,12 +18,16 @@ Zeal es una herramienta excelente, pero su interfaz (C++/Qt) se siente anticuada
 
 - **Paleta de comandos** (`Ctrl+K` / `Cmd+K`) con búsqueda difusa en vivo y teclado completo (↑/↓, Enter, Esc).
 - **Búsqueda en memoria** con `nucleo`: coincidencia exacta > prefijo > difusa, con prioridad por tipo (clases y funciones antes que secciones). Medido: ~37 ms con 300.000 entradas en build release.
+- **Pestañas e historial independiente**: atrás/adelante por pestaña, pestañas reordenables arrastrando y enlaces internos preparados mientras pasas el cursor para reducir la espera al navegar.
+- **Explorador por tipos**: navega clases, funciones y otras entradas con contadores, además de filtrar la búsqueda por docset (`cpp:vector`).
 - **Visor integrado** con protocolo propio `opendoc://` y `<iframe>` aislado (`sandbox`), protegido contra rutas maliciosas (`..`, rutas absolutas, enlaces simbólicos, codificaciones dobles).
+- **Catálogo configurable**: consulta feeds, instala docsets `.tgz`, reinstala versiones, comprueba actualizaciones y desinstala docsets instalados.
 - **Compatibilidad con docsets:**
   - Índice `searchIndex` y esquema Core Data (`ZTOKEN`…), detectado automáticamente.
   - Lectura de `Info.plist`.
   - Docsets **tarix**: se extraen una sola vez a una caché propia, con validación de seguridad y sin tocar tu carpeta de docsets.
 - **Tema claro / oscuro / sistema** para la aplicación, con ajustes persistentes. Los docsets se muestran siempre con su estilo claro original: el modo oscuro del contenido está desactivado (se retomará con temas por docset).
+- **Ajustes persistentes** para el tema, la carpeta de docsets y el repositorio del catálogo.
 - **Enlaces externos** abiertos en el navegador del sistema, no dentro del visor.
 - **Robusto:** un docset corrupto o raro se registra como incidencia y no tumba el resto.
 
@@ -59,12 +63,14 @@ La primera compilación tarda unos minutos (compila el backend en Rust). Despué
 
 ### Añadir docsets
 
-OpenDoc **no incluye docsets**. Al abrirlo por primera vez te pedirá elegir la carpeta donde los tienes (cada docset es una carpeta `.docset`). Puedes usar la misma carpeta que usa Zeal u otra de tu elección.
+OpenDoc **no incluye docsets**. Si no eliges una carpeta, crea y usa una carpeta predeterminada dentro de los datos de la aplicación. Puedes cambiarla en Ajustes y también usar la misma carpeta que Zeal. Cada docset clásico es una carpeta `.docset`.
+
+Si todavía no tienes docsets, puedes buscar documentación desde la bienvenida o abrir el catálogo. Para instalar desde el catálogo, configura un repositorio de feeds compatible y actualízalo para cargar sus entradas.
 
 - Los docsets *tarix* aparecen como **"Por instalar"**: el botón *Instalar* los extrae a la caché de la app (puede tardar un minuto en los más grandes y ocupar cientos de MB).
 - Si un docset no aparece, revisa la lista de incidencias en la barra lateral: indica qué le falta.
 
-> El gestor de descargas dentro de la app está aplazado y por decidir (no hay arquitectura aprobada). Mientras tanto, consigue los docsets por tu cuenta y respeta la licencia de cada fuente: no uses servidores ni catálogos pensados para otras aplicaciones sin permiso, ni redistribuyas sus docsets.
+Respeta la licencia y las condiciones de cada fuente de documentación. OpenDoc no incluye ni redistribuye los docsets.
 
 ### Compilar el instalador
 
@@ -104,7 +110,7 @@ Los tests que usan docsets reales (`CSS.docset`, `Python_3.docset`, `C++.docset`
 
 ```
 opendoc/
-├── SPEC.md               # Especificación técnica y hoja de ruta
+├── SPEC.md               # Especificación técnica
 ├── AGENTS.md             # Guía para agentes de código
 ├── src/                  # Frontend React + TypeScript
 │   ├── components/       # Paleta, barra lateral, visor
@@ -116,6 +122,7 @@ opendoc/
         ├── search/       # Índice en memoria y búsqueda difusa
         ├── protocol/     # Protocolo opendoc:// y seguridad de rutas
         ├── commands/     # Comandos de Tauri (finos)
+        ├── catalog/      # Feeds y catálogo configurable
         └── settings/     # Ajustes persistentes
 ```
 
@@ -123,10 +130,10 @@ La lógica vive en módulos de Rust independientes de Tauri y con tests; los com
 
 ## Hoja de ruta
 
-- [x] **v0.1 (MVP):** escaneo de docsets, índices (estándar y Core Data), búsqueda difusa, paleta de comandos, visor seguro, tarix, ajustes y tema, CI con releases por tags.
-- [ ] **v0.2:** navegación por tipos con contadores (estilo Zeal) e iconos, pestañas, historial, favoritos, filtro por docset (`py: format`), cancelar extracciones.
-- [ ] **v0.3:** gestión de docsets: por decidir (aplazado).
-- [ ] **v1.0:** temas por docset, resaltado de sintaxis refinado, instaladores multiplataforma y rendimiento verificado con 20+ docsets.
+- [x] **v0.1:** lectura de docsets, índices estándar y Core Data, búsqueda difusa, paleta, visor seguro, tarix, ajustes y temas de la aplicación.
+- [x] **v0.2:** navegación por tipos, pestañas e historial, filtro por docset, tema y carpeta predeterminada, catálogo configurable con instalación, actualización y desinstalación.
+- [ ] **Pendiente:** favoritos y cancelar extracciones.
+- [ ] **v1.0:** importar temas visuales, mejorar el resaltado de sintaxis y verificar el rendimiento con colecciones grandes de docsets.
 
 El detalle completo está en [`SPEC.md`](./SPEC.md).
 
@@ -134,7 +141,6 @@ El detalle completo está en [`SPEC.md`](./SPEC.md).
 
 - Solo probado en **Windows**. macOS y Linux están poco probados; en Linux, WebKitGTK puede comportarse distinto.
 - Los ejecutables no están firmados (avisos de SmartScreen / Gatekeeper).
-- No hay gestor de descargas (aplazado, por decidir).
 - Los docsets se ven siempre con su estilo claro; el modo oscuro del contenido está desactivado.
 - Los docsets *tarix* ocupan bastante en disco una vez extraídos (decenas o cientos de MB cada uno).
 
