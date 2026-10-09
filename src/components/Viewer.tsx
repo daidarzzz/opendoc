@@ -256,7 +256,7 @@ export function Viewer() {
   }
 
   return (
-    <main className="relative flex min-w-0 flex-1 flex-col" role="tabpanel" id="viewer-panel" aria-label="Visor">
+    <main className="relative flex min-h-0 min-w-0 flex-1 flex-col" role="tabpanel" id="viewer-panel" aria-label="Visor">
       {!activeEntry || !docsetLoaded ? (
         <div className="flex flex-1 flex-col items-center justify-center p-8">
           {!activeEntry ? (
@@ -281,8 +281,9 @@ export function Viewer() {
               src={frameUrls[index] ?? undefined}
               title={`Documentación de ${activeTitle}`}
               sandbox="allow-scripts"
+              scrolling="yes"
               aria-hidden={frontFrame !== index}
-              className={`h-full w-full flex-1 border-0 bg-white transition-opacity duration-100 motion-reduce:transition-none ${frontFrame === index ? `opacity-100 ${transitioning ? "pointer-events-none" : ""}` : "absolute inset-0 pointer-events-none opacity-0"}`}
+              className={`h-full min-h-0 w-full flex-1 border-0 bg-white transition-opacity duration-100 motion-reduce:transition-none ${frontFrame === index ? `opacity-100 ${transitioning ? "pointer-events-none" : ""}` : "absolute inset-0 pointer-events-none opacity-0"}`}
               onLoad={() => onIframeLoad(index, frameUrls[index], frameVersions[index])}
             />
           ))}

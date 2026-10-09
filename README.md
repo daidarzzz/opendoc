@@ -4,7 +4,7 @@
 
 OpenDoc lee el formato **docset** (el mismo que usan Dash y Zeal), así que puedes apuntarlo a tu carpeta de docsets y empezar a buscar.
 
-> **Versión actual: v0.2.6.** OpenDoc ya incluye pestañas e historial, ajustes y gestión de docsets desde un catálogo configurable. El proyecto sigue en desarrollo; consulta la [hoja de ruta](#hoja-de-ruta).
+> **Versión actual: v0.2.61.** OpenDoc ya incluye pestañas e historial, ajustes y gestión de docsets desde un catálogo configurable. El proyecto sigue en desarrollo; consulta la [hoja de ruta](#hoja-de-ruta).
 
 ## Por qué existe
 
