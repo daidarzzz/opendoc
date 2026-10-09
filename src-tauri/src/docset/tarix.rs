@@ -20,7 +20,8 @@
 //! - Rutas largas: medido máx 139 (C++) + base ~60 < 260 → sin `\\?\`.
 //!   Si un futuro docset excede, falla como `TarixFailed` visible.
 
-use std::io::Read;
+use std::collections::HashSet;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 /// Tope de bytes reales extraídos (4 GB).
@@ -218,6 +219,31 @@ fn replace_final(final_dir: &Path, tmp_dir: &Path) -> Result<(), TarixError> {
     Ok(())
 }
 
+/// Borra cachés huérfanas: subdirectorios de `cache_base` que ningún
+/// pendiente ni instalado referencia (docset borrado o convertido a
+/// clásico). No toca `.tmp`/`.old` (los gestiona `cleanup_stale_cache`)
+/// ni ficheros sueltos. Best-effort: los errores se ignoran.
+pub fn sweep_unreferenced_caches(
+    cache_base: &Path,
+    referenced: &std::collections::HashSet<String>,
+) {
+    let entries = match std::fs::read_dir(cache_base) {
+        Ok(entries) => entries,
+        Err(_) => return,
+    };
+    for entry in entries.flatten() {
+        if !entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+            continue;
+        }
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if name.ends_with(".tmp") || name.ends_with(".old") {
+            continue;
+        }
+        if !referenced.contains(&name) {
+            let _ = std::fs::remove_dir_all(entry.path());
+        }
+    }
+}
 /// Limpieza al arrancar: borra `<id>.tmp*` y resuelve `<id>.old`
 /// (si falta el final, restaura el old; si no, lo borra).
 pub fn cleanup_stale_cache(cache_base: &Path) {
@@ -246,17 +272,25 @@ pub fn cleanup_stale_cache(cache_base: &Path) {
 }
 
 /// Desembala validando cada entrada. Solo sale con caché completa o error
-/// (y tmp borrado por el llamador).
-fn unpack_validated(
+/// (y tmp borrado por el llamador). `pub(crate)` para reutilizar la
+/// validación en `install` (F2) sin duplicarla ni debilitarla: mismas
+/// reglas (raíz única, sin escapes, sin enlaces, topes por bytes reales).
+pub(crate) fn unpack_validated(
     tgz_path: &Path,
     tmp_dir: &Path,
     limits: TarixLimits,
 ) -> Result<ExtractOutcome, TarixError> {
+    // FASE 0: solo medida (descompresión+validación+escritura van en el
+    // mismo bucle; no se separan sin cambiar el algoritmo).
+    let t_unpack = std::time::Instant::now();
     let file = std::fs::File::open(tgz_path).map_err(|source| TarixError::Unreadable {
         path: tgz_path.to_path_buf(),
         source,
     })?;
-    let gz = flate2::read::GzDecoder::new(file);
+    // Búfer de lectura: el iterador del tar pide cabeceras (512 B) y
+    // trozos pequeños; sin esto cada petición baja a `read(2)`.
+    let buffered = std::io::BufReader::with_capacity(1024 * 1024, file);
+    let gz = flate2::read::GzDecoder::new(buffered);
     let mut archive = tar::Archive::new(gz);
     let entries = archive
         .entries()
@@ -268,6 +302,7 @@ fn unpack_validated(
         skipped: 0,
     };
     let mut root: Option<String> = None;
+    let mut created_dirs: HashSet<PathBuf> = HashSet::new();
     for entry in entries {
         let mut entry = entry.map_err(|e| TarixError::Corrupt(e.to_string()))?;
         outcome.files += 1;
@@ -308,18 +343,29 @@ fn unpack_validated(
             continue;
         }
         let dest = tmp_dir.join(&rel);
+        // Directorios ya creados (memoizados): evita repetir
+        // `create_dir_all` —que re-recorre componentes— por cada fichero
+        // del mismo padre. Solo contiene rutas ya validadas y creadas.
         if kind.is_dir() {
-            std::fs::create_dir_all(&dest)?;
+            if created_dirs.insert(dest.clone()) {
+                std::fs::create_dir_all(&dest)?;
+            }
             continue;
         }
         // Fichero: padres + copia con tope de bytes reales.
         if let Some(parent) = dest.parent() {
-            std::fs::create_dir_all(parent)?;
+            if created_dirs.insert(parent.to_path_buf()) {
+                std::fs::create_dir_all(parent)?;
+            }
         }
         let remaining = limits.max_bytes.saturating_sub(outcome.bytes);
-        let mut out = std::fs::File::create(&dest)?;
+        let file_out = std::fs::File::create(&dest)?;
+        // Búfer de escritura: coalesca los `write(2)` de 8 KiB de la copia.
+        // `flush` explícito (el `drop` lo silenciaría ante disco lleno).
+        let mut out = std::io::BufWriter::with_capacity(128 * 1024, file_out);
         let mut take = (&mut entry).take(remaining);
         let n = std::io::copy(&mut take, &mut out)?;
+        out.flush()?;
         outcome.bytes += n;
         if n == remaining {
             let mut probe = [0u8; 1];
@@ -330,12 +376,29 @@ fn unpack_validated(
             }
         }
     }
+    // FASE 0: solo medida.
+    let ms = crate::profile::ms_since(t_unpack).max(1);
+    crate::profile::mark(
+        "install",
+        format_args!(
+            "extraccion tgz={} files={} bytes={} skipped={} ms={ms} mbs={:.1}",
+            tgz_path.display(),
+            outcome.files,
+            outcome.bytes,
+            outcome.skipped,
+            outcome.bytes as f64 / 1_048_576.0 / (ms as f64 / 1000.0)
+        ),
+    );
     Ok(outcome)
 }
 
 /// Quita el primer componente (raíz única del tgz). `None` = la propia
 /// raíz (se salta en silencio). Raíz múltiple o ruta maliciosa → error.
-fn strip_single_root(raw: &str, root: &mut Option<String>) -> Result<Option<PathBuf>, TarixError> {
+/// `pub(crate)` para `install` (misma política, distinto destino).
+pub(crate) fn strip_single_root(
+    raw: &str,
+    root: &mut Option<String>,
+) -> Result<Option<PathBuf>, TarixError> {
     if raw.starts_with('/') || has_drive_letter(raw) {
         return Err(TarixError::UnsafeEntry(raw.to_string()));
     }
@@ -374,8 +437,8 @@ fn has_drive_letter(s: &str) -> bool {
 
 /// Componente inválido en Windows: prohibidos, controles, reservados o
 /// terminados en espacio/punto. Se saltan y cuentan (sanear rompería la
-/// resolución del índice).
-fn has_invalid_windows_component(rel: &Path) -> bool {
+/// resolución del índice). `pub(crate)` para `install`.
+pub(crate) fn has_invalid_windows_component(rel: &Path) -> bool {
     rel.components().any(|c| {
         let s = c.as_os_str().to_string_lossy();
         s.chars()
@@ -669,5 +732,45 @@ mod tests {
         cleanup_stale_cache(dir.path());
         assert!(dir.path().join("c").is_dir());
         assert!(!dir.path().join("c.old").exists());
+    }
+
+    #[test]
+    fn sweep_drops_only_unreferenced_caches() {
+        use std::collections::HashSet;
+        let dir = tempfile::tempdir().expect("tempdir");
+        // Referenciada (pendiente o instalada): se conserva.
+        std::fs::create_dir_all(dir.path().join("demo/Contents")).expect("demo");
+        // Huérfanas: manifest solo, contenido completo sin referencia.
+        std::fs::create_dir_all(dir.path().join("viejo")).expect("viejo");
+        std::fs::write(dir.path().join("viejo/manifest.json"), "{}").expect("manifest");
+        std::fs::create_dir_all(dir.path().join("otro/Contents")).expect("otro");
+        // `.tmp`/`.old` no son de este barrido.
+        std::fs::create_dir_all(dir.path().join("x.tmp")).expect("tmp");
+        let referenced: HashSet<String> = ["demo".to_string()].into_iter().collect();
+        sweep_unreferenced_caches(dir.path(), &referenced);
+        assert!(dir.path().join("demo").is_dir());
+        assert!(!dir.path().join("viejo").exists());
+        assert!(!dir.path().join("otro").exists());
+        assert!(dir.path().join("x.tmp").is_dir());
+    }
+
+    #[test]
+    fn large_file_roundtrips_exactly() {
+        // 5 MB de un tirón: ejercita búfers sin cambiar el resultado.
+        let dir = tempfile::tempdir().expect("tempdir");
+        let big = "x".repeat(5 * 1024 * 1024);
+        let tgz = make_tgz(dir.path(), &[("Root/grande.bin", Some(big.as_str()))], &[]);
+        let status =
+            ensure_extracted(dir.path(), "grande", &tgz, TarixLimits::default()).expect("extraer");
+        match status {
+            ExtractStatus::Extracted(o) => {
+                assert_eq!(o.bytes, 5 * 1024 * 1024);
+                assert_eq!(o.skipped, 0);
+            }
+            ExtractStatus::Reused => panic!("debería extraer"),
+        }
+        let out = std::fs::read(dir.path().join("grande/grande.bin")).expect("leer");
+        assert_eq!(out.len(), big.len());
+        assert!(out.iter().all(|b| *b == b'x'));
     }
 }

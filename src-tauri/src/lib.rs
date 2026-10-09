@@ -1,23 +1,28 @@
 // Módulos de lógica de OpenDoc (independientes de Tauri y testeables).
-// Fases posteriores: `download` (catálogo/descargas, v0.3), pestañas/favoritos (v0.2, frontend).
+// F2: `catalog` + `docset::install` (gestor de docsets); quedan
+// pestañas/favoritos (v0.2, frontend).
 pub mod browse;
 pub mod catalog;
 pub mod commands;
 pub mod docset;
 pub mod navigation;
+pub mod profile;
 pub mod protocol;
 pub mod search;
 pub mod settings;
 
 use commands::{
-    extract_tarix, get_catalog_status, get_docset_home, get_settings, list_catalog, list_docsets,
-    list_entries, list_kinds, refresh_catalog, search, set_docsets_dir, set_feed_repo, set_theme,
-    AppState,
+    extract_tarix, get_catalog_status, get_docset_home, get_install_status, get_settings,
+    install_docset, list_catalog, list_docsets, list_entries, list_kinds, refresh_catalog, search,
+    set_docsets_dir, set_feed_repo, set_theme, AppState,
 };
 
-/// Carga ajustes + carpeta guardada al arrancar. Nunca tumba el arranque:
-/// sin ajustes, corruptos o con ruta inexistente se arranca vacío (la UI
-/// muestra el banner para elegir carpeta).
+/// Carga ajustes al arrancar. Nunca tumba el arranque: sin ajustes,
+/// corruptos o con ruta inexistente se arranca vacío (la UI muestra el
+/// banner para elegir carpeta).
+/// La carga de docsets NO se hace aquí (F1): la única carga efectiva es
+/// la de `init()` del frontend (`set_docsets_dir`), que devuelve el
+/// `ScanReport` que el preload descartaba.
 fn load_startup_state(app: &mut tauri::App) {
     use tauri::Manager;
     let Some(data_dir) = app.path().app_data_dir().ok() else {
@@ -25,30 +30,15 @@ fn load_startup_state(app: &mut tauri::App) {
     };
     let settings_path = settings::settings_file(&data_dir);
     let settings = settings::load(&settings_path);
-    let dir = settings.docsets_dir.clone();
     let Some(state) = app.try_state::<AppState>() else {
         return;
     };
     if let Ok(mut guard) = state.settings.lock() {
         *guard = settings;
     }
-    if let Some(dir) = dir {
-        let cache_base = data_dir.join("tarix-cache");
-        // Solo reutiliza cachés existentes (arranque rápido): la primera
-        // extracción la pide el usuario con Instalar (comando async).
-        docset::tarix::cleanup_stale_cache(&cache_base);
-        if let Ok(loaded) = commands::service::load_docsets_dir(
-            &dir,
-            &commands::service::LoadOptions {
-                cache_base,
-                extract_missing: false,
-            },
-        ) {
-            if let Ok(mut guard) = state.loaded.lock() {
-                *guard = loaded;
-            }
-        }
-    }
+    // Limpieza de restos de extracciones interrumpidas (barata: solo
+    // nombres `*.tmp`/`*.old`, sin validar contenidos).
+    docset::tarix::cleanup_stale_cache(&data_dir.join("tarix-cache"));
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -106,7 +96,9 @@ pub fn run() {
             get_catalog_status,
             set_feed_repo,
             refresh_catalog,
-            list_catalog
+            list_catalog,
+            install_docset,
+            get_install_status
         ])
         .run(tauri::generate_context!());
     if let Err(e) = result {

@@ -2,12 +2,16 @@
 // (los componentes usan estas funciones, nunca invoke() directo).
 // El diálogo nativo (plugin-dialog) también vive aquí por la misma razón.
 import { invoke } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
 import type {
   CatalogStatus,
   CatalogSummary,
   Docset,
+  DocsetProgress,
   FeedEntry,
+  InstallStatus,
+  InstallSummary,
   KindInfo,
   NavEntry,
   ScanReport,
@@ -86,6 +90,38 @@ export async function refreshCatalog(): Promise<CatalogSummary> {
 /** Entradas en caché con búsqueda opcional (offline: sin red). */
 export async function listCatalog(query?: string): Promise<FeedEntry[]> {
   return invoke<FeedEntry[]>("list_catalog", { query: query ?? null });
+}
+
+/** Instala un docset del catálogo (largo, no bloquea). Sin force, falla
+ *  si ya está instalado o la coincidencia es ambigua. El progreso llega
+ *  por el evento "docset-progress" (ver onDocsetProgress). */
+export async function installDocset(
+  feedId: string,
+  force?: boolean,
+): Promise<InstallSummary> {
+  return invoke<InstallSummary>("install_docset", {
+    feedId,
+    force: force ?? null,
+  });
+}
+
+/** Estado de los feeds frente a los instalados (offline). Con feedId
+ *  devuelve solo esa entrada o falla con `unknown_feed`. */
+export async function getInstallStatus(
+  feedId?: string,
+): Promise<InstallStatus[]> {
+  return invoke<InstallStatus[]>("get_install_status", {
+    feedId: feedId ?? null,
+  });
+}
+
+/** Escucha el progreso de instalaciones (evento "docset-progress"). */
+export async function onDocsetProgress(
+  handler: (progress: DocsetProgress) => void,
+): Promise<UnlistenFn> {
+  return listen<DocsetProgress>("docset-progress", (event) =>
+    handler(event.payload),
+  );
 }
 
 /** Tipos con conteo de un docset, en orden de muestra. */

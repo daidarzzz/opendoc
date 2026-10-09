@@ -69,6 +69,7 @@ pub fn scan_dir(root: &Path) -> Result<ScanReport, ScanError> {
         docsets: Vec::new(),
         pending_tarix: Vec::new(),
         issues: entry_issues,
+        index_entries: Vec::new(),
     };
     let mut used_slugs: HashSet<String> = HashSet::new();
 
@@ -147,6 +148,8 @@ pub fn scan_dir(root: &Path) -> Result<ScanReport, ScanError> {
         }
         // Sin página de inicio aún → primera entrada del índice (T4).
         // Índice ilegible → issue, el docset se conserva sin home.
+        // Las entradas leídas viajan en el informe (F1) para que la
+        // carga no reabra este índice; home, issues y orden intactos.
         if docset.home_path.is_none() {
             let dsidx = contents_path.join("Resources/docSet.dsidx");
             match read_index(&dsidx, &docset.id) {
@@ -154,6 +157,7 @@ pub fn scan_dir(root: &Path) -> Result<ScanReport, ScanError> {
                     if let Some(first) = data.entries.first() {
                         docset.home_path = Some(first.path.clone());
                     }
+                    report.index_entries.extend(data.entries);
                 }
                 Err(_) => report.issues.push(ScanIssue {
                     path: root_path,
@@ -212,8 +216,9 @@ pub fn slugify(raw: &str) -> String {
 }
 
 /// Asigna un slug único de forma determinista: el primero usa la base y
-/// las colisiones reciben `-2`, `-3`...
-fn unique_slug(base: &str, used: &mut HashSet<String>) -> String {
+/// las colisiones reciben `-2`, `-3`... `pub(crate)` para `install` (mismo
+/// algoritmo al colocar un docset recién descargado).
+pub(crate) fn unique_slug(base: &str, used: &mut HashSet<String>) -> String {
     if used.insert(base.to_string()) {
         return base.to_string();
     }
@@ -489,6 +494,39 @@ mod tests {
         assert_eq!(
             report.docsets[0].home_path.as_deref(),
             Some("man/printf.html")
+        );
+    }
+
+    #[test]
+    fn scanner_read_entries_travel_in_report() {
+        // F1: las entradas leídas para el home viajan en el informe para
+        // que la carga no reabra el índice (mismo id, nombre y ruta).
+        let dir = tempfile::tempdir().expect("tempdir");
+        make_docset(dir.path(), "Idx.docset", true);
+
+        let report = scan_dir(dir.path()).expect("scan");
+        assert!(report.issues.is_empty());
+        assert_eq!(report.index_entries.len(), 1);
+        let entry = &report.index_entries[0];
+        assert_eq!(entry.docset_id, "idx");
+        assert_eq!(entry.name, "home");
+        assert_eq!(entry.path, "home/page.html");
+        // Con home conocido (plist) no se lee el índice: nada viaja.
+        let dir = tempfile::tempdir().expect("tempdir");
+        let docset = make_docset(dir.path(), "Idx.docset", true);
+        write_test_plist(
+            &docset,
+            r#"<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict>
+<key>CFBundleName</key><string>Idx</string>
+<key>dashIndexFilePath</key><string>home/page.html</string>
+</dict></plist>"#,
+        );
+        let report = scan_dir(dir.path()).expect("scan");
+        assert!(report.issues.is_empty());
+        assert!(report.index_entries.is_empty());
+        assert_eq!(
+            report.docsets[0].home_path.as_deref(),
+            Some("home/page.html")
         );
     }
 

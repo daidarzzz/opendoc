@@ -59,6 +59,9 @@ pub struct AppState {
     pub settings: Mutex<Settings>,
     /// Ids con extracción en curso (evita duplicadas, desactiva el botón).
     pub extracting: Mutex<HashSet<String>>,
+    /// Feeds con instalación en curso (F2: evita dos instalaciones del
+    /// mismo docset a la vez; las de distintos docsets van en paralelo).
+    pub installing: Mutex<HashSet<String>>,
 }
 
 impl Default for AppState {
@@ -67,6 +70,7 @@ impl Default for AppState {
             loaded: Mutex::new(Loaded::default()),
             settings: Mutex::new(Settings::default()),
             extracting: Mutex::new(HashSet::new()),
+            installing: Mutex::new(HashSet::new()),
         }
     }
 }

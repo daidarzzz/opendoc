@@ -369,4 +369,20 @@ mod tests {
             assert!(!usable, "{xml}");
         }
     }
+
+    #[test]
+    fn blocking_client_is_built_inside_blocking_thread() {
+        // El cliente `blocking` crea un runtime tokio interno:
+        // construirlo/dropearlo en contexto async provoca el pánico
+        // "Cannot drop a runtime..." (visto con install_docset). Los
+        // comandos lo construyen dentro de `spawn_blocking`.
+        tauri::async_runtime::block_on(async {
+            tauri::async_runtime::spawn_blocking(|| {
+                let client = http_client().expect("cliente");
+                drop(client);
+            })
+            .await
+            .expect("join");
+        });
+    }
 }

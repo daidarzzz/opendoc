@@ -131,6 +131,13 @@ pub struct ScanReport {
     pub pending_tarix: Vec<PendingTarix>,
     /// Entradas saltadas con su motivo.
     pub issues: Vec<ScanIssue>,
+    /// Entradas ya leídas por el escáner al resolver la página principal
+    /// (F1): la carga las reutiliza sin reabrir esos índices. Solo
+    /// contiene entradas de docsets cuyo índice se abrió aquí; el resto
+    /// se lee en la carga como antes. No viaja al frontend (las entradas
+    /// viven en el índice en memoria del backend).
+    #[serde(skip_serializing, default)]
+    pub index_entries: Vec<Entry>,
 }
 
 /// Error fatal del escaneo: solo si la raíz no existe o no se puede leer.

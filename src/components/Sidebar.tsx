@@ -1,6 +1,7 @@
-// Barra lateral: árbol de navegación, carpeta, pendientes, estado, tema.
+// Barra lateral: árbol de navegación, carpeta, catálogo, pendientes, estado, tema.
 import { BrowseTree } from "./BrowseTree";
 import { DocsetIcon } from "./DocsetIcon";
+import { useCatalog } from "../store/catalog";
 import { useDocsets } from "../store/docsets";
 import { useTheme } from "../store/theme";
 
@@ -19,6 +20,9 @@ export function Sidebar() {
     extract,
   } = useDocsets();
   const { mode, cycle } = useTheme();
+  const catalogView = useCatalog((s) => s.view);
+  const openCatalog = useCatalog((s) => s.open);
+  const updatable = useCatalog((s) => s.updatable);
 
   return (
     <aside className="flex w-64 shrink-0 flex-col border-r border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-950">
@@ -33,12 +37,28 @@ export function Sidebar() {
         </button>
       </div>
 
-      <div className="px-3 pb-2">
+      <div className="space-y-1 px-3 pb-2">
         <button
           onClick={() => void choose()}
           className="w-full rounded border border-gray-300 px-2 py-1.5 text-left text-xs hover:bg-gray-200 dark:border-gray-700 dark:hover:bg-gray-800"
         >
           Carpeta…
+        </button>
+        <button
+          onClick={openCatalog}
+          aria-current={catalogView === "catalog"}
+          className={`w-full rounded border px-2 py-1.5 text-left text-xs hover:bg-gray-200 dark:hover:bg-gray-800 ${
+            catalogView === "catalog"
+              ? "border-blue-500 font-medium"
+              : "border-gray-300 dark:border-gray-700"
+          }`}
+        >
+          Catálogo
+          {updatable > 0 && (
+            <span className="ml-1 rounded bg-blue-600 px-1.5 text-[11px] text-white">
+              {updatable}
+            </span>
+          )}
         </button>
       </div>
 

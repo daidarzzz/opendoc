@@ -54,6 +54,10 @@ pub struct Settings {
     /// Epoch de la última descarga del catálogo (`None` = nunca).
     #[serde(default, deserialize_with = "u64_or_none")]
     pub catalog_fetched_at: Option<u64>,
+    /// Host del mirror que funcionó la última vez (`None` = sin dato).
+    /// Solo ordena el intento; si falla, se prueban los demás igual.
+    #[serde(default, deserialize_with = "url_or_none")]
+    pub fast_mirror: Option<String>,
 }
 
 /// `u32` o default (nunca tumba el parseo).
@@ -103,6 +107,7 @@ impl Default for Settings {
             theme: ThemeMode::default(),
             feed_url: None,
             catalog_fetched_at: None,
+            fast_mirror: None,
         }
     }
 }
@@ -198,6 +203,7 @@ mod tests {
             theme: ThemeMode::Dark,
             feed_url: Some("zealdocs/feeds".to_string()),
             catalog_fetched_at: Some(1_700_000_000),
+            fast_mirror: Some("sanfrancisco.kapeli.com".to_string()),
         };
         assert!(save_if_changed(&path, &settings).expect("guardar"));
         assert_eq!(load(&path), settings);

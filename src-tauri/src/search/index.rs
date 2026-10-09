@@ -56,15 +56,28 @@ impl SearchIndex {
 
     /// Construye el índice desde las entradas de los docsets abribles.
     pub fn build(entries: Vec<Entry>) -> Self {
+        // FASE 0: solo medida.
+        let t_build = std::time::Instant::now();
+        let n = entries.len();
         let mut index = Self::new();
         index.extend(entries);
         index.entries.shrink_to_fit();
+        crate::profile::mark(
+            "index",
+            format_args!(
+                "build total_entries={n} ms={}",
+                crate::profile::ms_since(t_build)
+            ),
+        );
         index
     }
 
     /// Añade entradas compartiendo el internado (p. ej. tarix instalados
     /// después de la carga inicial) y reconstruye la navegación.
     pub fn extend(&mut self, entries: Vec<Entry>) {
+        // FASE 0: solo medida (incluye el rebuild de navegación).
+        let t_ext = std::time::Instant::now();
+        let added = entries.len();
         let Self {
             entries: mine,
             pool,
@@ -77,6 +90,64 @@ impl SearchIndex {
             docset_id: intern(pool, &e.docset_id),
         }));
         self.browse = BrowseCache::rebuild(&self.entries);
+        // FASE 0: solo medida.
+        crate::profile::mark(
+            "index",
+            format_args!(
+                "extend added={added} total={} ms={}",
+                self.entries.len(),
+                crate::profile::ms_since(t_ext)
+            ),
+        );
+    }
+
+    /// Quita las entradas de un docset y reconstruye la navegación
+    /// (al sustituirlo por una versión recién instalada).
+    pub fn remove_docset(&mut self, docset_id: &str) {
+        // FASE 0: solo medida.
+        let t_rm = std::time::Instant::now();
+        self.entries.retain(|e| e.docset_id.as_ref() != docset_id);
+        self.browse = BrowseCache::rebuild(&self.entries);
+        crate::profile::mark(
+            "index",
+            format_args!(
+                "remove docset={docset_id} remaining={} ms={}",
+                self.entries.len(),
+                crate::profile::ms_since(t_rm)
+            ),
+        );
+    }
+
+    /// Sustituye las entradas de varios docsets por unas nuevas con UNA
+    /// sola reconstrucción (F1): mismo estado final que `remove_docset`
+    /// más `extend` (retain conserva el orden y extend anexa), sin el
+    /// rebuild intermedio que nadie observa.
+    pub fn replace_docset(&mut self, old_ids: &[String], entries: Vec<Entry>) {
+        // FASE 0: solo medida.
+        let t_replace = std::time::Instant::now();
+        let added = entries.len();
+        let Self {
+            entries: mine,
+            pool,
+            ..
+        } = self;
+        mine.retain(|e| !old_ids.iter().any(|id| e.docset_id.as_ref() == id));
+        mine.extend(entries.into_iter().map(|e| IndexedEntry {
+            name: e.name,
+            path: e.path,
+            kind: intern(pool, &e.kind),
+            docset_id: intern(pool, &e.docset_id),
+        }));
+        self.browse = BrowseCache::rebuild(&self.entries);
+        crate::profile::mark(
+            "index",
+            format_args!(
+                "replace dropped={} added={added} total={} ms={}",
+                old_ids.len(),
+                self.entries.len(),
+                crate::profile::ms_since(t_replace)
+            ),
+        );
     }
 
     /// Número de entradas indexadas.
@@ -139,5 +210,87 @@ mod tests {
             &index.entries[0].docset_id,
             &index.entries[2].docset_id
         ));
+    }
+
+    #[test]
+    fn remove_docset_drops_only_its_entries() {
+        let mut index = SearchIndex::build(vec![
+            entry("a", "uno", "Guide"),
+            entry("b", "dos", "Guide"),
+            entry("a", "tres", "Guide"),
+        ]);
+        index.remove_docset("a");
+        assert_eq!(index.len(), 1);
+        assert_eq!(index.entries[0].name, "dos");
+        // Navegación reconstruida: `a` ya no tiene tipos.
+        assert!(index.browse_kinds("a").is_empty());
+        assert_eq!(index.browse_kinds("b").len(), 1);
+        // Id desconocido: no cambia nada.
+        index.remove_docset("nadie");
+        assert_eq!(index.len(), 1);
+    }
+
+    /// F1: `replace_docset` produce exactamente el mismo estado que
+    /// `remove_docset` + `extend` (orden, kinds, conteos y búsqueda).
+    type EntrySnap = Vec<(String, String, String, String)>;
+    type KindsSnap = Vec<(String, usize)>;
+    fn snapshot(index: &SearchIndex) -> (EntrySnap, KindsSnap) {
+        let entries = index
+            .entries
+            .iter()
+            .map(|e| {
+                (
+                    e.docset_id.to_string(),
+                    e.name.clone(),
+                    e.kind.to_string(),
+                    e.path.clone(),
+                )
+            })
+            .collect();
+        let mut kinds: Vec<(String, usize)> = Vec::new();
+        for id in ["a", "b", "c"] {
+            for info in index.browse_kinds(id) {
+                kinds.push((format!("{id}/{}", info.kind), info.count));
+            }
+        }
+        (entries, kinds)
+    }
+
+    #[test]
+    fn replace_docset_matches_remove_plus_extend() {
+        let seed = vec![
+            entry("a", "uno", "Guide"),
+            entry("b", "dos", "Function"),
+            entry("a", "tres", "Guide"),
+            entry("c", "cuatro", "Class"),
+        ];
+        let mut old_way = SearchIndex::build(seed.clone());
+        old_way.remove_docset("a");
+        old_way.remove_docset("nadie");
+        old_way.extend(vec![
+            entry("a", "nueva", "Method"),
+            entry("b", "otra", "Guide"),
+        ]);
+
+        let mut new_way = SearchIndex::build(seed);
+        new_way.replace_docset(
+            &["a".to_string(), "nadie".to_string()],
+            vec![entry("a", "nueva", "Method"), entry("b", "otra", "Guide")],
+        );
+
+        assert_eq!(snapshot(&new_way), snapshot(&old_way));
+        // La búsqueda ve lo mismo en ambos.
+        for query in ["nueva", "dos", "uno"] {
+            let mut old_search = old_way;
+            let mut new_search = new_way;
+            let old_hits = crate::search::search(&mut old_search, query, None, 10);
+            let new_hits = crate::search::search(&mut new_search, query, None, 10);
+            let names = |hits: Vec<crate::search::SearchResult>| {
+                hits.into_iter().map(|r| r.name).collect::<Vec<_>>()
+            };
+            assert_eq!(names(new_hits), names(old_hits), "{query}");
+            old_way = old_search;
+            new_way = new_search;
+        }
     }
 }

@@ -67,6 +67,26 @@ pub enum IndexError {
 
 /// Lee y normaliza `docSet.dsidx` en una sola pasada.
 pub fn read_index(dsidx: &Path, docset_id: &str) -> Result<IndexData, IndexError> {
+    // FASE 0: solo medida (una apertura+query por llamada).
+    let t_read = std::time::Instant::now();
+    let result = read_index_inner(dsidx, docset_id);
+    if let Ok(data) = &result {
+        crate::profile::mark(
+            "index",
+            format_args!(
+                "read dsidx={} entries={} skipped_nulls={} ms={}",
+                dsidx.display(),
+                data.entries.len(),
+                data.skipped_nulls,
+                crate::profile::ms_since(t_read)
+            ),
+        );
+    }
+    result
+}
+
+/// Núcleo de `read_index` (la medida vive en el envoltorio).
+fn read_index_inner(dsidx: &Path, docset_id: &str) -> Result<IndexData, IndexError> {
     let conn =
         Connection::open_with_flags(dsidx, OpenFlags::SQLITE_OPEN_READ_ONLY).map_err(|source| {
             IndexError::Unreadable {

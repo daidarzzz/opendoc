@@ -4,6 +4,7 @@ import {
   chooseFolder,
   extractTarix,
   getSettings,
+  listDocsets,
   setDocsetsDir,
 } from "../lib/commands";
 import type { Docset, PendingTarix, ScanIssue } from "../lib/types";
@@ -28,6 +29,8 @@ interface DocsetsState {
   choose: () => Promise<void>;
   /** Extrae un tarix pendiente (muestra "extrayendo…" y desactiva). */
   extract: (id: string) => Promise<void>;
+  /** Relee la lista de instalados (tras instalar desde el catálogo). */
+  refresh: () => Promise<void>;
 }
 
 /** Normaliza rutas pegadas (espacios, comillas de "Copiar como ruta"). */
@@ -38,6 +41,12 @@ export function cleanDir(raw: string): string {
 function errText(e: unknown): string {
   return e instanceof Error ? e.message : JSON.stringify(e);
 }
+
+// F1: una sola inicialización efectiva. En dev, StrictMode monta dos
+// veces y el efecto de arranque invoca `init()` duplicado: las llamadas
+// concurrentes comparten la misma promesa en vez de relanzar la carga.
+// Al asentarse (ok o error) se libera para permitir reintentar.
+let initPromise: Promise<void> | null = null;
 
 export const useDocsets = create<DocsetsState>()((set) => ({
   docsets: [],
@@ -72,32 +81,38 @@ export const useDocsets = create<DocsetsState>()((set) => ({
       set({ loading: false, status: "error al cargar", error: errText(e) });
     }
   },
-  init: async () => {
-    try {
-      const settings = await getSettings();
-      if (!settings.docsets_dir) {
-        set({ loading: false, status: "elige tu carpeta de docsets" });
-        return;
-      }
-      // Se conserva el valor guardado aunque no exista (disco desconectado).
-      set({ savedDir: settings.docsets_dir });
+  init: () => {
+    if (initPromise) return initPromise;
+    initPromise = (async () => {
       try {
-        const report = await setDocsetsDir(settings.docsets_dir);
-        useBrowse.getState().reset();
-        set({
-          docsets: report.docsets,
-          pending: report.pending_tarix,
-          issues: report.issues,
-          dirMissing: false,
-          loading: false,
-          status: `cargados ${report.docsets.length} docsets, ${report.issues.length} issues`,
-        });
+        const settings = await getSettings();
+        if (!settings.docsets_dir) {
+          set({ loading: false, status: "elige tu carpeta de docsets" });
+          return;
+        }
+        // Se conserva el valor guardado aunque no exista (disco desconectado).
+        set({ savedDir: settings.docsets_dir });
+        try {
+          const report = await setDocsetsDir(settings.docsets_dir);
+          useBrowse.getState().reset();
+          set({
+            docsets: report.docsets,
+            pending: report.pending_tarix,
+            issues: report.issues,
+            dirMissing: false,
+            loading: false,
+            status: `cargados ${report.docsets.length} docsets, ${report.issues.length} issues`,
+          });
+        } catch (e) {
+          set({ loading: false, dirMissing: true, error: errText(e) });
+        }
       } catch (e) {
-        set({ loading: false, dirMissing: true, error: errText(e) });
+        set({ loading: false, error: errText(e) });
       }
-    } catch (e) {
-      set({ loading: false, error: errText(e) });
-    }
+    })().finally(() => {
+      initPromise = null;
+    });
+    return initPromise;
   },
   choose: async () => {
     const picked = await chooseFolder();
@@ -128,6 +143,15 @@ export const useDocsets = create<DocsetsState>()((set) => ({
         extractingIds: s.extractingIds.filter((x) => x !== id),
         error: errText(e),
       }));
+    }
+  },
+  refresh: async () => {
+    try {
+      const docsets = await listDocsets();
+      useBrowse.getState().reset();
+      set({ docsets });
+    } catch (e) {
+      set({ error: errText(e) });
     }
   },
 }));

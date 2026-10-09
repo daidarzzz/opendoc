@@ -159,6 +159,9 @@ impl BrowseCache {
     /// Reconstruye la caché desde las entradas (coste `O(n log n)`, una vez
     /// por construcción/extensión del índice).
     pub fn rebuild(entries: &[IndexedEntry]) -> Self {
+        // FASE 0: solo medida.
+        let t_rebuild = std::time::Instant::now();
+        let n = entries.len();
         let fold: Vec<String> = entries.iter().map(|e| e.name.to_lowercase()).collect();
         let mut order: Vec<usize> = (0..entries.len()).collect();
         order.sort_by(|&a, &b| {
@@ -219,11 +222,20 @@ impl BrowseCache {
                     .collect(),
             );
         }
-        Self {
+        let built = Self {
             order,
             spans,
             kinds,
-        }
+        };
+        // FASE 0: solo medida.
+        crate::profile::mark(
+            "index",
+            format_args!(
+                "browse_rebuild entries={n} ms={}",
+                crate::profile::ms_since(t_rebuild)
+            ),
+        );
+        built
     }
 }
 

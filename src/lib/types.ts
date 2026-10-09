@@ -108,7 +108,19 @@ export type ApiError =
   | { kind: "load_failed"; message: string }
   | { kind: "extraction_in_progress"; id: string }
   | { kind: "no_feed_repo" }
-  | { kind: "feed_failed"; message: string };
+  | { kind: "feed_failed"; message: string }
+  | { kind: "no_docsets_dir"; path: string | null }
+  | { kind: "catalog_missing" }
+  | { kind: "unknown_feed"; id: string }
+  | { kind: "no_download_url"; id: string }
+  | { kind: "unsupported_package"; id: string }
+  | { kind: "already_installed"; id: string }
+  | { kind: "ambiguous_match"; id: string; candidates: string[] }
+  | { kind: "install_in_progress"; id: string }
+  | { kind: "download_failed"; id: string; message: string }
+  | { kind: "extract_failed"; id: string; message: string }
+  | { kind: "invalid_package"; id: string; message: string }
+  | { kind: "install_failed"; id: string; message: string };
 
 /** Tema guardado (settings::ThemeMode). */
 export type ThemeMode = "light" | "dark" | "system";
@@ -122,6 +134,8 @@ export interface Settings {
   feed_url: string | null;
   /** Epoch de la última descarga del catálogo, null = nunca. */
   catalog_fetched_at: number | null;
+  /** Host del mirror que funcionó la última vez, null = sin dato. */
+  fast_mirror: string | null;
 }
 
 /** Una parada del historial de pestaña (URL canónica opendoc://). */
@@ -156,6 +170,8 @@ export interface CatalogStatus {
   repo: string | null;
   fetched_at: number | null;
   count: number;
+  /** Profiling FASE 0 activo (`OPENDOC_PROFILE=1` al arrancar). */
+  profile_enabled: boolean;
 }
 
 /** Resumen tras refrescar (commands::CatalogSummary). */
@@ -164,4 +180,47 @@ export interface CatalogSummary {
   count: number;
   skipped: number;
   fetched_at: number;
+}
+
+/** Estado de un feed frente a los instalados (commands::InstallStatus). */
+export interface InstallStatus {
+  feed_id: string;
+  name: string;
+  installed: boolean;
+  docset_id: string | null;
+  installed_version: string | null;
+  available_version: string;
+  /** true = hay más reciente; false = iguales o instalada más reciente; null = no comparable. */
+  update_available: boolean | null;
+  ambiguous: boolean;
+  ambiguous_ids: string[];
+}
+
+/** Resumen tras instalar (commands::InstallSummary). */
+export interface InstallSummary {
+  feed_id: string;
+  docset_id: string;
+  name: string;
+  version: string | null;
+  entries: number;
+  reinstalled: boolean;
+}
+
+/** Etapa del progreso de instalación (evento "docset-progress"). */
+export type InstallStage =
+  | "downloading"
+  | "extracting"
+  | "verifying"
+  | "done"
+  | "error";
+
+/** Progreso de instalación (evento "docset-progress", sin porcentajes). */
+export interface DocsetProgress {
+  feed_id: string;
+  docset_id: string | null;
+  stage: InstallStage;
+  received_bytes: number;
+  total_bytes: number | null;
+  files: number;
+  message: string | null;
 }

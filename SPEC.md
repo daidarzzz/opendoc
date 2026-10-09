@@ -88,10 +88,12 @@ get_docset_home	docset_id	URL opendoc://...
 get_settings	n/a	Settings { version, docsets_dir?, theme, feed_url?, catalog_fetched_at? }
 set_theme	theme	Settings (persiste solo si cambió)
 extract_tarix	docset_id	ScanReport (async; ExtractionInProgress si hay otra en curso)
-get_catalog_status	n/a	CatalogStatus { repo?, fetched_at?, count } (caché local, sin red)
+get_catalog_status	n/a	CatalogStatus { repo?, fetched_at?, count, profile_enabled } (caché local, sin red; profile_enabled = OPENDOC_PROFILE=1 al arrancar)
 set_feed_repo	repo	Settings (valida owner/repo o URL y persiste)
-refresh_catalog	n/a	CatalogSummary { repo, count, skipped, fetched_at } (async; NoFeedRepo sin repo)
-list_catalog	query?	Vec<FeedEntry { id, name, version, urls }> (caché, offline)
+ refresh_catalog	n/a	CatalogSummary { repo, count, skipped, fetched_at } (async; NoFeedRepo sin repo)
+ list_catalog	query?	Vec<FeedEntry { id, name, version, urls }> (caché, offline)
+ install_docset	{ feed_id, force? }	InstallSummary { feed_id, docset_id, name, version?, entries, reinstalled } (async; progreso por evento `docset-progress`; sin force: AlreadyInstalled si ya instalado, AmbiguousMatch si varias carpetas coinciden; InstallInProgress si ya hay una en curso)
+ get_install_status	feed_id?	Vec<InstallStatus { feed_id, name, installed, docset_id?, installed_version?, available_version, update_available (true/false/null), ambiguous, ambiguous_ids }> (caché + instalados, offline; UnknownFeed si el id no existe)
 
 Los tipos se comparten con el frontend (generar bindings, por ejemplo con specta/tauri-specta o ts-rs, o mantenerlos a mano y sincronizados).
 
