@@ -241,12 +241,16 @@ export function Viewer() {
   if (docsets.length === 0 && !loading) {
     return (
       <main className="flex min-w-0 flex-1 flex-col">
-        <FolderPrompt
-          dirMissing={dirMissing}
-          savedDir={savedDir}
-          choose={choose}
-          error={tabError}
-        />
+        {dirMissing ? (
+          <FolderPrompt
+            dirMissing={dirMissing}
+            savedDir={savedDir}
+            choose={choose}
+            error={tabError}
+          />
+        ) : (
+          <Welcome docCount={0} />
+        )}
       </main>
     );
   }
