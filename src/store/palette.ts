@@ -45,7 +45,9 @@ export const usePalette = create<PaletteState>()((set, get) => {
       if (!open) set({ activeIndex: 0 });
     },
     setQuery: (query: string) => {
-      set({ query, results: [], applied: [], unknown: [], activeIndex: 0 });
+      // Keep the current filter chips visible while the debounced search runs.
+      // Clearing them here made selected docsets flash away on every keystroke.
+      set({ query, results: [], activeIndex: 0 });
       const mySeq = ++seq;
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => void (async () => {
