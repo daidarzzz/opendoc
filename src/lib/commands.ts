@@ -105,6 +105,11 @@ export async function installDocset(
   });
 }
 
+/** Desinstala el docset que coincide con el feed y devuelve su id local. */
+export async function uninstallDocset(feedId: string): Promise<string> {
+  return invoke<string>("uninstall_docset", { feedId });
+}
+
 /** Estado de los feeds frente a los instalados (offline). Con feedId
  *  devuelve solo esa entrada o falla con `unknown_feed`. */
 export async function getInstallStatus(

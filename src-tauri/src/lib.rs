@@ -14,12 +14,12 @@ pub mod settings;
 use commands::{
     extract_tarix, get_catalog_status, get_docset_home, get_install_status, get_settings,
     install_docset, list_catalog, list_docsets, list_entries, list_kinds, refresh_catalog, search,
-    set_docsets_dir, set_feed_repo, set_theme, AppState,
+    set_docsets_dir, set_feed_repo, set_theme, uninstall_docset, AppState,
 };
 
-/// Carga ajustes al arrancar. Nunca tumba el arranque: sin ajustes,
-/// corruptos o con ruta inexistente se arranca vacío (la UI muestra el
-/// banner para elegir carpeta).
+/// Carga ajustes al arrancar. Si no hay carpeta configurada, asigna
+/// `app_data/docsets`; una ruta elegida que ya no exista sigue mostrándose
+/// como no disponible para que el usuario pueda cambiarla.
 /// La carga de docsets NO se hace aquí (F1): la única carga efectiva es
 /// la de `init()` del frontend (`set_docsets_dir`), que devuelve el
 /// `ScanReport` que el preload descartaba.
@@ -29,7 +29,14 @@ fn load_startup_state(app: &mut tauri::App) {
         return;
     };
     let settings_path = settings::settings_file(&data_dir);
-    let settings = settings::load(&settings_path);
+    let mut settings = settings::load(&settings_path);
+    if settings.docsets_dir.is_none() {
+        let default_dir = data_dir.join("docsets");
+        if std::fs::create_dir_all(&default_dir).is_ok() {
+            settings.docsets_dir = Some(default_dir);
+            let _ = settings::save_if_changed(&settings_path, &settings);
+        }
+    }
     let Some(state) = app.try_state::<AppState>() else {
         return;
     };
@@ -98,7 +105,8 @@ pub fn run() {
             refresh_catalog,
             list_catalog,
             install_docset,
-            get_install_status
+            get_install_status,
+            uninstall_docset
         ])
         .run(tauri::generate_context!());
     if let Err(e) = result {

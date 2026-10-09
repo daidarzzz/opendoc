@@ -23,6 +23,10 @@ use crate::docset::Entry;
 pub struct IndexedEntry {
     /// Nombre de la API (`str.format`, `std::vector`...).
     pub name: String,
+    /// Forma plegada precalculada para filtros y ranking en cada tecla.
+    pub lower_name: String,
+    /// Forma plegada del último segmento de API, si existe.
+    pub lower_segment: Option<String>,
     /// Ruta relativa a `Documents/`, con ancla si la hay.
     pub path: String,
     /// Tipo normalizado. Internado: compartido entre entradas.
@@ -84,6 +88,8 @@ impl SearchIndex {
             ..
         } = self;
         mine.extend(entries.into_iter().map(|e| IndexedEntry {
+            lower_name: e.name.to_lowercase(),
+            lower_segment: crate::search::query::last_segment(&e.name).map(str::to_lowercase),
             name: e.name,
             path: e.path,
             kind: intern(pool, &e.kind),
@@ -133,6 +139,8 @@ impl SearchIndex {
         } = self;
         mine.retain(|e| !old_ids.iter().any(|id| e.docset_id.as_ref() == id));
         mine.extend(entries.into_iter().map(|e| IndexedEntry {
+            lower_name: e.name.to_lowercase(),
+            lower_segment: crate::search::query::last_segment(&e.name).map(str::to_lowercase),
             name: e.name,
             path: e.path,
             kind: intern(pool, &e.kind),

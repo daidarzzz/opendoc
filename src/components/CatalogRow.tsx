@@ -2,7 +2,7 @@
 // La acción la decide `rowAction` (lógica pura en lib/catalogUi); aquí
 // solo se pinta. El progreso llega indexado por feed_id desde el store,
 // así que nunca se atribuye al docset equivocado.
-import { memo } from "react";
+import { memo, useState } from "react";
 import { DocsetIcon } from "./DocsetIcon";
 import type { FeedEntry, InstallStatus } from "../lib/types";
 import type { FeedOp } from "../store/catalog";
@@ -34,6 +34,7 @@ export const CatalogRow = memo(function CatalogRow({
   icon,
   op,
   onAction,
+  onUninstall,
   onDismiss,
   onChooseFolder,
 }: {
@@ -43,9 +44,11 @@ export const CatalogRow = memo(function CatalogRow({
   icon: string | null;
   op: FeedOp;
   onAction: (feedId: string, force: boolean) => void;
+  onUninstall: (feedId: string) => void;
   onDismiss: (feedId: string) => void;
   onChooseFolder: () => void;
 }) {
+  const [confirmUninstall, setConfirmUninstall] = useState(false);
   const action = rowAction(status);
   const badge = statusBadge(status);
   const lines = versionLine(status);
@@ -70,19 +73,52 @@ export const CatalogRow = memo(function CatalogRow({
             {[lines, mirrors].filter((s) => s !== "").join(" · ")}
           </p>
         </div>
-        {action !== "none" && (
-          <button
-            onClick={() => onAction(entry.id, action !== "install")}
-            disabled={op.busy}
-            className={`shrink-0 rounded px-3 py-1 text-xs ${
-              action === "install"
-                ? "bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-                : "border border-gray-300 hover:bg-gray-200 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
-            }`}
-          >
-            {op.busy ? "En curso…" : ACTION_LABEL[action]}
-          </button>
-        )}
+        <div className="flex shrink-0 items-center gap-1.5">
+          {action !== "none" && (
+            <button
+              onClick={() => onAction(entry.id, action !== "install")}
+              disabled={op.busy}
+              className={`shrink-0 rounded px-3 py-1 text-xs ${
+                action === "install"
+                  ? "bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                  : "border border-gray-300 hover:bg-gray-200 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
+              }`}
+            >
+              {op.busy ? "En curso…" : ACTION_LABEL[action]}
+            </button>
+          )}
+          {status?.installed && (
+            confirmUninstall ? (
+              <>
+                <button
+                  onClick={() => setConfirmUninstall(false)}
+                  disabled={op.busy}
+                  className="rounded px-2 py-1 text-xs hover:bg-gray-200 disabled:opacity-50 dark:hover:bg-gray-800"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    setConfirmUninstall(false);
+                    onUninstall(entry.id);
+                  }}
+                  disabled={op.busy}
+                  className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  Confirmar
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setConfirmUninstall(true)}
+                disabled={op.busy}
+                className="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"
+              >
+                {op.busy ? "Desinstalando…" : "Desinstalar"}
+              </button>
+            )
+          )}
+        </div>
       </div>
       {(op.progress || op.error !== "" || op.done) && (
         <div className="mt-1.5" aria-live="polite">

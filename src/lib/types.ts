@@ -148,11 +148,9 @@ export interface TabEntry {
 export interface Tab {
   id: string;
   docsetId: string;
-  past: TabEntry[];
-  current: TabEntry | null;
-  future: TabEntry[];
-  /** URL puesta por back/forward/apertura, pendiente de eco del iframe. */
-  pendingUrl: string | null;
+  /** Historial lineal de la pestaña; la entrada activa es `historyIndex`. */
+  history: TabEntry[];
+  historyIndex: number;
   /** Scroll guardado por URL (acotado). */
   scrolls: Record<string, number>;
 }

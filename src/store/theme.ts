@@ -22,6 +22,7 @@ interface ThemeState {
   loaded: boolean;
   init: () => Promise<void>;
   cycle: () => Promise<void>;
+  setMode: (mode: ThemeMode) => Promise<void>;
 }
 
 // Sin flash: sistema de inmediato; init() corrige con lo guardado.
@@ -46,6 +47,15 @@ export const useTheme = create<ThemeState>()((set, get) => ({
     applyResolved(next);
     try {
       await setTheme(next);
+    } catch {
+      // Se conserva local; el backend persiste cuando puede.
+    }
+  },
+  setMode: async (mode) => {
+    set({ mode });
+    applyResolved(mode);
+    try {
+      await setTheme(mode);
     } catch {
       // Se conserva local; el backend persiste cuando puede.
     }

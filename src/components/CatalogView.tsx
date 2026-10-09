@@ -48,6 +48,7 @@ export function CatalogView() {
   const saveRepo = useCatalog((s) => s.saveRepo);
   const refresh = useCatalog((s) => s.refresh);
   const install = useCatalog((s) => s.install);
+  const uninstall = useCatalog((s) => s.uninstall);
   const clearOp = useCatalog((s) => s.clearOp);
   const setQuery = useCatalog((s) => s.setQuery);
   const setFilter = useCatalog((s) => s.setFilter);
@@ -201,6 +202,7 @@ export function CatalogView() {
                 icon={st?.docset_id ? (icons.get(st.docset_id) ?? null) : null}
                 op={ops[entry.id] ?? IDLE_OP}
                 onAction={(feedId, force) => void install(feedId, force)}
+                onUninstall={(feedId) => void uninstall(feedId)}
                 onDismiss={(feedId) => clearOp(feedId)}
                 onChooseFolder={() => void choose()}
               />

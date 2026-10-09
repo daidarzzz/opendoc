@@ -48,7 +48,7 @@ function errText(e: unknown): string {
 // Al asentarse (ok o error) se libera para permitir reintentar.
 let initPromise: Promise<void> | null = null;
 
-export const useDocsets = create<DocsetsState>()((set) => ({
+export const useDocsets = create<DocsetsState>()((set, get) => ({
   docsets: [],
   pending: [],
   extractingIds: [],
@@ -146,12 +146,28 @@ export const useDocsets = create<DocsetsState>()((set) => ({
     }
   },
   refresh: async () => {
+    const savedDir = get().savedDir;
     try {
+      if (savedDir) {
+        set({ loading: true, error: "", status: `actualizando ${savedDir}…` });
+        const report = await setDocsetsDir(savedDir);
+        useBrowse.getState().reset();
+        set({
+          docsets: report.docsets,
+          pending: report.pending_tarix,
+          issues: report.issues,
+          loading: false,
+          error: "",
+          dirMissing: false,
+          status: `cargados ${report.docsets.length} docsets, ${report.issues.length} issues`,
+        });
+        return;
+      }
       const docsets = await listDocsets();
       useBrowse.getState().reset();
-      set({ docsets });
+      set({ docsets, loading: false, error: "" });
     } catch (e) {
-      set({ error: errText(e) });
+      set({ loading: false, error: errText(e) });
     }
   },
 }));

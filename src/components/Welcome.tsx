@@ -3,6 +3,7 @@
 // Sin tarjetas, degradados, emojis ni iconos de terceros.
 import { platform } from "@tauri-apps/plugin-os";
 import { usePalette } from "../store/palette";
+import { useCatalog } from "../store/catalog";
 
 function Shortcut({ keys, label }: { keys: string; label: string }) {
   return (
@@ -17,6 +18,7 @@ function Shortcut({ keys, label }: { keys: string; label: string }) {
 
 export function Welcome({ docCount }: { docCount: number }) {
   const setOpen = usePalette((s) => s.setOpen);
+  const openCatalog = useCatalog((s) => s.open);
   // Símbolo del modificador según plataforma (macOS: ⌘).
   const mod = platform() === "macos" ? "⌘" : "Ctrl";
 
@@ -25,12 +27,14 @@ export function Welcome({ docCount }: { docCount: number }) {
       <h1 className="text-3xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">
         OpenDoc
       </h1>
-      <button
-        onClick={() => setOpen(true)}
-        className="mt-6 text-sm text-gray-500 underline decoration-gray-300 underline-offset-4 hover:text-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-400 dark:decoration-gray-700 dark:hover:text-gray-100"
-      >
-        Buscar documentación · {mod} K
-      </button>
+      <div className="mt-6 flex flex-col items-center gap-2">
+        <button onClick={() => setOpen(true)} className="text-sm text-gray-500 underline decoration-gray-300 underline-offset-4 hover:text-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-400 dark:decoration-gray-700 dark:hover:text-gray-100">
+          Buscar documentación · {mod} K
+        </button>
+        <button onClick={openCatalog} className="text-sm text-gray-500 underline decoration-gray-300 underline-offset-4 hover:text-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-400 dark:decoration-gray-700 dark:hover:text-gray-100">
+          Buscar en el catálogo
+        </button>
+      </div>
       <ul className="mt-8 space-y-1.5" aria-label="Atajos de teclado">
         <Shortcut keys={`${mod} K`} label="Buscar" />
         <Shortcut keys={`${mod} T`} label="Nueva pestaña" />

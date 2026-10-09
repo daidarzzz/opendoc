@@ -3,7 +3,7 @@
 //! `list_entries`, `get_docset_home`, `get_settings`, `set_theme`,
 //! `extract_tarix`, `get_catalog_status`, `set_feed_repo`,
 //! `refresh_catalog`, `list_catalog`, `install_docset`,
-//! `get_install_status`.
+//! `get_install_status`, `uninstall_docset`.
 //!
 //! Solo delegan en `service.rs` (testeable sin Tauri). Si se toca este
 //! contrato, actualizar `src/lib/types.ts` y la tabla de SPEC §4.4.
@@ -624,6 +624,105 @@ pub fn get_install_status(
         message: e.to_string(),
     })?;
     service::install_status_for(&data_dir, &loaded.docsets, feed_id.as_deref())
+}
+
+/// Desinstala el docset que coincide exactamente con el feed dentro de la
+/// carpeta configurada. El borrado de disco corre fuera del hilo principal.
+#[tauri::command]
+pub async fn uninstall_docset(
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+    feed_id: String,
+) -> Result<String, ApiError> {
+    let data_dir = data_dir_of(&app)?;
+    service::resolve_install_entry(&data_dir, &feed_id)?;
+    let docsets_dir = state
+        .settings
+        .lock()
+        .map_err(|e| ApiError::LoadFailed {
+            message: e.to_string(),
+        })?
+        .docsets_dir
+        .clone()
+        .ok_or(ApiError::NoDocsetsDir { path: None })?;
+
+    {
+        let mut installing = state.installing.lock().map_err(|e| ApiError::LoadFailed {
+            message: e.to_string(),
+        })?;
+        if !installing.insert(feed_id.clone()) {
+            return Err(ApiError::InstallInProgress { id: feed_id });
+        }
+    }
+
+    let result = async {
+        let docset = {
+            let loaded = state.loaded.lock().map_err(|e| ApiError::LoadFailed {
+                message: e.to_string(),
+            })?;
+            match crate::docset::match_feed(&feed_id, &loaded.docsets) {
+                crate::docset::FeedMatch::One(docset) => docset.clone(),
+                crate::docset::FeedMatch::None => {
+                    return Err(ApiError::UnknownDocset {
+                        id: feed_id.clone(),
+                    });
+                }
+                crate::docset::FeedMatch::Ambiguous(candidates) => {
+                    return Err(ApiError::AmbiguousMatch {
+                        id: feed_id.clone(),
+                        candidates: candidates.iter().map(|d| d.id.clone()).collect(),
+                    });
+                }
+            }
+        };
+
+        let expected_dir = docsets_dir.clone();
+        let root = docset.root_path.clone();
+        let docset_id = docset.id.clone();
+        let removed = tauri::async_runtime::spawn_blocking(move || {
+            let base = std::fs::canonicalize(&expected_dir).map_err(|e| e.to_string())?;
+            let metadata = std::fs::symlink_metadata(&root).map_err(|e| e.to_string())?;
+            if metadata.file_type().is_symlink() || !metadata.is_dir() {
+                return Err("la ruta del docset no es una carpeta segura".to_string());
+            }
+            let canonical_root = std::fs::canonicalize(&root).map_err(|e| e.to_string())?;
+            if canonical_root.parent() != Some(base.as_path())
+                || !canonical_root
+                    .file_name()
+                    .is_some_and(|name| name.to_string_lossy().to_lowercase().ends_with(".docset"))
+            {
+                return Err("el docset está fuera de la carpeta configurada".to_string());
+            }
+            std::fs::remove_dir_all(&canonical_root).map_err(|e| e.to_string())
+        })
+        .await
+        .map_err(|e| ApiError::LoadFailed {
+            message: e.to_string(),
+        })?;
+        removed.map_err(|message| ApiError::InstallFailed {
+            id: feed_id.clone(),
+            message,
+        })?;
+
+        let mut loaded = state.loaded.lock().map_err(|e| ApiError::LoadFailed {
+            message: e.to_string(),
+        })?;
+        if loaded
+            .docsets
+            .iter()
+            .any(|d| d.id == docset_id && d.root_path == docset.root_path)
+        {
+            loaded
+                .docsets
+                .retain(|d| !(d.id == docset_id && d.root_path == docset.root_path));
+            loaded.index.remove_docset(&docset_id);
+        }
+        Ok(docset_id)
+    }
+    .await;
+
+    remove_installing(&state, &feed_id);
+    result
 }
 
 /// Guarda `docsets_dir` en ajustes si cambió. Nunca falla hacia fuera

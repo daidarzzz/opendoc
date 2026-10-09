@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   appendTab,
   closeTab,
-  consumePending,
+  canGoBack,
+  canGoForward,
+  currentEntry,
   emptyTab,
   goBack,
   goForward,
@@ -40,26 +42,25 @@ describe("navigateTab", () => {
   it("apila y limpia el futuro desde punto medio", () => {
     let t = tabWith([a.url, b.url]);
     t = goBack(t);
-    expect(t.current?.url).toBe(a.url);
+    expect(currentEntry(t)?.url).toBe(a.url);
     t = navigateTab(t, { url: "opendoc://d/c.html", title: "C" });
-    expect(t.future).toEqual([]);
-    expect(t.past.map((e) => e.url)).toEqual([a.url]);
-    expect(t.current?.url).toBe("opendoc://d/c.html");
+    expect(t.history.map((e) => e.url)).toEqual([a.url, "opendoc://d/c.html"]);
+    expect(t.historyIndex).toBe(1);
+    expect(currentEntry(t)?.url).toBe("opendoc://d/c.html");
   });
 
   it("URL idéntica solo refresca el título (eco load/hash)", () => {
     const t = tabWith([a.url]);
     const n = navigateTab(t, { url: a.url, title: "A2" });
-    expect(n.past).toEqual([]);
-    expect(n.current?.title).toBe("A2");
+    expect(n.history).toEqual([{ ...a, title: "A2" }]);
+    expect(currentEntry(n)?.title).toBe("A2");
   });
 
   it("solo-cambio de ancla sustituye sin apilar", () => {
     const t = tabWith([a.url, b.url]);
     const n = navigateTab(t, { url: "opendoc://d/b.html#frag", title: "B#" });
-    expect(n.past.map((e) => e.url)).toEqual([a.url]);
-    expect(n.current?.url).toBe("opendoc://d/b.html#frag");
-    expect(n.future).toEqual([]);
+    expect(n.history.map((e) => e.url)).toEqual([a.url, "opendoc://d/b.html#frag"]);
+    expect(currentEntry(n)?.url).toBe("opendoc://d/b.html#frag");
   });
 
   it("acota el pasado a MAX_HISTORY", () => {
@@ -67,21 +68,26 @@ describe("navigateTab", () => {
     for (let i = 0; i < MAX_HISTORY + 10; i++) {
       t = navigateTab(t, { url: `opendoc://d/p${i}.html`, title: `${i}` });
     }
-    expect(t.past.length).toBe(MAX_HISTORY);
+    expect(t.history.length).toBe(MAX_HISTORY);
+    expect(t.historyIndex).toBe(MAX_HISTORY - 1);
   });
 });
 
 describe("goBack/goForward", () => {
-  it("recorre atrás y adelante con pendingUrl", () => {
+  it("recorre una secuencia con un cursor explícito", () => {
     let t = tabWith([a.url, b.url]);
+    expect(canGoBack(t)).toBe(true);
+    expect(canGoForward(t)).toBe(false);
     t = goBack(t);
-    expect(t.current?.url).toBe(a.url);
-    expect(t.pendingUrl).toBe(a.url);
-    expect(t.future.map((e) => e.url)).toEqual([b.url]);
+    expect(currentEntry(t)?.url).toBe(a.url);
+    expect(t.historyIndex).toBe(0);
+    expect(canGoBack(t)).toBe(false);
+    expect(canGoForward(t)).toBe(true);
     t = goForward(t);
-    expect(t.current?.url).toBe(b.url);
-    expect(t.pendingUrl).toBe(b.url);
-    expect(t.future).toEqual([]);
+    expect(currentEntry(t)?.url).toBe(b.url);
+    expect(t.historyIndex).toBe(1);
+    expect(canGoBack(t)).toBe(true);
+    expect(canGoForward(t)).toBe(false);
   });
 
   it("sin pasado/futuro no cambia", () => {
@@ -91,20 +97,15 @@ describe("goBack/goForward", () => {
   });
 });
 
-describe("consumePending", () => {
-  it("consume el eco esperado sin tocar pilas", () => {
+describe("iframe navigation echoes", () => {
+  it("refreshing the active URL does not add a history stop or erase forward", () => {
     let t = tabWith([a.url, b.url]);
     t = goBack(t);
-    const { tab: n, consumed } = consumePending(t, a.url);
-    expect(consumed).toBe(true);
-    expect(n.pendingUrl).toBeNull();
-    expect(n.past).toEqual([]);
-  });
-
-  it("no consume URLs distintas", () => {
-    let t = tabWith([a.url]);
-    t = { ...t, pendingUrl: b.url };
-    expect(consumePending(t, a.url).consumed).toBe(false);
+    const refreshed = navigateTab(t, { ...a, title: "A loaded" });
+    expect(refreshed.history.map((entry) => entry.url)).toEqual([a.url, b.url]);
+    expect(refreshed.history[0]?.title).toBe("A loaded");
+    expect(refreshed.historyIndex).toBe(0);
+    expect(canGoForward(refreshed)).toBe(true);
   });
 });
 
@@ -122,7 +123,7 @@ describe("closeTab", () => {
     const mk = (n: string) => tabWithEntry("d", { url: `opendoc://${n}`, title: n });
     const tabs = [mk("a"), mk("b"), mk("c")];
     let r = closeTab(tabs, tabs[1].id, tabs[1].id);
-    expect(r.tabs.map((t) => t.current?.url)).toEqual(["opendoc://a", "opendoc://c"]);
+    expect(r.tabs.map((t) => currentEntry(t)?.url)).toEqual(["opendoc://a", "opendoc://c"]);
     expect(r.activeId).toBe(tabs[2].id);
     r = closeTab(tabs, tabs[2].id, tabs[2].id);
     expect(r.activeId).toBe(tabs[1].id);
@@ -140,7 +141,7 @@ describe("closeTab", () => {
     const tabs = [tabWithEntry("d", a)];
     const r = closeTab(tabs, tabs[0].id, tabs[0].id);
     expect(r.tabs.length).toBe(1);
-    expect(r.tabs[0].current).toBeNull();
+    expect(currentEntry(r.tabs[0])).toBeNull();
   });
 
   it("id desconocido no cambia nada", () => {
@@ -162,14 +163,14 @@ describe("appendTab/moveTab", () => {
     expect(tabs.length).toBe(MAX_TABS);
     // La activa (t0) se conserva; las expulsadas son las inactivas viejas.
     expect(tabs[0].id).toBe(active);
-    expect(tabs.map((t) => t.current?.url)).not.toContain("opendoc://t1");
+    expect(tabs.map((t) => currentEntry(t)?.url)).not.toContain("opendoc://t1");
   });
 
   it("mueve pestañas de posición", () => {
     const mk = (n: string) => tabWithEntry("d", { url: `opendoc://${n}`, title: n });
     const tabs = [mk("a"), mk("b"), mk("c")];
     const moved = moveTab(tabs, tabs[0].id, 2);
-    expect(moved.map((t) => t.current?.url)).toEqual([
+    expect(moved.map((t) => currentEntry(t)?.url)).toEqual([
       "opendoc://b",
       "opendoc://c",
       "opendoc://a",

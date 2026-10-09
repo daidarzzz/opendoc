@@ -13,13 +13,15 @@
 //!   (`C++`, `!important`) nunca se leen como sintaxis de patrón.
 
 use std::cmp::Reverse;
-use std::collections::HashSet;
+use std::collections::{BinaryHeap, HashSet};
 
 use nucleo_matcher::pattern::{AtomKind, CaseMatching, Normalization, Pattern};
 use nucleo_matcher::{Matcher, Utf32Str};
 use serde::{Deserialize, Serialize};
 
 use super::index::{IndexedEntry, SearchIndex};
+
+type RankedHit<'a> = (u8, u8, Reverse<u32>, &'a str, &'a str, usize);
 
 /// Un resultado listo para la UI (serializable para T6).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -69,38 +71,39 @@ pub fn search(
         utf32_buf,
         ..
     } = &mut *index;
-    let mut hits: Vec<(usize, u8, u32)> = Vec::new();
+    // La paleta solo enseña 20 filas: conserva el mejor top-K durante el
+    // recorrido y evita ordenar/guardar todos los hits de docsets grandes.
+    let mut hits: BinaryHeap<RankedHit<'_>> = BinaryHeap::with_capacity(limit);
     for (idx, entry) in entries.iter().enumerate() {
         if let Some(allowed) = &allowed {
             if !allowed.contains(entry.docset_id.as_ref()) {
                 continue;
             }
         }
+        if words.iter().any(|word| !could_match_literals(entry, word)) {
+            continue;
+        }
         if let Some((tier, score)) = match_entry(matcher, utf32_buf, entry, &words, &patterns) {
-            hits.push((idx, tier, score));
+            let candidate = (
+                tier,
+                kind_rank(&entry.kind),
+                Reverse(score),
+                entry.name.as_str(),
+                entry.docset_id.as_ref(),
+                idx,
+            );
+            if hits.len() < limit {
+                hits.push(candidate);
+            } else if hits.peek().is_some_and(|worst| candidate < *worst) {
+                hits.pop();
+                hits.push(candidate);
+            }
         }
     }
-    hits.sort_by(|a, b| {
-        let ea = &entries[a.0];
-        let eb = &entries[b.0];
-        (
-            a.1,
-            kind_rank(&ea.kind),
-            Reverse(a.2),
-            &ea.name,
-            &ea.docset_id,
-        )
-            .cmp(&(
-                b.1,
-                kind_rank(&eb.kind),
-                Reverse(b.2),
-                &eb.name,
-                &eb.docset_id,
-            ))
-    });
+    let mut hits = hits.into_vec();
+    hits.sort_unstable();
     hits.into_iter()
-        .take(limit)
-        .map(|(idx, _, score)| {
+        .map(|(_, _, Reverse(score), _, _, idx)| {
             let entry = &entries[idx];
             SearchResult {
                 docset_id: entry.docset_id.to_string(),
@@ -111,6 +114,28 @@ pub fn search(
             }
         })
         .collect()
+}
+
+/// Descarta candidatos que carecen de dígitos/signos ASCII obligatorios.
+/// Las letras se dejan al matcher: su normalización permite, por ejemplo,
+/// que `i` coincida con `ï`, así que filtrarlas literalmente perdería hits.
+fn could_match_literals(entry: &IndexedEntry, word: &str) -> bool {
+    let literals = word
+        .chars()
+        .filter(|c| c.is_ascii_digit() || (c.is_ascii_punctuation() && !c.is_ascii_whitespace()));
+    let mut full_ok = true;
+    let mut segment_ok = true;
+    for literal in literals {
+        full_ok &= entry.lower_name.contains(literal);
+        segment_ok &= entry
+            .lower_segment
+            .as_deref()
+            .is_some_and(|segment| segment.contains(literal));
+        if !full_ok && !segment_ok {
+            return false;
+        }
+    }
+    true
 }
 
 /// Tier y score de una entrada. `None` si alguna palabra no coincide.
@@ -126,7 +151,14 @@ fn match_entry(
     let mut worst_tier = 0_u8;
     let mut total = 0_u32;
     for (word, pattern) in words.iter().zip(patterns.iter()) {
-        let (tier, score) = match_word(matcher, buf, word, pattern, full, segment)?;
+        let (tier, score) = match_word(
+            matcher,
+            buf,
+            word,
+            pattern,
+            (full, &entry.lower_name),
+            segment.zip(entry.lower_segment.as_deref()),
+        )?;
         worst_tier = worst_tier.max(tier);
         total = total.saturating_add(score);
     }
@@ -139,14 +171,22 @@ fn match_word(
     buf: &mut Vec<char>,
     word: &str,
     pattern: &Pattern,
-    full: &str,
-    segment: Option<&str>,
+    full: (&str, &str),
+    segment: Option<(&str, &str)>,
 ) -> Option<(u8, u32)> {
-    let mut best = tiered(matcher, buf, word, pattern, full, true);
-    if let Some(seg) = segment {
+    let mut best = tiered(matcher, buf, word, pattern, full.0, full.1, true);
+    if let Some((seg, lower_seg)) = segment {
         // El tier por segmento exige query de 2+ caracteres para no
         // inundar con queries de una letra.
-        let candidate = tiered(matcher, buf, word, pattern, seg, word.chars().count() >= 2);
+        let candidate = tiered(
+            matcher,
+            buf,
+            word,
+            pattern,
+            seg,
+            lower_seg,
+            word.chars().count() >= 2,
+        );
         best = match (best, candidate) {
             (Some(a), Some(b)) => Some(if (a.0, u32::MAX - a.1) <= (b.0, u32::MAX - b.1) {
                 a
@@ -168,14 +208,14 @@ fn tiered(
     word_lower: &str,
     pattern: &Pattern,
     candidate: &str,
+    lower: &str,
     allow_tier01: bool,
 ) -> Option<(u8, u32)> {
     let score = pattern.score(Utf32Str::new(candidate, buf), matcher)?;
     if !allow_tier01 {
         return Some((2, score));
     }
-    let lower = candidate.to_lowercase();
-    if lower == *word_lower {
+    if lower == word_lower {
         Some((0, score))
     } else if lower.starts_with(word_lower) {
         Some((1, score))
@@ -186,7 +226,7 @@ fn tiered(
 
 /// Último segmento tras separadores de API (`. # : /` y espacios).
 /// `None` si no hay segmentación útil.
-fn last_segment(name: &str) -> Option<&str> {
+pub(crate) fn last_segment(name: &str) -> Option<&str> {
     let seg = name
         .rsplit(['.', '#', ':', '/', ' '])
         .next()

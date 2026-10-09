@@ -1,3 +1,62 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Scrollbars consistentes en Chromium y Firefox, también dentro de las
+   zonas desplazables pequeñas de la aplicación. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #a3a3a3 #f3f4f6;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #f3f4f6;
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 2px solid #f3f4f6;
+  border-radius: 9999px;
+  background: #a3a3a3;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #737373;
+}
+
+html.dark,
+html.dark * {
+  scrollbar-color: #52525b #18181b;
+}
+
+html.dark::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html.dark::-webkit-scrollbar-track {
+  background: #18181b;
+}
+
+html.dark::-webkit-scrollbar-thumb {
+  border: 2px solid #18181b;
+  border-radius: 9999px;
+  background: #52525b;
+}
+
+html.dark *::-webkit-scrollbar-track {
+  background: #18181b;
+}
+
+html.dark *::-webkit-scrollbar-thumb {
+  border-color: #18181b;
+  background: #52525b;
+}
+
+html.dark *::-webkit-scrollbar-thumb:hover {
+  background: #71717a;
+}

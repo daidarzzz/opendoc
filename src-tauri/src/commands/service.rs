@@ -1320,6 +1320,13 @@ mod tests {
         assert!(summary.reinstalled);
         assert_eq!(loaded.docsets.len(), 1);
         assert_eq!(loaded.index.len(), 1, "la entrada vieja sale del índice");
+        let kinds = browse_kinds(&loaded, "demo").expect("tipos del docset instalado");
+        assert_eq!(kinds.len(), 1);
+        assert_eq!(kinds[0].kind, "Guide");
+        let entries = browse_entries(&loaded, "demo", "Guide", None, None)
+            .expect("entradas del docset instalado");
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].name, "nueva");
         let res = search_loaded(
             &mut loaded,
             &SearchRequest {

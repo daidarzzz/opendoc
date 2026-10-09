@@ -15,6 +15,7 @@ import {
   getCatalogStatus,
   getInstallStatus,
   installDocset,
+  uninstallDocset,
   listCatalog,
   onDocsetProgress,
   refreshCatalog,
@@ -86,6 +87,7 @@ interface CatalogState {
   refresh: () => Promise<void>;
   /** Instala o actualiza (`force` = actualizar/reinstalar). */
   install: (feedId: string, force: boolean) => Promise<void>;
+  uninstall: (feedId: string) => Promise<void>;
   /** Relee el estado de un feed tras operar (confirmación del backend). */
   refreshFeed: (feedId: string) => Promise<void>;
   clearOp: (feedId: string) => void;
@@ -237,6 +239,33 @@ export const useCatalog = create<CatalogState>()((set, get) => ({
       }
       set((s) => ({
         ops: { ...s.ops, [feedId]: { ...opOf(s.ops, feedId), busy: false, error, errorKind } },
+      }));
+    }
+  },
+
+  uninstall: async (feedId: string) => {
+    if (opOf(get().ops, feedId).busy) return;
+    set((s) => ({
+      ops: { ...s.ops, [feedId]: { ...opOf(s.ops, feedId), busy: true, error: "", errorKind: "", done: false } },
+    }));
+    try {
+      await uninstallDocset(feedId);
+      await useDocsets.getState().refresh();
+      await get().refreshFeed(feedId);
+      set((s) => ({
+        ops: { ...s.ops, [feedId]: { ...opOf(s.ops, feedId), busy: false } },
+      }));
+    } catch (e) {
+      set((s) => ({
+        ops: {
+          ...s.ops,
+          [feedId]: {
+            ...opOf(s.ops, feedId),
+            busy: false,
+            error: apiErrorText(e),
+            errorKind: errorKindOf(e),
+          },
+        },
       }));
     }
   },

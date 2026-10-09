@@ -11,7 +11,10 @@ import {
   toBackendUrl,
   validateKeyMessage,
   validateNavMessage,
+  validateNavigateMessage,
   validateOpenTabMessage,
+  validatePrefetchMessage,
+  validateReadyMessage,
   validateScrollMessage,
 } from "./iframeMessages";
 
@@ -105,6 +108,41 @@ describe("validateNavMessage", () => {
   });
 });
 
+describe("validateNavigateMessage", () => {
+  it("acepta solo solicitudes de navegación internas", () => {
+    expect(validateNavigateMessage({ type: "opendoc-navigate", url: "opendoc://css/a.html" }, true, DOCSETS))
+      .toEqual({ url: "opendoc://css/a.html", title: null });
+    expect(validateNavigateMessage({ type: "opendoc-nav", url: "opendoc://css/a.html" }, true, DOCSETS))
+      .toBeNull();
+    expect(validateNavigateMessage({ type: "opendoc-navigate", url: "opendoc://other/a.html" }, true, DOCSETS))
+      .toBeNull();
+  });
+});
+
+describe("validatePrefetchMessage", () => {
+  it("solo acepta URLs internas de docsets cargados desde el iframe activo", () => {
+    expect(validatePrefetchMessage({ type: "opendoc-prefetch", url: "opendoc://css/a.html" }, true, DOCSETS))
+      .toEqual({ url: "opendoc://css/a.html" });
+    expect(validatePrefetchMessage({ type: "opendoc-prefetch", url: "https://example.com" }, true, DOCSETS))
+      .toBeNull();
+    expect(validatePrefetchMessage({ type: "opendoc-prefetch", url: "opendoc://missing/a.html" }, true, DOCSETS))
+      .toBeNull();
+    expect(validatePrefetchMessage({ type: "opendoc-prefetch", url: "opendoc://css/a.html" }, false, DOCSETS))
+      .toBeNull();
+  });
+});
+
+describe("validateReadyMessage", () => {
+  it("valida que la URL de primera pintura pertenece a un docset cargado", () => {
+    expect(validateReadyMessage({ type: "opendoc-ready", url: "opendoc://css/a.html" }, true, DOCSETS))
+      .toEqual({ url: "opendoc://css/a.html", title: null });
+    expect(validateReadyMessage({ type: "opendoc-ready", url: "opendoc://missing/a.html" }, true, DOCSETS))
+      .toBeNull();
+    expect(validateReadyMessage({ type: "opendoc-nav", url: "opendoc://css/a.html" }, true, DOCSETS))
+      .toBeNull();
+  });
+});
+
 describe("validateOpenTabMessage", () => {
   const open = { type: "opendoc-open-tab", url: "opendoc://css/a.html#frag" };
 
@@ -164,12 +202,24 @@ describe("validateKeyMessage", () => {
       key: "t",
       shift: false,
     });
+    expect(validateKeyMessage({ type: "opendoc-key", key: "k", shift: false }, true)).toEqual({
+      key: "k",
+      shift: false,
+    });
     expect(validateKeyMessage({ type: "opendoc-key", key: "5", shift: 1 }, true)).toEqual({
       key: "5",
       shift: false,
     });
     expect(validateKeyMessage({ type: "opendoc-key", key: "alt-left" }, true)).toEqual({
       key: "alt-left",
+      shift: false,
+    });
+    expect(validateKeyMessage({ type: "opendoc-key", key: "mouse-back" }, true)).toEqual({
+      key: "mouse-back",
+      shift: false,
+    });
+    expect(validateKeyMessage({ type: "opendoc-key", key: "mouse-forward" }, true)).toEqual({
+      key: "mouse-forward",
       shift: false,
     });
     expect(validateKeyMessage({ type: "opendoc-key", key: "w" }, false)).toBeNull();

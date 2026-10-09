@@ -27,6 +27,7 @@ interface PaletteState {
 
 export const usePalette = create<PaletteState>()((set, get) => {
   let seq = 0;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   return {
     open: false,
     query: "",
@@ -44,9 +45,10 @@ export const usePalette = create<PaletteState>()((set, get) => {
       if (!open) set({ activeIndex: 0 });
     },
     setQuery: (query: string) => {
-      set({ query, activeIndex: 0 });
+      set({ query, results: [], applied: [], unknown: [], activeIndex: 0 });
       const mySeq = ++seq;
-      void (async () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => void (async () => {
         try {
           const res = await searchDocs(query, { limit: PALETTE_LIMIT });
           if (mySeq !== seq) return; // Obsoleta: se descarta.
@@ -60,7 +62,7 @@ export const usePalette = create<PaletteState>()((set, get) => {
           if (mySeq !== seq) return;
           set({ results: [], applied: [], unknown: [] });
         }
-      })();
+      })(), 35);
     },
     moveActive: (delta: number) => {
       const { results, activeIndex } = get();

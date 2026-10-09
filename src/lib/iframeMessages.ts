@@ -20,6 +20,7 @@ const SCHEME = "opendoc://";
 export type IframeKey =
   | "w"
   | "t"
+  | "k"
   | "tab"
   | "1"
   | "2"
@@ -31,7 +32,9 @@ export type IframeKey =
   | "8"
   | "9"
   | "alt-left"
-  | "alt-right";
+  | "alt-right"
+  | "mouse-back"
+  | "mouse-forward";
 
 export interface KeyPress {
   key: IframeKey;
@@ -105,6 +108,34 @@ export function validateNavMessage(
   return validateUrlMessage(data, trustedSource, docsetIds, "opendoc-nav");
 }
 
+/** Navegación interna solicitada antes del cambio de documento del iframe. */
+export function validateNavigateMessage(
+  data: unknown,
+  trustedSource: boolean,
+  docsetIds: readonly string[],
+): ValidNav | null {
+  return validateUrlMessage(data, trustedSource, docsetIds, "opendoc-navigate");
+}
+
+/** Enlace interno que se puede preparar en el iframe secundario al pasar el ratón. */
+export function validatePrefetchMessage(
+  data: unknown,
+  trustedSource: boolean,
+  docsetIds: readonly string[],
+): { url: string } | null {
+  const nav = validateUrlMessage(data, trustedSource, docsetIds, "opendoc-prefetch");
+  return nav ? { url: nav.url } : null;
+}
+
+/** Página del iframe lista para el primer pintado (no espera imágenes ni load). */
+export function validateReadyMessage(
+  data: unknown,
+  trustedSource: boolean,
+  docsetIds: readonly string[],
+): ValidNav | null {
+  return validateUrlMessage(data, trustedSource, docsetIds, "opendoc-ready");
+}
+
 /**
  * Petición de abrir enlace en pestaña nueva (`opendoc-open-tab`, desde
  * auxclick/Ctrl+clic en `<a>` internos). Misma validación que nav: SOLO
@@ -136,9 +167,12 @@ function isIframeKey(raw: unknown): raw is IframeKey {
   return (
     raw === "w" ||
     raw === "t" ||
+    raw === "k" ||
     raw === "tab" ||
     raw === "alt-left" ||
     raw === "alt-right" ||
+    raw === "mouse-back" ||
+    raw === "mouse-forward" ||
     (typeof raw === "string" && raw.length === 1 && raw >= "1" && raw <= "9")
   );
 }

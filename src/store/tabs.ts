@@ -1,7 +1,7 @@
 // Slice de pestañas con historial propio (v0.2 V2-3).
-// La lógica de pilas es pura (lib/tabHistory); aquí solo orquesta:
-// - las cargas programáticas fijan `pendingUrl` (el eco del iframe se
-//   consume sin apilar de nuevo);
+// La lógica del historial es pura (lib/tabHistory); aquí solo orquesta:
+// - el historial es una secuencia por pestaña con un cursor explícito;
+//   los ecos del iframe actualizan título/ancla sin crear otra parada;
 // - el iframe reporta navegación/scroll/teclas ya validadas por el Viewer;
 // - solo la pestaña activa monta su iframe (las demás guardan URL+scroll).
 // Sin persistencia entre sesiones (siguiente tarea).
@@ -14,7 +14,7 @@ import { OPEN_TAB_RATE_MAX, OPEN_TAB_RATE_WINDOW_MS, rateAllow } from "../lib/if
 import {
   appendTab,
   closeTab as closeTabPure,
-  consumePending,
+  currentEntry,
   emptyTab,
   goBack as goBackPure,
   goForward as goForwardPure,
@@ -99,13 +99,12 @@ export const useTabs = create<TabsState>()((set, get) => {
           if (opts?.newTab) {
             const r = appendTab(s.tabs, s.activeId, {
               ...tabWithEntry(docsetId, item),
-              pendingUrl: url,
             });
             return { tabs: r.tabs, activeId: r.activeId, error: "" };
           }
           const tab = s.tabs.find((t) => t.id === s.activeId);
           if (!tab) return s;
-          const next = { ...navigateTab(tab, item), docsetId, pendingUrl: url };
+          const next = { ...navigateTab(tab, item), docsetId };
           return {
             tabs: s.tabs.map((t) => (t.id === tab.id ? next : t)),
             error: "",
@@ -126,13 +125,12 @@ export const useTabs = create<TabsState>()((set, get) => {
           if (opts?.newTab) {
             const r = appendTab(s.tabs, s.activeId, {
               ...tabWithEntry(docsetId, item),
-              pendingUrl: url,
             });
             return { tabs: r.tabs, activeId: r.activeId, error: "" };
           }
           const tab = s.tabs.find((t) => t.id === s.activeId);
           if (!tab) return s;
-          const next = { ...navigateTab(tab, item), docsetId, pendingUrl: url };
+          const next = { ...navigateTab(tab, item), docsetId };
           return {
             tabs: s.tabs.map((t) => (t.id === tab.id ? next : t)),
             error: "",
@@ -152,7 +150,7 @@ export const useTabs = create<TabsState>()((set, get) => {
       const closing = s.tabs.find((t) => t.id === id);
       const { tabs, activeId } = closeTabPure(s.tabs, s.activeId, id);
       const closed =
-        closing && closing.current
+        closing && currentEntry(closing)
           ? [...s.closed, closing].slice(-MAX_CLOSED)
           : s.closed;
       set({ tabs, activeId, closed });
@@ -174,7 +172,11 @@ export const useTabs = create<TabsState>()((set, get) => {
         if (!tab) return s;
         const next = goBackPure(tab);
         if (next === tab) return s;
-        return { tabs: s.tabs.map((t) => (t.id === tab.id ? next : t)) };
+        return {
+          tabs: s.tabs.map((t) =>
+            t.id === tab.id ? { ...next, docsetId: docsetOf(currentEntry(next)?.url ?? "") } : t,
+          ),
+        };
       });
     },
 
@@ -184,21 +186,21 @@ export const useTabs = create<TabsState>()((set, get) => {
         if (!tab) return s;
         const next = goForwardPure(tab);
         if (next === tab) return s;
-        return { tabs: s.tabs.map((t) => (t.id === tab.id ? next : t)) };
+        return {
+          tabs: s.tabs.map((t) =>
+            t.id === tab.id ? { ...next, docsetId: docsetOf(currentEntry(next)?.url ?? "") } : t,
+          ),
+        };
       });
     },
 
     childNav: (url: string, title: string | null) => {
       set((s) => {
         const tab = s.tabs.find((t) => t.id === s.activeId);
-        const current = tab?.current;
+        const current = tab ? currentEntry(tab) : null;
         if (!tab || !current) return s;
-        // Eco de carga programática: solo refresca título y consume.
-        const { tab: cleared, consumed } = consumePending(tab, url);
-        const item = { url: consumed ? current.url : url, title: title ?? current.title };
-        const next = consumed
-          ? { ...cleared, current: item }
-          : { ...navigateTab(cleared, item), docsetId: docsetOf(url) };
+        const item = { url, title: title ?? current.title };
+        const next = { ...navigateTab(tab, item), docsetId: docsetOf(url) };
         return { tabs: s.tabs.map((t) => (t.id === tab.id ? next : t)) };
       });
     },
@@ -206,7 +208,7 @@ export const useTabs = create<TabsState>()((set, get) => {
     childScroll: (url: string, y: number) => {
       set((s) => {
         const tab = s.tabs.find((t) => t.id === s.activeId);
-        if (!tab || tab.current?.url !== url) return s;
+        if (!tab || currentEntry(tab)?.url !== url) return s;
         const next = noteScroll(tab, url, y);
         return { tabs: s.tabs.map((t) => (t.id === tab.id ? next : t)) };
       });
@@ -229,6 +231,10 @@ export const useTabs = create<TabsState>()((set, get) => {
       } else if (key === "alt-left") {
         s.goBack();
       } else if (key === "alt-right") {
+        s.goForward();
+      } else if (key === "mouse-back") {
+        s.goBack();
+      } else if (key === "mouse-forward") {
         s.goForward();
       } else {
         const idx = Number(key) - 1;
@@ -253,7 +259,6 @@ export const useTabs = create<TabsState>()((set, get) => {
         s.activeId,
         {
           ...tabWithEntry(docsetOf(url), { url, title: fallbackTitle }),
-          pendingUrl: url,
         },
       );
       set({ tabs: r.tabs, activeId: r.activeId, error: "" });
@@ -266,7 +271,7 @@ export const useTabs = create<TabsState>()((set, get) => {
       const r = appendTab(
         s.tabs,
         s.activeId,
-        { ...last, pendingUrl: last.current?.url ?? null },
+        last,
       );
       set({ tabs: r.tabs, activeId: r.activeId, closed: s.closed.slice(0, -1), error: "" });
     },

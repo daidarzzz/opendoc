@@ -295,7 +295,11 @@ fn store_validated_path(path: &Path, bytes: &[u8]) -> Option<String> {
     }
     if std::fs::rename(&tmp, path).is_err() {
         let _ = std::fs::remove_file(&tmp);
-        return None;
+        // Windows no reemplaza un destino que otra escritura concurrente
+        // acaba de crear. Si ese ganador es un SVG válido, la caché ya está
+        // satisfecha y esta operación también puede completarse.
+        let existing = std::fs::read(path).ok()?;
+        return validate_svg(&existing).then(|| svg_data_url(&existing));
     }
     Some(svg_data_url(bytes))
 }

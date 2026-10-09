@@ -2,7 +2,7 @@
 // URLs canónicas `opendoc://<id>/<ruta>` (con `#ancla` si la hay).
 import type { Tab, TabEntry } from "./types";
 
-/** Entradas de historial por pestaña (pasado, sin contar la actual). */
+/** Máximo de páginas que conserva el historial de cada pestaña. */
 export const MAX_HISTORY = 100;
 /** Pestañas simultáneas. */
 export const MAX_TABS = 30;
@@ -16,17 +16,28 @@ export function emptyTab(): Tab {
   return {
     id: `tab-${nextTabId++}`,
     docsetId: "",
-    past: [],
-    current: null,
-    future: [],
-    pendingUrl: null,
+    history: [],
+    historyIndex: -1,
     scrolls: {},
   };
 }
 
 /** Pestaña nueva con una entrada inicial. */
 export function tabWithEntry(docsetId: string, entry: TabEntry): Tab {
-  return { ...emptyTab(), docsetId, current: entry };
+  return { ...emptyTab(), docsetId, history: [entry], historyIndex: 0 };
+}
+
+/** Entrada actual de la pestaña, o null si es una pestaña vacía. */
+export function currentEntry(tab: Tab): TabEntry | null {
+  return tab.history[tab.historyIndex] ?? null;
+}
+
+export function canGoBack(tab: Tab): boolean {
+  return tab.historyIndex > 0;
+}
+
+export function canGoForward(tab: Tab): boolean {
+  return tab.historyIndex >= 0 && tab.historyIndex < tab.history.length - 1;
 }
 
 /** Misma página ignorando el hash (`a/b#f1` ~ `a/b#f2`, pero no ~ `a/b`). */
@@ -37,62 +48,41 @@ export function sameDocument(a: string, b: string): boolean {
 }
 
 /**
- * Nueva navegación en la pestaña:
- * - URL idéntica a la actual → solo refresca el título (eco load/hash).
- * - Solo cambia el hash → sustituye la actual (no apila anclas).
- * - En otro caso apila la actual en el pasado (acotado) y limpia el futuro.
+ * Registra una navegación en la secuencia:
+ * - URL idéntica → refresca la entrada actual, conservando el tramo futuro.
+ * - Solo cambia el hash → sustituye la entrada actual y descarta el futuro.
+ * - Otra URL → trunca el futuro y añade una parada (historial acotado).
  */
 export function navigateTab(tab: Tab, entry: TabEntry): Tab {
-  const current = tab.current;
+  const current = currentEntry(tab);
   if (current && entry.url === current.url) {
-    return { ...tab, current: entry };
+    const history = [...tab.history];
+    history[tab.historyIndex] = entry;
+    return { ...tab, history };
   }
   if (current && sameDocument(current.url, entry.url)) {
-    return { ...tab, current: entry, future: [] };
+    const history = tab.history.slice(0, tab.historyIndex + 1);
+    history[tab.historyIndex] = entry;
+    return { ...tab, history };
   }
-  const past =
-    current !== null ? [...tab.past, current].slice(-MAX_HISTORY) : tab.past;
-  return { ...tab, past, current: entry, future: [] };
+  let history = [...tab.history.slice(0, tab.historyIndex + 1), entry];
+  let historyIndex = history.length - 1;
+  if (history.length > MAX_HISTORY) {
+    const dropped = history.length - MAX_HISTORY;
+    history = history.slice(dropped);
+    historyIndex -= dropped;
+  }
+  return { ...tab, history, historyIndex };
 }
 
-/** Atrás: la actual pasa al futuro. Sin pasado → igual. */
+/** Atrás: mueve el cursor una posición. Sin página anterior → igual. */
 export function goBack(tab: Tab): Tab {
-  if (tab.past.length === 0) return tab;
-  const current = tab.current;
-  const prev = tab.past[tab.past.length - 1];
-  return {
-    ...tab,
-    past: tab.past.slice(0, -1),
-    current: prev,
-    future: current !== null ? [current, ...tab.future] : tab.future,
-    pendingUrl: prev.url,
-  };
+  return canGoBack(tab) ? { ...tab, historyIndex: tab.historyIndex - 1 } : tab;
 }
 
-/** Adelante: simétrico. Sin futuro → igual. */
+/** Adelante: mueve el cursor una posición. Sin página siguiente → igual. */
 export function goForward(tab: Tab): Tab {
-  if (tab.future.length === 0) return tab;
-  const [next, ...rest] = tab.future;
-  const current = tab.current;
-  return {
-    ...tab,
-    past: current !== null ? [...tab.past, current].slice(-MAX_HISTORY) : tab.past,
-    current: next,
-    future: rest,
-    pendingUrl: next.url,
-  };
-}
-
-/**
- * Eco del iframe tras una carga programática: si coincide con lo esperado,
- * se consume (no toca las pilas; el título ya viene actualizado).
- * Devuelve la pestaña y si se consumió.
- */
-export function consumePending(tab: Tab, url: string): { tab: Tab; consumed: boolean } {
-  if (tab.pendingUrl !== null && tab.pendingUrl === url) {
-    return { tab: { ...tab, pendingUrl: null }, consumed: true };
-  }
-  return { tab, consumed: false };
+  return canGoForward(tab) ? { ...tab, historyIndex: tab.historyIndex + 1 } : tab;
 }
 
 /** Guarda el scroll de una URL (acotado, evicción de la más antigua). */

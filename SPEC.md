@@ -94,6 +94,7 @@ set_feed_repo	repo	Settings (valida owner/repo o URL y persiste)
  list_catalog	query?	Vec<FeedEntry { id, name, version, urls }> (caché, offline)
  install_docset	{ feed_id, force? }	InstallSummary { feed_id, docset_id, name, version?, entries, reinstalled } (async; progreso por evento `docset-progress`; sin force: AlreadyInstalled si ya instalado, AmbiguousMatch si varias carpetas coinciden; InstallInProgress si ya hay una en curso)
  get_install_status	feed_id?	Vec<InstallStatus { feed_id, name, installed, docset_id?, installed_version?, available_version, update_available (true/false/null), ambiguous, ambiguous_ids }> (caché + instalados, offline; UnknownFeed si el id no existe)
+ uninstall_docset	feed_id	String (id eliminado; requiere coincidencia única dentro de la carpeta configurada; UnknownFeed, UnknownDocset, AmbiguousMatch o InstallFailed)
 
 Los tipos se comparten con el frontend (generar bindings, por ejemplo con specta/tauri-specta o ts-rs, o mantenerlos a mano y sincronizados).
 
