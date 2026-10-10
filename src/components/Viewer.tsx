@@ -45,6 +45,35 @@ export function Viewer() {
   const pendingFrame = useRef<{ index: number; url: string; version: number } | null>(null);
   const preloadedFrame = useRef<{ index: number; url: string; version: number } | null>(null);
   const prefetchTime = useRef(0);
+  const viewerRef = useRef<HTMLElement | null>(null);
+
+  // WKWebView can route trackpad wheel input to the outer document instead
+  // of the nested docset iframe. Relay those deltas to the active frame.
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+    const relayWheel = (event: WheelEvent): void => {
+      const index = frontFrameRef.current;
+      const frame = index === null ? null : frames.current[index];
+      const child = frame?.contentWindow;
+      if (!child || (event.deltaX === 0 && event.deltaY === 0)) return;
+      event.preventDefault();
+      const rect = frame.getBoundingClientRect();
+      child.postMessage(
+        {
+          type: "opendoc-wheel",
+          deltaX: event.deltaX,
+          deltaY: event.deltaY,
+          deltaMode: event.deltaMode,
+          x: event.clientX - rect.left,
+          y: event.clientY - rect.top,
+        },
+        "*",
+      );
+    };
+    viewer.addEventListener("wheel", relayWheel, { passive: false, capture: true });
+    return () => viewer.removeEventListener("wheel", relayWheel, true);
+  }, [docsets.length]);
 
   const active = tabs.find((t) => t.id === activeId);
   const activeEntry = active ? currentEntry(active) : null;
@@ -240,7 +269,7 @@ export function Viewer() {
 
   if (docsets.length === 0 && !loading) {
     return (
-      <main className="flex min-w-0 flex-1 flex-col">
+      <main ref={viewerRef} className="flex min-w-0 flex-1 flex-col">
         {dirMissing ? (
           <FolderPrompt
             dirMissing={dirMissing}
@@ -256,7 +285,7 @@ export function Viewer() {
   }
 
   return (
-    <main className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" role="tabpanel" id="viewer-panel" aria-label="Visor">
+    <main ref={viewerRef} className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" role="tabpanel" id="viewer-panel" aria-label="Visor">
       {!activeEntry || !docsetLoaded ? (
         <div className="flex flex-1 flex-col items-center justify-center p-8">
           {!activeEntry ? (

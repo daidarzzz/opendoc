@@ -116,12 +116,24 @@ fn serve_inner(
 pub const THEME_STYLE: &str = "<style>html{color-scheme:light!important;}</style>";
 pub const THEME_SCRIPT: &str = r#"<script>(function(){function rep(t,x){x=x||{};x.type=t;window.parent.postMessage(x,"*");}function here(){return {url:String(location.href),title:String(document.title)};}window.addEventListener("message",function(e){if(e.source!==window.parent)return;var d=e.data;if(!d)return;if(d.type==="opendoc-theme"){document.documentElement.removeAttribute("data-opendoc-theme");}else if(d.type==="opendoc-scroll-to"){var y=Number(d.y);if(isFinite(y)&&y>=0){window.scrollTo(0,y);}}});window.addEventListener("DOMContentLoaded",function(){rep("opendoc-ready",here());},{once:true});window.addEventListener("load",function(){rep("opendoc-nav",here());});window.addEventListener("hashchange",function(){rep("opendoc-nav",here());});var lastY=-1,lastT=0;window.addEventListener("scroll",function(){var y=window.scrollY||window.pageYOffset||0;var t=Date.now();if(t-lastT>250&&y!==lastY){lastT=t;lastY=y;rep("opendoc-scroll",{y:y});}},true);window.addEventListener("keydown",function(e){var k=(e.key||"").toLowerCase();if((e.ctrlKey||e.metaKey)&&!e.altKey&&(k==="w"||k==="t"||k==="k"||k==="tab"||(k.length===1&&k>="1"&&k<="9"))){e.preventDefault();if(e.stopPropagation)e.stopPropagation();rep("opendoc-key",{key:k,shift:!!e.shiftKey});}else if(e.altKey&&!e.ctrlKey&&!e.metaKey&&(e.key==="ArrowLeft"||e.key==="ArrowRight")){e.preventDefault();if(e.stopPropagation)e.stopPropagation();rep("opendoc-key",{key:e.key==="ArrowLeft"?"alt-left":"alt-right",shift:false});}},true);function linkUrl(e){try{var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(!a)return null;var u=new URL(a.getAttribute("href"),location.href);if(u.origin!==location.origin)return null;return u.toString();}catch(_){return null;}}var hoverTimer=null,hoverAnchor=null;window.addEventListener("pointerover",function(e){if(!e.isTrusted)return;var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;var u=linkUrl(e);if(!a||!u)return;try{var target=new URL(u),current=new URL(location.href);if(target.pathname===current.pathname&&target.search===current.search)return;}catch(_){return;}if(hoverTimer)clearTimeout(hoverTimer);hoverAnchor=a;hoverTimer=setTimeout(function(){if(hoverAnchor===a&&a.matches(":hover"))rep("opendoc-prefetch",{url:u});},60);},true);function openTab(e){if(!e.isTrusted)return;var u=linkUrl(e);if(!u)return;e.preventDefault();if(e.stopImmediatePropagation)e.stopImmediatePropagation();else if(e.stopPropagation)e.stopPropagation();rep("opendoc-open-tab",{url:u});}window.addEventListener("mousedown",function(e){if(e.button===1&&linkUrl(e)){e.preventDefault();}},true);window.addEventListener("auxclick",function(e){if(e.button===1){openTab(e);}else if(e.button===3||e.button===4){e.preventDefault();e.stopPropagation();rep("opendoc-key",{key:e.button===3?"mouse-back":"mouse-forward",shift:false});}},true);window.addEventListener("click",function(e){if(e.button!==0||e.altKey||e.shiftKey)return;if(e.ctrlKey||e.metaKey){openTab(e);return;}if(!e.isTrusted)return;var u=linkUrl(e);if(!u)return;var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;try{var target=new URL(u),current=new URL(location.href);if(target.pathname===current.pathname&&target.search===current.search)return;}catch(_){return;}e.preventDefault();if(e.stopPropagation)e.stopPropagation();rep("opendoc-navigate",{url:u,title:a&&a.textContent?a.textContent.trim():document.title});},true);})();</script>"#;
 
+/// Normaliza y aplica el scroll del trackpad dentro del docset. Safari puede
+/// entregar el `wheel` al documento padre cuando el contenido vive en un iframe;
+/// el visor lo reenvía por postMessage y este script desplaza el scroller interno.
+pub const THEME_WHEEL_SCRIPT: &str = r#"<script>(function(){
+function pixels(value,mode,viewport){return mode===1?value*16:mode===2?value*viewport:value;}
+function canMove(el,axis,delta){var size=axis==="y"?el.scrollHeight-el.clientHeight:el.scrollWidth-el.clientWidth;if(size<1)return false;var pos=axis==="y"?el.scrollTop:el.scrollLeft;return delta>0?pos<size-1:delta<0?pos>1:false;}
+function moveAxis(target,axis,delta){if(!delta)return;var root=document.scrollingElement;for(var el=target;el&&el!==document;el=el.parentElement){var node=el===document.body||el===document.documentElement?root:el;if(!node)continue;var style=getComputedStyle(node),overflow=axis==="y"?style.overflowY:style.overflowX;if(node===root||/^(auto|scroll|overlay|hidden)$/.test(overflow)){if(canMove(node,axis,delta)){if(axis==="y")node.scrollTop+=delta;else node.scrollLeft+=delta;return;}}}if(root&&canMove(root,axis,delta)){if(axis==="y")root.scrollTop+=delta;else root.scrollLeft+=delta;}}
+function apply(x,y,dx,dy,mode){var sx=pixels(dx,mode,window.innerWidth),sy=pixels(dy,mode,window.innerHeight),target=document.elementFromPoint(x,y)||document.documentElement;moveAxis(target,"x",sx);moveAxis(target,"y",sy);}
+window.addEventListener("wheel",function(e){if(e.ctrlKey)return;e.preventDefault();apply(e.clientX,e.clientY,e.deltaX,e.deltaY,e.deltaMode);},{capture:true,passive:false});
+window.addEventListener("message",function(e){if(e.source!==window.parent||!e.data||e.data.type!=="opendoc-wheel")return;var d=e.data;if(typeof d.deltaX!=="number"||typeof d.deltaY!=="number")return;apply(Number(d.x)||0,Number(d.y)||0,d.deltaX,d.deltaY,Number(d.deltaMode)||0);});
+})();</script>"#;
+
 /// BOM UTF-8 (se respeta al insertar al inicio).
 const UTF8_BOM: [u8; 3] = [0xEF, 0xBB, 0xBF];
 
 /// Inserta `THEME_STYLE + THEME_SCRIPT` en un HTML.
 pub fn inject_theme_support(html: &[u8]) -> Vec<u8> {
-    let block = format!("{THEME_STYLE}{THEME_SCRIPT}");
+    let block = format!("{THEME_STYLE}{THEME_SCRIPT}{THEME_WHEEL_SCRIPT}");
     let bytes = block.as_bytes();
     if let Some(pos) = find_head_close(html) {
         let mut out = Vec::with_capacity(html.len() + bytes.len());
@@ -266,6 +278,7 @@ mod tests {
             let s = String::from_utf8(out).expect("utf8");
             assert!(s.contains(THEME_STYLE), "{html}");
             assert!(s.contains(THEME_SCRIPT), "{html}");
+            assert!(s.contains(THEME_WHEEL_SCRIPT), "{html}");
             let style_pos = s.find(THEME_STYLE).expect("style");
             let head_pos = s.to_lowercase().find("</head>").expect("head");
             assert!(style_pos < head_pos, "{html}");
@@ -273,9 +286,9 @@ mod tests {
         // Sin head: al inicio (tras BOM si lo hay).
         let no_head = "<html><body>hola</body></html>";
         let out = inject_theme_support(no_head.as_bytes());
-        assert!(String::from_utf8(out)
-            .expect("utf8")
-            .starts_with(THEME_STYLE));
+        let no_head_out = String::from_utf8(out).expect("utf8");
+        assert!(no_head_out.starts_with(THEME_STYLE));
+        assert!(no_head_out.contains(THEME_WHEEL_SCRIPT));
         let mut bom = vec![0xEF, 0xBB, 0xBF];
         bom.extend_from_slice(no_head.as_bytes());
         let out = inject_theme_support(&bom);
@@ -324,6 +337,9 @@ mod tests {
             "mouse-forward",
         ] {
             assert!(THEME_SCRIPT.contains(token), "falta {token}");
+        }
+        for token in ["opendoc-wheel", "passive:false", "scrollTop", "scrollLeft"] {
+            assert!(THEME_WHEEL_SCRIPT.contains(token), "falta {token}");
         }
     }
 
