@@ -256,7 +256,7 @@ export function Viewer() {
   }
 
   return (
-    <main className="relative flex min-h-0 min-w-0 flex-1 flex-col" role="tabpanel" id="viewer-panel" aria-label="Visor">
+    <main className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" role="tabpanel" id="viewer-panel" aria-label="Visor">
       {!activeEntry || !docsetLoaded ? (
         <div className="flex flex-1 flex-col items-center justify-center p-8">
           {!activeEntry ? (

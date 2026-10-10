@@ -54,7 +54,7 @@ export default function App() {
   }, [sidebarWidth]);
 
   return (
-    <div className="flex h-screen bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100">
+    <div className="flex h-screen overflow-hidden bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100">
       <Sidebar style={{ width: sidebarWidth, flexBasis: sidebarWidth }} />
       <div
         role="separator"
