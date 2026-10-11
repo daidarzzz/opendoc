@@ -13,11 +13,13 @@ pub mod search;
 pub mod session;
 pub mod settings;
 
+use tauri::Emitter;
+
 use commands::{
-    extract_tarix, get_catalog_status, get_docset_home, get_install_status, get_session,
-    get_settings, install_docset, list_catalog, list_docsets, list_entries, list_kinds,
-    refresh_catalog, save_session, search, set_docsets_dir, set_feed_repo, set_language,
-    set_restore_tabs, set_theme, uninstall_docset, AppState,
+    confirm_exit, extract_tarix, get_catalog_status, get_docset_home, get_install_status,
+    get_session, get_settings, install_docset, list_catalog, list_docsets, list_entries,
+    list_kinds, refresh_catalog, save_session, search, set_docsets_dir, set_feed_repo,
+    set_language, set_restore_tabs, set_theme, uninstall_docset, AppState,
 };
 
 /// Carga ajustes al arrancar. Si no hay carpeta configurada, asigna
@@ -53,7 +55,7 @@ fn load_startup_state(app: &mut tauri::App) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let result = tauri::Builder::default()
+    let built = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
@@ -94,6 +96,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            confirm_exit,
             list_docsets,
             set_docsets_dir,
             search,
@@ -113,11 +116,43 @@ pub fn run() {
             list_catalog,
             install_docset,
             get_install_status,
-            uninstall_docset
+            uninstall_docset,
+            confirm_exit
         ])
-        .run(tauri::generate_context!());
-    if let Err(e) = result {
-        eprintln!("error while running tauri application: {e}");
-        std::process::exit(1);
-    }
+        .build(tauri::generate_context!());
+    let app = match built {
+        Ok(app) => app,
+        Err(e) => {
+            eprintln!("error while running tauri application: {e}");
+            std::process::exit(1);
+        }
+    };
+    app.run(|handle, event| {
+        use tauri::RunEvent;
+        match event {
+            // Cmd+Q / Quit del dock (macOS) no pasa por onCloseRequested:
+            // se frena la salida, se avisa al frontend para volcar la
+            // sesión y un hilo de respaldo sale solo por si no responde.
+            RunEvent::ExitRequested { api, code, .. } => {
+                api.prevent_exit();
+                let _ = handle.emit("opendoc-exit-requested", ());
+                let handle = handle.clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(2500));
+                    handle.exit(code.unwrap_or(0));
+                });
+            }
+            // En macOS cerrar la última ventana no termina el proceso y
+            // esta app no tiene menú ni dock para reabrir: se sale.
+            RunEvent::WindowEvent {
+                label,
+                event: tauri::WindowEvent::Destroyed,
+                ..
+            } if label == "main" => {
+                #[cfg(target_os = "macos")]
+                handle.exit(0);
+            }
+            _ => {}
+        }
+    });
 }

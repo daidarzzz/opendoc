@@ -165,6 +165,16 @@ export async function onCloseRequested(
   return getCurrentWindow().onCloseRequested(handler);
 }
 
+/** Salida de la app pedida al SO (Cmd+Q en macOS): volcar y confirmar. */
+export async function onExitRequested(handler: () => void | Promise<void>): Promise<UnlistenFn> {
+  return listen("opendoc-exit-requested", handler);
+}
+
+/** Confirma la salida tras el volcado final (flujo ExitRequested). */
+export async function confirmExit(): Promise<void> {
+  await invoke("confirm_exit");
+}
+
 /** Cierra la ventana sin pedir confirmación (tras el guardado al cerrar). */
 export async function destroyWindow(): Promise<void> {
   return getCurrentWindow().destroy();

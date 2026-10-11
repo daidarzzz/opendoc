@@ -6,7 +6,7 @@ import { Sidebar } from "./components/Sidebar";
 import { TabsBar } from "./components/TabsBar";
 import { Viewer } from "./components/Viewer";
 import { useGlobalKeys } from "./hooks/useGlobalKeys";
-import { destroyWindow, onCloseRequested } from "./lib/commands";
+import { destroyWindow, onCloseRequested, onExitRequested, confirmExit } from "./lib/commands";
 import {
   CLOSE_SAVE_TIMEOUT_MS,
   flushSessionForClose,
@@ -67,6 +67,31 @@ export default function App() {
     })();
     let closing = false;
     let unlistenClose: (() => void) | null = null;
+    let unlistenExit: (() => void) | null = null;
+    // Salida pedida al SO (Cmd+Q en macOS): no pasa por onCloseRequested.
+    // Se vuelca la sesión y se confirma; el backend sale solo si no hay
+    // respuesta (hilo de respaldo).
+    void (async () => {
+      try {
+        unlistenExit = await onExitRequested(async () => {
+          try {
+            await Promise.race([
+              flushSessionForClose(),
+              new Promise((r) => setTimeout(r, CLOSE_SAVE_TIMEOUT_MS)),
+            ]);
+          } catch {
+            // Un fallo al salir no bloquea la salida (el debounce acota).
+          }
+          try {
+            await confirmExit();
+          } catch {
+            // El hilo de respaldo del backend sale solo.
+          }
+        });
+      } catch {
+        // Fuera de Tauri (navegador): sin guardado al salir.
+      }
+    })();
     void (async () => {
       try {
         unlistenClose = await onCloseRequested(async (e) => {
@@ -101,6 +126,7 @@ export default function App() {
       alive = false;
       stopSync();
       if (unlistenClose) unlistenClose();
+      if (unlistenExit) unlistenExit();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

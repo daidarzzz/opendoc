@@ -4,7 +4,7 @@
 //! `set_language`, `set_restore_tabs`, `get_session`, `save_session`, `extract_tarix`,
 //! `get_catalog_status`, `set_feed_repo`, `refresh_catalog`,
 //! `list_catalog`, `install_docset`, `get_install_status`,
-//! `uninstall_docset`.
+//! `uninstall_docset`, `confirm_exit`.
 //!
 //! Solo delegan en `service.rs` (testeable sin Tauri). Si se toca este
 //! contrato, actualizar `src/lib/types.ts` y la tabla de SPEC §4.4.
@@ -985,6 +985,14 @@ pub fn set_theme(
         }
     }
     Ok(settings)
+}
+
+/// Confirma la salida tras volcar la sesión (flujo `ExitRequested`:
+/// Cmd+Q en macOS). El hilo de respaldo de `lib.rs` sale solo si el
+/// frontend no responde.
+#[tauri::command]
+pub fn confirm_exit(app: tauri::AppHandle) {
+    app.exit(0);
 }
 
 #[cfg(test)]

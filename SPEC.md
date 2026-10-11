@@ -88,6 +88,7 @@ get_docset_home	docset_id	URL opendoc://...
 get_settings	n/a	Settings { version, docsets_dir?, theme, feed_url?, catalog_fetched_at?, fast_mirror?, restore_tabs, language }
 set_theme	theme	Settings (persiste solo si cambió)
 set_language	language	Settings (idioma de la interfaz en/es; persiste solo si cambió)
+confirm_exit	n/a	n/a (sale con código 0 tras el volcado; flujo ExitRequested de macOS)
 set_restore_tabs	restore	Settings (restaurar pestañas al abrir; con false no se lee ni se escribe session.json)
 get_session	n/a	Session { version, tabs: Vec<SavedTab { docset_id, docset_name?, bundle_id?, history: Vec<{ path, title }>, history_index, scroll? }>, active } (vacía si no hay nada; nunca falla)
 save_session	Session	bool (escribe si cambió; con restore_tabs=false no toca el disco)
