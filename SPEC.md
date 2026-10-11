@@ -136,7 +136,7 @@ Sin cancelar extracción en v0.2: no hay cancelación (un fallo o cierre nunca d
 v0.3: Gestión de docsets
 Gestión de docsets: por decidir (aplazado). No hay arquitectura aprobada (ni catálogo central, ni P2P, ni proveedores concretos): se discutirá antes de escribir código. Lo único decidido:
 Nada de OpenDoc debe depender de los servidores o del catálogo de Kapeli (feeds de Dash) ni redistribuir sus docsets: su licencia prohíbe usarlos en aplicaciones de terceros sin permiso, y no se va a pedir.
-Zeal es GPL-3.0-or-later: no copiar ni traducir su código salvo que OpenDoc sea GPL compatible. Mientras tanto, solo estudiar comportamiento.
+Zeal es GPL-3.0-or-later y OpenDoc también (GPL-3.0-or-later, ver LICENSE): la licencia ya es compatible, pero SIGUE prohibido copiar o traducir código de Zeal o de cualquier otro proyecto sin avisar antes; si alguna vez se adapta código ajeno, hay que conservar sus avisos de copyright, atribuirlo en el propio archivo y listarlo en un NOTICE. Mientras tanto, solo estudiar comportamiento.
 v1.0: Objetivo final
 Temas personalizables y CSS inyectado para modo oscuro en la documentación (el modo oscuro del visor quedó DESACTIVADO: la inversión por filtro se ve bugueada; el mecanismo de inyección permanece para retomarlo con temas por docset).
 Resaltado de sintaxis refinado.

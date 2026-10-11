@@ -49,6 +49,12 @@ Antes de dar una tarea por terminada, ejecuta tests, clippy y typecheck, y corri
 - No añadas dependencias nuevas sin justificarlas brevemente.
 - Si tocas el contrato de comandos Tauri, actualiza también los tipos del frontend y la tabla de `SPEC.md`.
 
+## Licencia
+
+El proyecto se distribuye bajo GPL-3.0-or-later (ver `LICENSE`).
+Está prohibido copiar o traducir código de Zeal o de cualquier otro proyecto sin avisar antes; si alguna vez se adapta código ajeno, conserva sus avisos de copyright, atribúyelo en el propio archivo y lístalo en un NOTICE.
+Nada de OpenDoc debe depender de los servidores o del catálogo de Kapeli ni redistribuir sus docsets.
+
 ## Convenciones de Rust
 
 - La lógica va en módulos independientes de Tauri y con tests; los `#[tauri::command]` solo delegan.

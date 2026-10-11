@@ -148,7 +148,13 @@ El detalle completo está en [`SPEC.md`](./SPEC.md).
 
 ## Licencia
 
-*Por decidir.* Hasta que se publique un archivo `LICENSE`, no se concede ningún permiso de uso o redistribución del código.
+Copyright (C) 2026 daidarzzz
+
+OpenDoc es software libre, licenciado bajo la Licencia Pública General de GNU v3.0 o posterior (GPL-3.0-or-later). Ver LICENSE.
+
+Cada documentación que cargues conserva su propia licencia; OpenDoc no incluye ni redistribuye docsets.
+
+El código fuente de cada versión publicada está en este repositorio, que es lo que pide la GPL al distribuir los instaladores.
 
 ## Agradecimientos
 

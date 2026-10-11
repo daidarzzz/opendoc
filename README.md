@@ -149,7 +149,13 @@ Full detail is in [`SPEC.md`](./SPEC.md).
 
 ## License
 
-*Undecided.* Until a `LICENSE` file is published, no permission to use or redistribute the code is granted.
+Copyright (C) 2026 daidarzzz
+
+OpenDoc is free software, licensed under the GNU General Public License v3.0 or later (GPL-3.0-or-later). See LICENSE.
+
+Each documentation set you load keeps its own license; OpenDoc neither includes nor redistributes docsets.
+
+The source code of each released version is published in this repository, which is what the GPL requires when distributing the installers.
 
 ## Thanks
 
