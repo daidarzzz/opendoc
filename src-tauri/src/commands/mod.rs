@@ -1,9 +1,10 @@
 //! Comandos Tauri finos (contrato SPEC §4.4 + ajustes T9 + navegación v0.2 + F2):
 //! `list_docsets`, `set_docsets_dir`, `search`, `list_kinds`,
 //! `list_entries`, `get_docset_home`, `get_settings`, `set_theme`,
-//! `extract_tarix`, `get_catalog_status`, `set_feed_repo`,
-//! `refresh_catalog`, `list_catalog`, `install_docset`,
-//! `get_install_status`, `uninstall_docset`.
+//! `set_restore_tabs`, `get_session`, `save_session`, `extract_tarix`,
+//! `get_catalog_status`, `set_feed_repo`, `refresh_catalog`,
+//! `list_catalog`, `install_docset`, `get_install_status`,
+//! `uninstall_docset`.
 //!
 //! Solo delegan en `service.rs` (testeable sin Tauri). Si se toca este
 //! contrato, actualizar `src/lib/types.ts` y la tabla de SPEC §4.4.
@@ -844,6 +845,84 @@ pub fn get_settings(state: State<'_, AppState>) -> crate::settings::Settings {
         .lock()
         .map(|settings| settings.clone())
         .unwrap_or_default()
+}
+
+/// Sesión de pestañas guardada (vacía si no hay nada, si está desactivada
+/// la restauración o si el archivo era ilegible). Nunca falla: el arranque
+/// no depende de este archivo.
+#[tauri::command]
+pub fn get_session(state: State<'_, AppState>, app: tauri::AppHandle) -> crate::session::Session {
+    let restore = state
+        .settings
+        .lock()
+        .map(|settings| settings.restore_tabs)
+        .unwrap_or(true);
+    if !restore {
+        return crate::session::Session::empty();
+    }
+    let Ok(data_dir) = data_dir_of(&app) else {
+        return crate::session::Session::empty();
+    };
+    crate::session::load(&crate::session::session_file(&data_dir))
+}
+
+/// Guarda la sesión si cambió. Con la restauración desactivada no toca el
+/// disco (y no borra el archivo existente). Devuelve si escribió.
+#[tauri::command]
+pub fn save_session(
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+    session: crate::session::Session,
+) -> Result<bool, ApiError> {
+    let restore = state
+        .settings
+        .lock()
+        .map(|settings| settings.restore_tabs)
+        .map_err(|e| ApiError::LoadFailed {
+            message: e.to_string(),
+        })?;
+    if !restore {
+        return Ok(false);
+    }
+    let data_dir = data_dir_of(&app)?;
+    crate::session::save_if_changed(&crate::session::session_file(&data_dir), &session).map_err(
+        |e| ApiError::LoadFailed {
+            message: e.to_string(),
+        },
+    )
+}
+
+/// Activa o desactiva la restauración de pestañas (persiste solo si cambió).
+/// Al activar en caliente no se restaura nada encima: el frontend guarda su
+/// estado actual con el próximo guardado.
+#[tauri::command]
+pub fn set_restore_tabs(
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+    restore: bool,
+) -> Result<crate::settings::Settings, ApiError> {
+    let settings = state
+        .settings
+        .lock()
+        .map(|mut guard| {
+            guard.restore_tabs = restore;
+            guard.clone()
+        })
+        .map_err(|e| ApiError::LoadFailed {
+            message: e.to_string(),
+        })?;
+    {
+        use tauri::Manager;
+        if let Ok(data_dir) = app.path().app_data_dir() {
+            let path = crate::settings::settings_file(&data_dir);
+            crate::settings::save_if_changed(&path, &settings).map_err(|e| {
+                ApiError::LoadFailed {
+                    message: e.to_string(),
+                }
+            })?;
+        }
+    }
+    Ok(settings)
 }
 
 /// Cambia el tema y lo persiste (solo si cambió).

@@ -33,7 +33,7 @@ export function Viewer() {
   const childKey = useTabs((s) => s.childKey);
   const openTabUrl = useTabs((s) => s.openTabUrl);
   const newTab = useTabs((s) => s.newTab);
-  const { docsets, loading, dirMissing, savedDir, choose } = useDocsets();
+  const { docsets, loading, dirMissing, savedDir, choose, pending, extract, extractingIds } = useDocsets();
   const [frameUrls, setFrameUrls] = useState<[string | null, string | null]>([null, null]);
   const [frameVersions, setFrameVersions] = useState<[number, number]>([0, 0]);
   const [frontFrame, setFrontFrame] = useState<number | null>(null);
@@ -79,8 +79,15 @@ export function Viewer() {
   const activeEntry = active ? currentEntry(active) : null;
   const activeTitle = activeEntry?.title ?? "";
   const backendUrl = activeEntry?.url ?? null;
-  const docsetLoaded =
-    !activeEntry || docsets.some((d) => d.id === active?.docsetId);
+  /** Estado del docset de la pestaña activa: cargado, tarix sin instalar
+   *  o ausente (la pestaña se conserva atenuada en ambos casos). */
+  const docsetState: "ok" | "pending" | "missing" = !activeEntry || !active
+    ? "ok"
+    : docsets.some((d) => d.id === active.docsetId)
+      ? "ok"
+      : pending.some((p) => p.id === active.docsetId)
+        ? "pending"
+        : "missing";
 
   // Activa un iframe ya cargado o recién terminado y restaura su estado.
   const activateFrame = useCallback((index: number): void => {
@@ -286,14 +293,31 @@ export function Viewer() {
 
   return (
     <main ref={viewerRef} className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" role="tabpanel" id="viewer-panel" aria-label="Visor">
-      {!activeEntry || !docsetLoaded ? (
+      {!activeEntry || docsetState !== "ok" ? (
         <div className="flex flex-1 flex-col items-center justify-center p-8">
           {!activeEntry ? (
             <Welcome docCount={docsets.length} />
+          ) : docsetState === "pending" ? (
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                Este docset existe pero aún no está instalado (tarix pendiente).
+              </p>
+              <button
+                onClick={() => {
+                  if (active) void extract(active.docsetId);
+                }}
+                disabled={active !== undefined && extractingIds.includes(active.docsetId)}
+                className="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-200 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
+              >
+                {active !== undefined && extractingIds.includes(active.docsetId)
+                  ? "Extrayendo…"
+                  : "Instalar"}
+              </button>
+            </div>
           ) : (
             <p className="text-sm text-yellow-700 dark:text-yellow-300">
-              El docset de esta pestaña ya no está cargado. Elige la carpeta
-              de docsets para recuperarlo.
+              El docset de esta pestaña no está disponible (desinstalado o en
+              otra carpeta). La pestaña se conserva por si vuelve.
             </p>
           )}
           {tabError !== "" && <p className="mt-2 text-sm text-red-500">{tabError}</p>}

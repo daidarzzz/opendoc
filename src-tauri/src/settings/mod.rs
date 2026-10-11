@@ -14,11 +14,18 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
+use crate::persist::{backup_rotating, save_atomic_json, save_if_changed_json};
+
 /// Versión actual del formato (para migraciones futuras).
 pub const SETTINGS_VERSION: u32 = 1;
 
 fn default_version() -> u32 {
     SETTINGS_VERSION
+}
+
+/// `restore_tabs` activado por defecto (ausente → `true`).
+fn default_restore_tabs() -> bool {
+    true
 }
 
 /// Tema guardado. `System` respeta el SO (el frontend lo resuelve y
@@ -58,6 +65,10 @@ pub struct Settings {
     /// Solo ordena el intento; si falla, se prueban los demás igual.
     #[serde(default, deserialize_with = "url_or_none")]
     pub fast_mirror: Option<String>,
+    /// Restaurar las pestañas al abrir (`true` por defecto). Con `false`
+    /// no se lee ni se escribe `session.json` (y no se borra el existente).
+    #[serde(default = "default_restore_tabs", deserialize_with = "bool_or_true")]
+    pub restore_tabs: bool,
 }
 
 /// `u32` o default (nunca tumba el parseo).
@@ -89,6 +100,12 @@ fn u64_or_none<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<u64>, D:
     Ok(v.as_u64())
 }
 
+/// `bool` o `true` para cualquier otra cosa (nunca tumba el parseo).
+fn bool_or_true<'de, D: serde::Deserializer<'de>>(d: D) -> Result<bool, D::Error> {
+    let v = serde_json::Value::deserialize(d)?;
+    Ok(v.as_bool().unwrap_or(true))
+}
+
 /// `"light"`/`"dark"` o `System` para cualquier otra cosa.
 fn theme_or_default<'de, D: serde::Deserializer<'de>>(d: D) -> Result<ThemeMode, D::Error> {
     let v = serde_json::Value::deserialize(d)?;
@@ -108,6 +125,7 @@ impl Default for Settings {
             feed_url: None,
             catalog_fetched_at: None,
             fast_mirror: None,
+            restore_tabs: true,
         }
     }
 }
@@ -136,43 +154,19 @@ pub fn load(path: &Path) -> Settings {
 }
 
 /// Guarda si el valor cambió. Devuelve `true` si escribió. Si lo que hay
-/// no parsea, lo respalda a `.bak` antes de sobrescribir.
+/// no parsea, lo respalda a `.bak` (rotativo) antes de sobrescribir.
 pub fn save_if_changed(path: &Path, settings: &Settings) -> std::io::Result<bool> {
-    match std::fs::read(path) {
-        Ok(bytes) => match serde_json::from_slice::<Settings>(&bytes) {
-            Ok(current) if &current == settings => return Ok(false),
-            Ok(_) => {}
-            Err(_) => {
-                let _ = std::fs::rename(path, path.with_extension("json.bak"));
-            }
-        },
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
-        Err(e) => return Err(e),
-    }
-    save_atomic(path, settings)?;
-    Ok(true)
+    save_if_changed_json(path, settings)
 }
 
-/// Renombra a `.bak` (si puede) y escribe defaults frescos. Si algo falla,
-/// devuelve defaults igualmente: la app nunca se tumba por ajustes.
+/// Renombra a `.bak` (rotativo, conserva la más antigua) y escribe
+/// defaults frescos. Si algo falla, devuelve defaults igualmente: la app
+/// nunca se tumba por ajustes.
 fn backup_and_fresh(path: &Path) -> Settings {
     let fresh = Settings::default();
-    let bak = path.with_extension("json.bak");
-    let _ = std::fs::rename(path, &bak);
-    let _ = save_atomic(path, &fresh);
+    backup_rotating(path);
+    let _ = save_atomic_json(path, &fresh);
     fresh
-}
-
-/// Escritura atómica: temporal en el mismo directorio + rename.
-fn save_atomic(path: &Path, settings: &Settings) -> std::io::Result<()> {
-    let json = serde_json::to_string_pretty(settings).map_err(std::io::Error::other)?;
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-    let tmp = path.with_extension("json.tmp");
-    std::fs::write(&tmp, json)?;
-    std::fs::rename(&tmp, path)?;
-    Ok(())
 }
 
 #[cfg(test)]
@@ -204,6 +198,7 @@ mod tests {
             feed_url: Some("zealdocs/feeds".to_string()),
             catalog_fetched_at: Some(1_700_000_000),
             fast_mirror: Some("sanfrancisco.kapeli.com".to_string()),
+            restore_tabs: true,
         };
         assert!(save_if_changed(&path, &settings).expect("guardar"));
         assert_eq!(load(&path), settings);
@@ -256,6 +251,25 @@ mod tests {
         let settings = load(&path);
         assert_eq!(settings.feed_url, None);
         assert_eq!(settings.catalog_fetched_at, None);
+        assert_eq!(settings.theme, ThemeMode::Dark);
+    }
+
+    #[test]
+    fn restore_tabs_defaults_true_and_tolerates_garbage() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        // Ausente → true.
+        let path = write_raw(dir.path(), r#"{"version": 1, "theme": "dark"}"#);
+        assert!(load(&path).restore_tabs);
+        // Explícito se respeta y viaja en roundtrip.
+        let path = write_raw(dir.path(), r#"{"version": 1, "restore_tabs": false}"#);
+        assert!(!load(&path).restore_tabs);
+        // Basura → true sin tumbar el resto.
+        let path = write_raw(
+            dir.path(),
+            r#"{"version": 1, "restore_tabs": "siempre", "theme": "dark"}"#,
+        );
+        let settings = load(&path);
+        assert!(settings.restore_tabs);
         assert_eq!(settings.theme, ThemeMode::Dark);
     }
 

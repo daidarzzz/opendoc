@@ -3,6 +3,7 @@
 // El diálogo nativo (plugin-dialog) también vive aquí por la misma razón.
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open } from "@tauri-apps/plugin-dialog";
 import type {
   CatalogStatus,
@@ -17,6 +18,7 @@ import type {
   ScanReport,
   SearchRequest,
   SearchResponse,
+  SessionData,
   Settings,
   ThemeMode,
 } from "./types";
@@ -70,6 +72,25 @@ export async function getSettings(): Promise<Settings> {
 /** Cambia el tema (persiste solo si cambió). */
 export async function setTheme(theme: ThemeMode): Promise<Settings> {
   return invoke<Settings>("set_theme", { theme });
+}
+
+/** Activa/desactiva restaurar pestañas (persiste; con false no se lee ni
+ *  se escribe session.json). Al activar en caliente no restaura encima:
+ *  el próximo guardado vuelca el estado actual. */
+export async function setRestoreTabs(restore: boolean): Promise<Settings> {
+  return invoke<Settings>("set_restore_tabs", { restore });
+}
+
+/** Sesión guardada (vacía si no hay nada o está desactivado). Nunca falla
+ *  hacia fuera: el arranque no depende de este archivo. */
+export async function getSession(): Promise<SessionData> {
+  return invoke<SessionData>("get_session");
+}
+
+/** Guarda la sesión si cambió (devuelve si escribió). Con restore_tabs
+ *  desactivado no toca el disco. */
+export async function saveSession(session: SessionData): Promise<boolean> {
+  return invoke<boolean>("save_session", { session });
 }
 
 /** Estado del catálogo (repo, última descarga, entradas en caché). */
@@ -127,6 +148,20 @@ export async function onDocsetProgress(
   return listen<DocsetProgress>("docset-progress", (event) =>
     handler(event.payload),
   );
+}
+
+/** Petición de cierre de la ventana (para el último guardado de sesión).
+ *  El handler debe llamar `preventDefault()`, guardar y luego `destroy()`.
+ *  Falla fuera de Tauri (navegador). */
+export async function onCloseRequested(
+  handler: (event: { preventDefault: () => void }) => void | Promise<void>,
+): Promise<UnlistenFn> {
+  return getCurrentWindow().onCloseRequested(handler);
+}
+
+/** Cierra la ventana sin pedir confirmación (tras el guardado al cerrar). */
+export async function destroyWindow(): Promise<void> {
+  return getCurrentWindow().destroy();
 }
 
 /** Tipos con conteo de un docset, en orden de muestra. */

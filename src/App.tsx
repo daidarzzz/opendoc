@@ -6,6 +6,13 @@ import { Sidebar } from "./components/Sidebar";
 import { TabsBar } from "./components/TabsBar";
 import { Viewer } from "./components/Viewer";
 import { useGlobalKeys } from "./hooks/useGlobalKeys";
+import { destroyWindow, onCloseRequested } from "./lib/commands";
+import {
+  CLOSE_SAVE_TIMEOUT_MS,
+  flushSessionForClose,
+  hydrateSessionOnce,
+  startSessionSync,
+} from "./lib/sessionSync";
 import { useCatalog } from "./store/catalog";
 import { useDocsets } from "./store/docsets";
 import { useTheme } from "./store/theme";
@@ -39,9 +46,48 @@ export default function App() {
   }, []);
 
   // Arranque: tema guardado (con anti-flash ya aplicado) + carpeta guardada.
+  // Tras el escaneo se hidratan las pestañas (nunca antes: la bienvenida
+  // inicial no debe pisar session.json). El cierre vuelca el último estado
+  // con tope para no colgar la ventana (ver sessionSync).
   useEffect(() => {
     void initTheme();
-    void initDocsets();
+    let alive = true;
+    const stopSync = startSessionSync();
+    void (async () => {
+      await initDocsets();
+      if (alive) await hydrateSessionOnce();
+    })();
+    let closing = false;
+    let unlistenClose: (() => void) | null = null;
+    void (async () => {
+      try {
+        unlistenClose = await onCloseRequested(async (e) => {
+          if (closing) return;
+          closing = true;
+          e.preventDefault();
+          try {
+            await Promise.race([
+              flushSessionForClose(),
+              new Promise((r) => setTimeout(r, CLOSE_SAVE_TIMEOUT_MS)),
+            ]);
+          } catch {
+            // Un fallo al cerrar no bloquea el cierre (el debounce acota).
+          }
+          try {
+            await destroyWindow();
+          } catch {
+            // La ventana ya se estaba cerrando.
+          }
+        });
+      } catch {
+        // Fuera de Tauri (navegador): sin guardado al cerrar.
+      }
+    })();
+    return () => {
+      alive = false;
+      stopSync();
+      if (unlistenClose) unlistenClose();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

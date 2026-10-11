@@ -6,15 +6,18 @@ pub mod catalog;
 pub mod commands;
 pub mod docset;
 pub mod navigation;
+pub mod persist;
 pub mod profile;
 pub mod protocol;
 pub mod search;
+pub mod session;
 pub mod settings;
 
 use commands::{
-    extract_tarix, get_catalog_status, get_docset_home, get_install_status, get_settings,
-    install_docset, list_catalog, list_docsets, list_entries, list_kinds, refresh_catalog, search,
-    set_docsets_dir, set_feed_repo, set_theme, uninstall_docset, AppState,
+    extract_tarix, get_catalog_status, get_docset_home, get_install_status, get_session,
+    get_settings, install_docset, list_catalog, list_docsets, list_entries, list_kinds,
+    refresh_catalog, save_session, search, set_docsets_dir, set_feed_repo, set_restore_tabs,
+    set_theme, uninstall_docset, AppState,
 };
 
 /// Carga ajustes al arrancar. Si no hay carpeta configurada, asigna
@@ -99,6 +102,9 @@ pub fn run() {
             get_docset_home,
             get_settings,
             set_theme,
+            set_restore_tabs,
+            get_session,
+            save_session,
             extract_tarix,
             get_catalog_status,
             set_feed_repo,

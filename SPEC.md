@@ -85,8 +85,11 @@ search	SearchRequest { request_id, query, docset_ids?, limit? } (query admite `a
 list_kinds	docset_id	Vec<KindInfo { kind, label, inferred, count }> (orden fijo de comunes + inferidas + resto A-Z)
 list_entries	docset_id, kind, offset?, limit? (defecto 0/100, tope 500)	Vec<NavEntry { docset_id, name, kind, path, url }> (orden plegado; tipo inexistente → vacío)
 get_docset_home	docset_id	URL opendoc://...
-get_settings	n/a	Settings { version, docsets_dir?, theme, feed_url?, catalog_fetched_at? }
+get_settings	n/a	Settings { version, docsets_dir?, theme, feed_url?, catalog_fetched_at?, fast_mirror?, restore_tabs }
 set_theme	theme	Settings (persiste solo si cambió)
+set_restore_tabs	restore	Settings (restaurar pestañas al abrir; con false no se lee ni se escribe session.json)
+get_session	n/a	Session { version, tabs: Vec<SavedTab { docset_id, docset_name?, bundle_id?, history: Vec<{ path, title }>, history_index, scroll? }>, active } (vacía si no hay nada; nunca falla)
+save_session	Session	bool (escribe si cambió; con restore_tabs=false no toca el disco)
 extract_tarix	docset_id	ScanReport (async; ExtractionInProgress si hay otra en curso)
 get_catalog_status	n/a	CatalogStatus { repo?, fetched_at?, count, profile_enabled } (caché local, sin red; profile_enabled = OPENDOC_PROFILE=1 al arrancar)
 set_feed_repo	repo	Settings (valida owner/repo o URL y persiste)
@@ -118,7 +121,8 @@ v0.1: MVP (primer objetivo)
  Tests de Rust para escaneo, lectura de índices y búsqueda.
 v0.2: Uso diario
 Pestañas e historial (atrás/adelante).
-Siguiente (tras V2-3): persistir las pestañas entre sesiones y ejecutar Vitest en el job check del CI.
+Persistencia de pestañas entre sesiones (hecho): `session.json` en datos de la app (`"version": 1`, escritura atómica, `.bak` rotativo máx. 3, tolerancia por campo). Guarda por pestaña docset_id, historial en forma neutra (ruta relativa con ancla, sin esquema), título, índice actual, scroll de la entrada actual y pistas de reencuentro (nombre de carpeta + bundle_id); tope 30 pestañas y 50 entradas (ventana centrada en la actual). Guardado con debounce (~500 ms) + vuelco al cerrar (el frontend, con tope ~1 s; un fallo al cerrar no bloquea el cierre). Restaura tras el escaneo (solo la activa monta iframe); docset ausente → pestaña atenuada conservada (tarix pendiente → aviso propio); reencuentro por id exacto, bundle_id único o nombre único (ambiguo → no disponible sin reescribir). Ajuste `restore_tabs` (por defecto true, interruptor en Ajustes).
+Siguiente (tras V2-3): ejecutar Vitest en el job check del CI.
 Favoritos y recientes.
 Tabla de contenidos de la página actual.
 Filtro por docset y por prefijo de búsqueda.
@@ -142,3 +146,4 @@ Sin unwrap() en código de producción; errores tipados con thiserror.
 Los docsets son entrada no confiable: validar rutas, tolerar índices corruptos sin caerse.
 Al extraer un tgz, ninguna entrada puede salir de la carpeta destino (.., rutas absolutas, symlinks) y el total extraído está topado.
 Cada módulo de Rust con tests; los de docsets usan fixtures reales en tests/fixtures/.
+Dos instancias simultáneas de la app: último en cerrar gana (`session.json` last-writer-wins, sin bloqueo). Mejora futura: plugin single-instance de Tauri.

@@ -34,6 +34,8 @@ interface TabsState {
   tabs: Tab[];
   activeId: string;
   error: string;
+  /** Restauración terminada (o innecesaria): ya se puede guardar sesión. */
+  hydrated: boolean;
   /** Teclas reenviadas recientes (tasa ≤10/s, anti-bucle de un docset). */
   keyTimes: number[];
   /** Peticiones open-tab recientes (tasa ≤3/s). */
@@ -64,6 +66,10 @@ interface TabsState {
   openTabUrl: (url: string, fallbackTitle: string) => void;
   /** Reabre la última pestaña cerrada con contenido (Ctrl+Shift+T). */
   reopenLast: () => void;
+  /** Sustituye las pestañas por las restauradas y marca hidratado. */
+  restoreSession: (tabs: Tab[], activeId: string) => void;
+  /** No hay nada que restaurar: marca hidratado sin tocar las pestañas. */
+  markHydrated: () => void;
 }
 
 function errText(e: unknown): string {
@@ -84,7 +90,7 @@ export const useTabs = create<TabsState>()((set, get) => {
     tabs: [fresh],
     activeId: fresh.id,
     error: "",
-    keyTimes: [],
+    hydrated: false,    keyTimes: [],
     openTabTimes: [],
     closed: [],
 
@@ -274,6 +280,20 @@ export const useTabs = create<TabsState>()((set, get) => {
         last,
       );
       set({ tabs: r.tabs, activeId: r.activeId, closed: s.closed.slice(0, -1), error: "" });
+    },
+
+    restoreSession: (tabs: Tab[], activeId: string) => {
+      const ok = tabs.some((t) => t.id === activeId);
+      set({
+        tabs,
+        activeId: ok ? activeId : (tabs[tabs.length - 1]?.id ?? ""),
+        hydrated: true,
+        error: "",
+      });
+    },
+
+    markHydrated: () => {
+      if (!get().hydrated) set({ hydrated: true });
     },
   };
 });

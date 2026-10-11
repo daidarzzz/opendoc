@@ -136,6 +136,9 @@ export interface Settings {
   catalog_fetched_at: number | null;
   /** Host del mirror que funcionó la última vez, null = sin dato. */
   fast_mirror: string | null;
+  /** Restaurar pestañas al abrir (por defecto true; con false no se lee
+   *  ni se escribe session.json). */
+  restore_tabs: boolean;
 }
 
 /** Una parada del historial de pestaña (URL canónica opendoc://). */
@@ -153,6 +156,32 @@ export interface Tab {
   historyIndex: number;
   /** Scroll guardado por URL (acotado). */
   scrolls: Record<string, number>;
+}
+
+/** Una parada del historial en forma neutra (session::SavedEntry):
+ *  ruta relativa a Documents/ con ancla, sin esquema ni id. */
+export interface SavedEntry {
+  path: string;
+  title: string;
+}
+
+/** Una pestaña guardada (session::SavedTab). Sin id estable: al restaurar
+ *  se generan nuevos. Las pistas solo sirven para reencontrar el docset
+ *  entre los cargados, nunca para rutas. */
+export interface SavedTab {
+  docset_id: string;
+  docset_name?: string | null;
+  bundle_id?: string | null;
+  history: SavedEntry[];
+  history_index: number;
+  scroll?: number | null;
+}
+
+/** Sesión persistida (session::Session): pestañas en orden + activa. */
+export interface SessionData {
+  version: number;
+  tabs: SavedTab[];
+  active: number;
 }
 
 /** Una entrada del catálogo (catalog::FeedEntry). */

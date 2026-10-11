@@ -1,14 +1,17 @@
 // Barra lateral: árbol de navegación, carpeta, catálogo, pendientes, estado, tema.
 import { BrowseTree } from "./BrowseTree";
 import { DocsetIcon } from "./DocsetIcon";
+import { getSettings, setRestoreTabs } from "../lib/commands";
+import { setSessionEnabled } from "../lib/sessionSync";
 import { useDocsets } from "../store/docsets";
 import { useTheme } from "../store/theme";
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 
 const THEME_LABEL = { light: "Claro", dark: "Oscuro", system: "Sistema" } as const;
 
 export function Sidebar({ style }: { style: CSSProperties }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [restoreTabs, setRestoreTabsState] = useState(true);
   const {
     pending,
     extractingIds,
@@ -21,6 +24,31 @@ export function Sidebar({ style }: { style: CSSProperties }) {
     extract,
   } = useDocsets();
   const mode = useTheme((s) => s.mode);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    void (async () => {
+      try {
+        setRestoreTabsState((await getSettings()).restore_tabs ?? true);
+      } catch {
+        // Se conserva el valor local.
+      }
+    })();
+  }, [settingsOpen]);
+
+  const toggleRestoreTabs = (): void => {
+    const next = !restoreTabs;
+    setRestoreTabsState(next);
+    void (async () => {
+      try {
+        await setRestoreTabs(next);
+      } catch {
+        // Se conserva local; el backend persiste cuando puede.
+      }
+      // En caliente no se restaura encima: solo se guarda el actual.
+      setSessionEnabled(next);
+    })();
+  };
 
   return (
     <aside style={style} className="flex h-full min-w-0 shrink-0 flex-col border-r border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-950">
@@ -43,6 +71,7 @@ export function Sidebar({ style }: { style: CSSProperties }) {
           <section role="dialog" aria-modal="true" aria-label="Ajustes" className="w-full max-w-sm space-y-4 rounded-lg bg-white p-5 shadow-xl dark:bg-gray-900" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between"><h2 className="text-base font-semibold">Ajustes</h2><button aria-label="Cerrar ajustes" onClick={() => setSettingsOpen(false)}>×</button></div>
             <div><p className="mb-2 text-xs text-gray-500">Tema</p><div className="flex gap-2">{(["system", "light", "dark"] as const).map((value) => <button key={value} aria-pressed={mode === value} onClick={() => void useTheme.getState().setMode(value)} className={`rounded border px-3 py-1 text-sm ${mode === value ? "border-blue-500" : "border-gray-300 dark:border-gray-700"}`}>{THEME_LABEL[value]}</button>)}</div></div>
+            <div><label className="flex cursor-pointer items-center gap-2 text-sm"><input type="checkbox" checked={restoreTabs} onChange={toggleRestoreTabs} className="accent-blue-600" />Restaurar pestañas al abrir</label></div>
             <div><p className="mb-1 text-xs text-gray-500">Carpeta de docsets</p><p className="break-all text-xs text-gray-600 dark:text-gray-300">{savedDir ?? "Sin configurar"}</p><button onClick={() => void choose()} className="mt-2 rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800">Elegir carpeta…</button></div>
           </section>
         </div>

@@ -17,6 +17,7 @@ const TabButton = memo(function TabButton({
   onClose,
   onPointerDown,
   dragging,
+  unavailable,
 }: {
   id: string;
   title: string;
@@ -27,6 +28,8 @@ const TabButton = memo(function TabButton({
   onClose: () => void;
   onPointerDown: (e: React.PointerEvent) => void;
   dragging: boolean;
+  /** El docset no está cargado (o es un tarix sin instalar): atenuada. */
+  unavailable: boolean;
 }) {
   return (
     <div
@@ -61,7 +64,7 @@ const TabButton = memo(function TabButton({
         selected
           ? "border-transparent bg-white font-medium dark:bg-gray-900"
           : "border-transparent text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-800"
-      } ${dragging ? "z-10 bg-white shadow-lg dark:bg-gray-800" : ""}`}
+      } ${dragging ? "z-10 bg-white shadow-lg dark:bg-gray-800" : ""} ${unavailable ? "opacity-50" : ""}`}
     >
       <DocsetIcon icon={icon} name={docName} size={14} />
       <span className="flex-1 truncate">{title}</span>
@@ -89,6 +92,7 @@ export function TabsBar() {
   const goBack = useTabs((s) => s.goBack);
   const goForward = useTabs((s) => s.goForward);
   const docsets = useDocsets((s) => s.docsets);
+  const pending = useDocsets((s) => s.pending);
   const pointerDrag = useRef<{
     pointerId: number;
     fromId: string;
@@ -250,6 +254,14 @@ export function TabsBar() {
       <div role="tablist" aria-label="Pestañas" onKeyDown={onListKeyDown} className="flex flex-1 items-end gap-0.5 overflow-x-auto">
         {tabs.map((t) => {
           const m = meta.get(t.docsetId);
+          const hasContent = currentEntry(t) !== null;
+          const unavailable =
+            hasContent &&
+            t.docsetId !== "" &&
+            !meta.has(t.docsetId) &&
+            !pending.some((p) => p.id === t.docsetId);
+          const pendingInstall =
+            hasContent && t.docsetId !== "" && pending.some((p) => p.id === t.docsetId);
           return (
             <TabButton
               key={t.id}
@@ -258,6 +270,7 @@ export function TabsBar() {
               icon={m?.icon ?? null}
               docName={m?.name ?? t.docsetId}
               selected={t.id === activeId}
+              unavailable={unavailable || pendingInstall}
               onClose={() => closeTab(t.id)}
               onPointerDown={(e) => {
                 if (!e.isPrimary || e.button !== 0 || (e.target instanceof Element && e.target.closest("button"))) return;
