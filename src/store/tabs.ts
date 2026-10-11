@@ -211,7 +211,9 @@ export const useTabs = create<TabsState>()((set, get) => {
     childScroll: (url: string, y: number) => {
       set((s) => {
         const tab = s.tabs.find((t) => t.id === s.activeId);
-        if (!tab || currentEntry(tab)?.url !== url) return s;
+        // Cualquier URL del historial (no solo la actual): el volcado final
+        // en pagehide llega con la URL de la página que se abandona.
+        if (!tab || !tab.history.some((e) => e.url === url)) return s;
         const next = noteScroll(tab, url, y);
         return { tabs: s.tabs.map((t) => (t.id === tab.id ? next : t)) };
       });

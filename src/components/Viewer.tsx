@@ -22,6 +22,7 @@ import {
   validateReadyMessage,
   validateScrollMessage,
 } from "../lib/iframeMessages";
+import { toBackendUrl } from "../lib/iframeMessages";
 import { toViewerUrl } from "../lib/opendocUrl";
 import { currentEntry } from "../lib/tabHistory";
 import { findLoadedFrame, isPendingFrameLoad } from "../lib/viewerFrames";
@@ -49,14 +50,22 @@ export function Viewer() {
   const pendingFrame = useRef<{ index: number; url: string; version: number } | null>(null);
   const preloadedFrame = useRef<{ index: number; url: string; version: number } | null>(null);
   const prefetchTime = useRef(0);
-  const viewerRef = useRef<HTMLElement | null>(null);
 
   // WKWebView can route trackpad wheel input to the outer document instead
   // of the nested docset iframe. Relay those deltas to the active frame.
-  useEffect(() => {
-    const viewer = viewerRef.current;
+  // Callback ref (not an effect): the <main> node changes between the
+  // empty and docset branches, and the listener must always sit on the
+  // live node. Pinch (ctrlKey) is swallowed, never relayed as scroll.
+  const wheelCleanup = useRef<(() => void) | null>(null);
+  const attachWheel = useCallback((viewer: HTMLElement | null): void => {
+    wheelCleanup.current?.();
+    wheelCleanup.current = null;
     if (!viewer) return;
     const relayWheel = (event: WheelEvent): void => {
+      if (event.ctrlKey) {
+        event.preventDefault();
+        return;
+      }
       const index = frontFrameRef.current;
       const frame = index === null ? null : frames.current[index];
       const child = frame?.contentWindow;
@@ -69,6 +78,7 @@ export function Viewer() {
           deltaX: event.deltaX,
           deltaY: event.deltaY,
           deltaMode: event.deltaMode,
+          ctrlKey: false,
           x: event.clientX - rect.left,
           y: event.clientY - rect.top,
         },
@@ -76,8 +86,8 @@ export function Viewer() {
       );
     };
     viewer.addEventListener("wheel", relayWheel, { passive: false, capture: true });
-    return () => viewer.removeEventListener("wheel", relayWheel, true);
-  }, [docsets.length]);
+    wheelCleanup.current = () => viewer.removeEventListener("wheel", relayWheel, true);
+  }, []);
 
   const active = tabs.find((t) => t.id === activeId);
   const activeEntry = active ? currentEntry(active) : null;
@@ -199,7 +209,18 @@ export function Viewer() {
       const frame = frontFrameRef.current === null
         ? null
         : frames.current[frontFrameRef.current];
-      if (!frame || e.source !== frame.contentWindow || transitioning) return;
+      if (!frame || e.source !== frame.contentWindow) return;
+      if (type === "opendoc-scroll") {
+        // Sin puerta de `transitioning` a propósito: el reporte trae su
+        // propia URL (incluye el volcado final en pagehide) y childScroll
+        // solo acepta URLs del historial de la pestaña activa.
+        const sc = validateScrollMessage(data, true);
+        const rawUrl: unknown = (data as Record<string, unknown>)["url"];
+        const url = typeof rawUrl === "string" ? toBackendUrl(rawUrl) : null;
+        if (sc && url) childScroll(url, sc.y);
+        return;
+      }
+      if (transitioning) return;
       if (type === "opendoc-nav") {
         const nav = validateNavMessage(data, true, ids);
         if (nav) childNav(nav.url, nav.title);
@@ -230,11 +251,6 @@ export function Viewer() {
           next[index] = prefetch.url;
           return next;
         });
-      } else if (type === "opendoc-scroll") {
-        const sc = validateScrollMessage(data, true);
-        const tab = useTabs.getState().active();
-        const entry = tab ? currentEntry(tab) : null;
-        if (sc && entry) childScroll(entry.url, sc.y);
       } else if (type === "opendoc-key") {
         const kp = validateKeyMessage(data, true);
         if (!kp) return;
@@ -280,7 +296,7 @@ export function Viewer() {
 
   if (docsets.length === 0 && !loading) {
     return (
-      <main ref={viewerRef} className="flex min-w-0 flex-1 flex-col">
+      <main ref={attachWheel} className="flex min-w-0 flex-1 flex-col">
         {dirMissing ? (
           <FolderPrompt
             dirMissing={dirMissing}
@@ -296,7 +312,7 @@ export function Viewer() {
   }
 
   return (
-    <main ref={viewerRef} className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" role="tabpanel" id="viewer-panel" aria-label={t("viewer.viewer")}>
+    <main ref={attachWheel} className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" role="tabpanel" id="viewer-panel" aria-label={t("viewer.viewer")}>
       {!activeEntry || docsetState !== "ok" ? (
         <div className="flex flex-1 flex-col items-center justify-center p-8">
           {!activeEntry ? (
