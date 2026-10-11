@@ -89,25 +89,25 @@ pub enum IssueKind {
 impl std::fmt::Display for IssueKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            IssueKind::NotDirectory => write!(f, "no es un directorio"),
-            IssueKind::MissingContents => write!(f, "falta Contents/"),
+            IssueKind::NotDirectory => write!(f, "not a directory"),
+            IssueKind::MissingContents => write!(f, "missing Contents/"),
             IssueKind::MissingDocuments => {
-                write!(f, "falta Contents/Resources/Documents/")
+                write!(f, "missing Contents/Resources/Documents/")
             }
             IssueKind::MissingIndex => {
-                write!(f, "falta Contents/Resources/docSet.dsidx")
+                write!(f, "missing Contents/Resources/docSet.dsidx")
             }
             IssueKind::InvalidInfoPlist => {
-                write!(f, "Contents/Info.plist ilegible")
+                write!(f, "unreadable Contents/Info.plist")
             }
             IssueKind::InvalidIndex => {
-                write!(f, "índice ilegible o no reconocido")
+                write!(f, "unreadable or unrecognized index")
             }
             IssueKind::EntryUnreadable => {
-                write!(f, "no se pudo leer la entrada")
+                write!(f, "could not read entry")
             }
             IssueKind::TarixFailed => {
-                write!(f, "tarix no instalable (ver terminal)")
+                write!(f, "tarix not installable (see terminal)")
             }
         }
     }
@@ -145,13 +145,13 @@ pub struct ScanReport {
 #[derive(Debug, thiserror::Error)]
 pub enum ScanError {
     /// La carpeta raíz no existe.
-    #[error("la carpeta de docsets no existe: {}", path.display())]
+    #[error("docsets folder does not exist: {}", path.display())]
     RootNotFound {
         /// Ruta raíz que se intentó escanear.
         path: PathBuf,
     },
     /// La carpeta raíz no se puede leer.
-    #[error("no se puede leer la carpeta de docsets: {}", path.display())]
+    #[error("cannot read docsets folder: {}", path.display())]
     RootUnreadable {
         /// Ruta raíz que se intentó escanear.
         path: PathBuf,

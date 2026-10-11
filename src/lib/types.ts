@@ -125,6 +125,9 @@ export type ApiError =
 /** Tema guardado (settings::ThemeMode). */
 export type ThemeMode = "light" | "dark" | "system";
 
+/** Idioma de la interfaz (settings::Language). */
+export type Language = "en" | "es";
+
 /** Ajustes persistentes (settings::Settings). */
 export interface Settings {
   version: number;
@@ -139,6 +142,8 @@ export interface Settings {
   /** Restaurar pestañas al abrir (por defecto true; con false no se lee
    *  ni se escribe session.json). */
   restore_tabs: boolean;
+  /** Idioma de la interfaz (por defecto "en"). */
+  language: Language;
 }
 
 /** Una parada del historial de pestaña (URL canónica opendoc://). */

@@ -27,7 +27,7 @@ import type {
   FeedEntry,
   InstallStatus,
 } from "../lib/types";
-import { apiErrorText } from "../lib/catalogUi";
+import { errorKindOf } from "../lib/appError";
 import type { CatalogFilter } from "../lib/catalogUi";
 import { pmark, setProfileEnabled } from "../lib/profile";
 import { useDocsets } from "./docsets";
@@ -38,22 +38,19 @@ export type CatalogView = "viewer" | "catalog";
 export interface FeedOp {
   busy: boolean;
   progress: DocsetProgress | null;
-  error: string;
+  error: unknown;
   /** `kind` del ApiError si lo hubo (p. ej. `no_docsets_dir`). */
   errorKind: string;
   done: boolean;
 }
 
-const idleOp: FeedOp = { busy: false, progress: null, error: "", errorKind: "", done: false };
-
-/** `kind` de un error de comando, o "" si no es un ApiError. */
-function errorKindOf(e: unknown): string {
-  if (typeof e === "object" && e !== null && "kind" in e) {
-    const kind: unknown = (e as { kind: unknown }).kind;
-    return typeof kind === "string" ? kind : "";
-  }
-  return "";
+/** Resumen de refresco para traducir al pintar (números sin formatear). */
+export interface RefreshNote {
+  count: number;
+  skipped: number;
 }
+
+const idleOp: FeedOp = { busy: false, progress: null, error: null, errorKind: "", done: false };
 
 interface CatalogState {
   view: CatalogView;
@@ -65,14 +62,14 @@ interface CatalogState {
   loading: boolean;
   refreshing: boolean;
   /** Error global (carga/actualización del catálogo). */
-  error: string;
+  error: unknown;
   /** Resumen de la última actualización manual. */
-  refreshNote: string;
+  refreshNote: RefreshNote | null;
   query: string;
   filter: CatalogFilter;
   repoInput: string;
   repoBusy: boolean;
-  repoError: string;
+  repoError: unknown;
   ops: Record<string, FeedOp>;
   open: () => void;
   showViewer: () => void;
@@ -118,13 +115,13 @@ export const useCatalog = create<CatalogState>()((set, get) => ({
   updatable: 0,
   loading: true,
   refreshing: false,
-  error: "",
-  refreshNote: "",
+  error: null,
+  refreshNote: null,
   query: "",
   filter: "all",
   repoInput: "",
   repoBusy: false,
-  repoError: "",
+  repoError: null,
   ops: {},
 
   open: () => {
@@ -138,7 +135,7 @@ export const useCatalog = create<CatalogState>()((set, get) => ({
 
   load: async () => {
     const mySeq = ++seq;
-    set({ loading: true, error: "" });
+    set({ loading: true, error: null });
     try {
       const [status, entries, installStates] = await Promise.all([
         getCatalogStatus(),
@@ -160,35 +157,35 @@ export const useCatalog = create<CatalogState>()((set, get) => ({
       });
     } catch (e) {
       if (mySeq !== seq) return;
-      set({ loading: false, error: apiErrorText(e) });
+      set({ loading: false, error: e });
     }
   },
 
   saveRepo: async (repo: string) => {
     if (get().repoBusy) return;
-    set({ repoBusy: true, repoError: "" });
+    set({ repoBusy: true, repoError: null });
     try {
       await setFeedRepo(repo);
       const status = await getCatalogStatus();
       set({ status, repoInput: status.repo ?? "", repoBusy: false });
       await get().load();
     } catch (e) {
-      set({ repoBusy: false, repoError: apiErrorText(e) });
+      set({ repoBusy: false, repoError: e });
     }
   },
 
   refresh: async () => {
     if (get().refreshing) return;
-    set({ refreshing: true, error: "", refreshNote: "" });
+    set({ refreshing: true, error: null, refreshNote: null });
     try {
       const summary = await refreshCatalog();
       set({
-        refreshNote: `${summary.count} entradas (${summary.skipped} saltadas)`,
+        refreshNote: { count: summary.count, skipped: summary.skipped },
       });
       await get().load();
     } catch (e) {
       // La caché anterior se conserva: se muestra el error con los datos.
-      set({ error: apiErrorText(e) });
+      set({ error: e });
       await get().load();
     } finally {
       set({ refreshing: false });
@@ -204,7 +201,7 @@ export const useCatalog = create<CatalogState>()((set, get) => ({
     set((s) => ({
       ops: {
         ...s.ops,
-        [feedId]: { busy: true, progress: null, error: "", errorKind: "", done: false },
+        [feedId]: { busy: true, progress: null, error: null, errorKind: "", done: false },
       },
     }));
     try {
@@ -222,7 +219,6 @@ export const useCatalog = create<CatalogState>()((set, get) => ({
         ops: { ...s.ops, [feedId]: { ...opOf(s.ops, feedId), busy: false, done: true } },
       }));
     } catch (e) {
-      const error = apiErrorText(e);
       const errorKind = errorKindOf(e);
       // FASE 0: solo medida.
       pmark("ui install error", {
@@ -238,7 +234,7 @@ export const useCatalog = create<CatalogState>()((set, get) => ({
         // Si ni el estado se puede leer, se conserva el error original.
       }
       set((s) => ({
-        ops: { ...s.ops, [feedId]: { ...opOf(s.ops, feedId), busy: false, error, errorKind } },
+        ops: { ...s.ops, [feedId]: { ...opOf(s.ops, feedId), busy: false, error: e, errorKind } },
       }));
     }
   },
@@ -246,7 +242,7 @@ export const useCatalog = create<CatalogState>()((set, get) => ({
   uninstall: async (feedId: string) => {
     if (opOf(get().ops, feedId).busy) return;
     set((s) => ({
-      ops: { ...s.ops, [feedId]: { ...opOf(s.ops, feedId), busy: true, error: "", errorKind: "", done: false } },
+      ops: { ...s.ops,       [feedId]: { ...opOf(s.ops, feedId), busy: true, error: null, errorKind: "", done: false } },
     }));
     try {
       await uninstallDocset(feedId);
@@ -262,7 +258,7 @@ export const useCatalog = create<CatalogState>()((set, get) => ({
           [feedId]: {
             ...opOf(s.ops, feedId),
             busy: false,
-            error: apiErrorText(e),
+            error: e,
             errorKind: errorKindOf(e),
           },
         },

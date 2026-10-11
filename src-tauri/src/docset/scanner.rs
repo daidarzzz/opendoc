@@ -592,14 +592,14 @@ mod tests {
 
     #[test]
     fn issue_kind_messages_are_clear() {
-        assert_eq!(IssueKind::MissingContents.to_string(), "falta Contents/");
+        assert_eq!(IssueKind::MissingContents.to_string(), "missing Contents/");
         assert_eq!(
             IssueKind::MissingDocuments.to_string(),
-            "falta Contents/Resources/Documents/"
+            "missing Contents/Resources/Documents/"
         );
         assert_eq!(
             IssueKind::MissingIndex.to_string(),
-            "falta Contents/Resources/docSet.dsidx"
+            "missing Contents/Resources/docSet.dsidx"
         );
     }
 }

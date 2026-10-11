@@ -1,7 +1,8 @@
 //! Errores serializables de los comandos Tauri (T6).
 //!
 //! Unión discriminada por `kind` para que el frontend la distinga sin
-//! parsear strings. Mensajes claros en español; nunca `String` genérico.
+//! parsear strings. Mensajes claros en inglés (el frontend los traduce por
+//! `kind`); nunca `String` genérico.
 
 use serde::Serialize;
 
@@ -10,80 +11,80 @@ use serde::Serialize;
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum ApiError {
     /// La ruta no existe o no es un directorio.
-    #[error("la carpeta no existe o no es un directorio: {path}")]
+    #[error("directory does not exist or is not a directory: {path}")]
     InvalidDir {
         /// Ruta rechazada.
         path: String,
     },
     /// Ningún docset cargado tiene ese id.
-    #[error("docset desconocido: {id}")]
+    #[error("unknown docset: {id}")]
     UnknownDocset {
         /// Id solicitado.
         id: String,
     },
     /// El docset no tiene página de inicio conocida.
-    #[error("el docset no tiene página de inicio: {id}")]
+    #[error("docset has no home page: {id}")]
     NoHomePage {
         /// Id del docset.
         id: String,
     },
     /// Fallo interno cargando docsets (p. ej. el hilo de carga falló).
-    #[error("fallo cargando docsets: {message}")]
+    #[error("failed loading docsets: {message}")]
     LoadFailed {
         /// Detalle del fallo.
         message: String,
     },
     /// Ya hay una extracción en curso para ese id.
-    #[error("extracción en curso: {id}")]
+    #[error("extraction in progress: {id}")]
     ExtractionInProgress {
         /// Id del docset.
         id: String,
     },
     /// No hay repositorio de feeds configurado.
-    #[error("sin repositorio de feeds (configúralo primero)")]
+    #[error("no feed repository configured")]
     NoFeedRepo,
     /// Fallo descargando o parseando el catálogo de feeds.
-    #[error("fallo del catálogo: {message}")]
+    #[error("catalog failed: {message}")]
     FeedFailed {
         /// Detalle del fallo.
         message: String,
     },
     /// Sin carpeta de docsets configurada (`path` nulo) o que dejó de
     /// existir (`path` con la ruta).
-    #[error("sin carpeta de docsets (elige una primero)")]
+    #[error("no docsets folder configured")]
     NoDocsetsDir {
         /// Ruta que falta (`None` = nunca se configuró).
         path: Option<String>,
     },
     /// El catálogo no se ha descargado todavía.
-    #[error("sin catálogo descargado (refréscalo primero)")]
+    #[error("catalog not downloaded yet")]
     CatalogMissing,
     /// Ninguna entrada del catálogo tiene ese id.
-    #[error("entrada desconocida en el catálogo: {id}")]
+    #[error("unknown catalog entry: {id}")]
     UnknownFeed {
         /// Id solicitado.
         id: String,
     },
     /// La entrada no trae URL de descarga utilizable.
-    #[error("la entrada no trae URL de descarga utilizable: {id}")]
+    #[error("entry has no usable download URL: {id}")]
     NoDownloadUrl {
         /// Id del feed.
         id: String,
     },
     /// Ninguna URL es un `.tgz` (único formato de F2).
-    #[error("formato no soportado (solo .tgz): {id}")]
+    #[error("unsupported format (only .tgz): {id}")]
     UnsupportedPackage {
         /// Id del feed.
         id: String,
     },
     /// Ya instalado y sin `force` (reinstalar pide confirmación).
-    #[error("el docset ya está instalado: {id} (usa force para reinstalar)")]
+    #[error("docset already installed: {id} (use force to reinstall)")]
     AlreadyInstalled {
         /// Id del feed.
         id: String,
     },
     /// Varias carpetas coinciden con el feed: no se elige ninguna.
-    #[error("instalación ambigua: {id} coincide con varios docsets")]
+    #[error("ambiguous install: {id} matches several docsets")]
     AmbiguousMatch {
         /// Id del feed.
         id: String,
@@ -91,13 +92,13 @@ pub enum ApiError {
         candidates: Vec<String>,
     },
     /// Ya hay una instalación en curso para ese feed.
-    #[error("instalación en curso: {id}")]
+    #[error("install already in progress: {id}")]
     InstallInProgress {
         /// Id del feed.
         id: String,
     },
     /// Todas las URLs fallaron (red o HTTP).
-    #[error("fallo descargando {id}: {message}")]
+    #[error("download failed for {id}: {message}")]
     DownloadFailed {
         /// Id del feed.
         id: String,
@@ -105,7 +106,7 @@ pub enum ApiError {
         message: String,
     },
     /// El `.tgz` no se pudo extraer (corrupto, malicioso, límites...).
-    #[error("fallo extrayendo {id}: {message}")]
+    #[error("extraction failed for {id}: {message}")]
     ExtractFailed {
         /// Id del feed.
         id: String,
@@ -113,7 +114,7 @@ pub enum ApiError {
         message: String,
     },
     /// Extraído pero sin estructura de docset clásico.
-    #[error("paquete inválido (no es un docset clásico): {id}: {message}")]
+    #[error("invalid package (not a classic docset): {id}: {message}")]
     InvalidPackage {
         /// Id del feed.
         id: String,
@@ -121,7 +122,7 @@ pub enum ApiError {
         message: String,
     },
     /// Fallo colocando la instalación (disco o renombrados).
-    #[error("fallo instalando {id}: {message}")]
+    #[error("install failed for {id}: {message}")]
     InstallFailed {
         /// Id del feed.
         id: String,

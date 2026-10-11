@@ -15,14 +15,11 @@ const entryKey = (docsetId: string, kind: string): string => `${docsetId}\n${kin
 const pageKey = (docsetId: string, kind: string, page: number): string =>
   `${entryKey(docsetId, kind)}\n${page}`;
 
-function errText(e: unknown): string {
-  return e instanceof Error ? e.message : JSON.stringify(e);
-}
 
 interface BrowseState {
   kinds: Record<string, KindInfo[]>;
   kindsState: Record<string, KindsState>;
-  kindsError: Record<string, string>;
+  kindsError: Record<string, unknown>;
   /** Entradas dispersas por docset+tipo (longitud = count; hueco = sin pedir). */
   entries: Record<string, (NavEntry | undefined)[]>;
   /** Páginas ya pedidas (con éxito) por docset+tipo+página. */
@@ -30,7 +27,7 @@ interface BrowseState {
   /** Páginas en vuelo (no repetir la petición). */
   inflight: Record<string, boolean>;
   /** Error de la última página fallida por docset+tipo (reintento al pedir). */
-  entriesError: Record<string, string>;
+  entriesError: Record<string, unknown>;
   expandedDocs: string[];
   expandedKinds: Record<string, string[]>;
   toggleDoc: (docsetId: string) => void;
@@ -111,14 +108,14 @@ export const useBrowse = create<BrowseState>()((set, get) => ({
       set((s) => ({
         kinds: { ...s.kinds, [docsetId]: kinds },
         kindsState: { ...s.kindsState, [docsetId]: "ready" },
-        kindsError: { ...s.kindsError, [docsetId]: "" },
+        kindsError: { ...s.kindsError, [docsetId]: null },
         entries: { ...s.entries, ...entries },
       }));
     } catch (e) {
       if (get().kindsState[docsetId] !== "loading") return;
       set((s) => ({
         kindsState: { ...s.kindsState, [docsetId]: "error" },
-        kindsError: { ...s.kindsError, [docsetId]: errText(e) },
+        kindsError: { ...s.kindsError, [docsetId]: e },
       }));
     }
   },
@@ -173,7 +170,7 @@ export const useBrowse = create<BrowseState>()((set, get) => ({
             entries: { ...prev.entries, [key]: next },
             loadedPages: { ...prev.loadedPages, [pk]: true },
             inflight,
-            entriesError: { ...prev.entriesError, [key]: "" },
+            entriesError: { ...prev.entriesError, [key]: null },
           };
         });
       } catch (e) {
@@ -182,7 +179,7 @@ export const useBrowse = create<BrowseState>()((set, get) => ({
           const { [pk]: _drop, ...inflight } = prev.inflight;
           return {
             inflight,
-            entriesError: { ...prev.entriesError, [key]: errText(e) },
+            entriesError: { ...prev.entriesError, [key]: e },
           };
         });
       }
@@ -191,7 +188,7 @@ export const useBrowse = create<BrowseState>()((set, get) => ({
 
   retryEntries: async (docsetId, kind, count, start, end) => {
     const key = entryKey(docsetId, kind);
-    set((s) => ({ entriesError: { ...s.entriesError, [key]: "" } }));
+    set((s) => ({ entriesError: { ...s.entriesError, [key]: null } }));
     await get().ensureRange(docsetId, kind, count, start, end);
   },
 

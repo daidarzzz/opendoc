@@ -7,16 +7,23 @@ import {
   listDocsets,
   setDocsetsDir,
 } from "../lib/commands";
+import type { I18nKey, I18nVars } from "../lib/i18n";
 import type { Docset, PendingTarix, ScanIssue } from "../lib/types";
 import { useBrowse } from "./browse";
+
+/** Estado traducible en el componente (los números se formatean al pintar). */
+export interface DocsetsStatus {
+  key: I18nKey;
+  vars?: I18nVars;
+}
 
 interface DocsetsState {
   docsets: Docset[];
   pending: PendingTarix[];
   extractingIds: string[];
   issues: ScanIssue[];
-  status: string;
-  error: string;
+  status: DocsetsStatus;
+  error: unknown;
   loading: boolean;
   /** Ruta guardada en ajustes (aunque ya no exista: disco desconectado). */
   savedDir: string | null;
@@ -38,10 +45,6 @@ export function cleanDir(raw: string): string {
   return raw.trim().replace(/^["']+|["']+$/g, "");
 }
 
-function errText(e: unknown): string {
-  return e instanceof Error ? e.message : JSON.stringify(e);
-}
-
 // F1: una sola inicialización efectiva. En dev, StrictMode monta dos
 // veces y el efecto de arranque invoca `init()` duplicado: las llamadas
 // concurrentes comparten la misma promesa en vez de relanzar la carga.
@@ -53,18 +56,18 @@ export const useDocsets = create<DocsetsState>()((set, get) => ({
   pending: [],
   extractingIds: [],
   issues: [],
-  status: "iniciando…",
-  error: "",
+  status: { key: "status.starting" },
+  error: null,
   loading: true,
   savedDir: null,
   dirMissing: false,
   load: async (raw: string) => {
     const dir = cleanDir(raw);
     if (dir === "") {
-      set({ error: "pega la ruta de la carpeta de docsets" });
+      set({ error: { kind: "empty_dir" } });
       return;
     }
-    set({ error: "", loading: true, status: `cargando ${dir}…` });
+    set({ error: null, loading: true, status: { key: "status.loading", vars: { dir } } });
     try {
       const report = await setDocsetsDir(dir);
       useBrowse.getState().reset();
@@ -75,10 +78,10 @@ export const useDocsets = create<DocsetsState>()((set, get) => ({
         savedDir: dir,
         dirMissing: false,
         loading: false,
-        status: `cargados ${report.docsets.length} docsets, ${report.issues.length} issues`,
+        status: loadedStatus(report.docsets.length, report.issues.length),
       });
     } catch (e) {
-      set({ loading: false, status: "error al cargar", error: errText(e) });
+      set({ loading: false, status: { key: "status.loadError" }, error: e });
     }
   },
   init: () => {
@@ -87,7 +90,7 @@ export const useDocsets = create<DocsetsState>()((set, get) => ({
       try {
         const settings = await getSettings();
         if (!settings.docsets_dir) {
-          set({ loading: false, status: "elige tu carpeta de docsets" });
+          set({ loading: false, status: { key: "status.chooseDir" } });
           return;
         }
         // Se conserva el valor guardado aunque no exista (disco desconectado).
@@ -101,13 +104,13 @@ export const useDocsets = create<DocsetsState>()((set, get) => ({
             issues: report.issues,
             dirMissing: false,
             loading: false,
-            status: `cargados ${report.docsets.length} docsets, ${report.issues.length} issues`,
+            status: loadedStatus(report.docsets.length, report.issues.length),
           });
         } catch (e) {
-          set({ loading: false, dirMissing: true, error: errText(e) });
+          set({ loading: false, dirMissing: true, error: e });
         }
       } catch (e) {
-        set({ loading: false, error: errText(e) });
+        set({ loading: false, error: e });
       }
     })().finally(() => {
       initPromise = null;
@@ -126,7 +129,7 @@ export const useDocsets = create<DocsetsState>()((set, get) => ({
       extractingIds: s.extractingIds.includes(id)
         ? s.extractingIds
         : [...s.extractingIds, id],
-      error: "",
+      error: null,
     }));
     try {
       const report = await extractTarix(id);
@@ -136,12 +139,12 @@ export const useDocsets = create<DocsetsState>()((set, get) => ({
         pending: report.pending_tarix,
         issues: report.issues,
         extractingIds: s.extractingIds.filter((x) => x !== id),
-        status: `cargados ${report.docsets.length} docsets, ${report.issues.length} issues`,
+        status: loadedStatus(report.docsets.length, report.issues.length),
       }));
     } catch (e) {
       set((s) => ({
         extractingIds: s.extractingIds.filter((x) => x !== id),
-        error: errText(e),
+        error: e,
       }));
     }
   },
@@ -149,7 +152,11 @@ export const useDocsets = create<DocsetsState>()((set, get) => ({
     const savedDir = get().savedDir;
     try {
       if (savedDir) {
-        set({ loading: true, error: "", status: `actualizando ${savedDir}…` });
+        set({
+          loading: true,
+          error: null,
+          status: { key: "status.refreshing", vars: { dir: savedDir } },
+        });
         const report = await setDocsetsDir(savedDir);
         useBrowse.getState().reset();
         set({
@@ -157,17 +164,21 @@ export const useDocsets = create<DocsetsState>()((set, get) => ({
           pending: report.pending_tarix,
           issues: report.issues,
           loading: false,
-          error: "",
+          error: null,
           dirMissing: false,
-          status: `cargados ${report.docsets.length} docsets, ${report.issues.length} issues`,
+          status: loadedStatus(report.docsets.length, report.issues.length),
         });
         return;
       }
       const docsets = await listDocsets();
       useBrowse.getState().reset();
-      set({ docsets, loading: false, error: "" });
+      set({ docsets, loading: false, error: null });
     } catch (e) {
-      set({ loading: false, error: errText(e) });
+      set({ loading: false, error: e });
     }
   },
 }));
+
+function loadedStatus(docs: number, issues: number): DocsetsStatus {
+  return { key: "status.loadedMany", vars: { docs, issues } };
+}

@@ -7,7 +7,9 @@
 // visible, forma exacta, URLs opendoc de docsets cargados, título ≤200 sin
 // controles, scrollY finito en rango y teclas a ≤10/s.
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ErrorDetails } from "./ErrorDetails";
 import { Welcome } from "./Welcome";
+import { useT } from "../hooks/useT";
 import { useDocsets } from "../store/docsets";
 import { usePalette } from "../store/palette";
 import { useTabs } from "../store/tabs";
@@ -34,6 +36,8 @@ export function Viewer() {
   const openTabUrl = useTabs((s) => s.openTabUrl);
   const newTab = useTabs((s) => s.newTab);
   const { docsets, loading, dirMissing, savedDir, choose, pending, extract, extractingIds } = useDocsets();
+  const docsetsError = useDocsets((s) => s.error);
+  const { t } = useT();
   const [frameUrls, setFrameUrls] = useState<[string | null, string | null]>([null, null]);
   const [frameVersions, setFrameVersions] = useState<[number, number]>([0, 0]);
   const [frontFrame, setFrontFrame] = useState<number | null>(null);
@@ -282,7 +286,7 @@ export function Viewer() {
             dirMissing={dirMissing}
             savedDir={savedDir}
             choose={choose}
-            error={tabError}
+            error={docsetsError}
           />
         ) : (
           <Welcome docCount={0} />
@@ -292,7 +296,7 @@ export function Viewer() {
   }
 
   return (
-    <main ref={viewerRef} className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" role="tabpanel" id="viewer-panel" aria-label="Visor">
+    <main ref={viewerRef} className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" role="tabpanel" id="viewer-panel" aria-label={t("viewer.viewer")}>
       {!activeEntry || docsetState !== "ok" ? (
         <div className="flex flex-1 flex-col items-center justify-center p-8">
           {!activeEntry ? (
@@ -300,7 +304,7 @@ export function Viewer() {
           ) : docsetState === "pending" ? (
             <div className="flex flex-col items-center gap-2">
               <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                Este docset existe pero aún no está instalado (tarix pendiente).
+                {t("viewer.pendingTarix")}
               </p>
               <button
                 onClick={() => {
@@ -310,29 +314,28 @@ export function Viewer() {
                 className="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-200 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
               >
                 {active !== undefined && extractingIds.includes(active.docsetId)
-                  ? "Extrayendo…"
-                  : "Instalar"}
+                  ? t("settings.extracting")
+                  : t("common.install")}
               </button>
             </div>
           ) : (
             <p className="text-sm text-yellow-700 dark:text-yellow-300">
-              El docset de esta pestaña no está disponible (desinstalado o en
-              otra carpeta). La pestaña se conserva por si vuelve.
+              {t("viewer.docsetMissing")}
             </p>
           )}
-          {tabError !== "" && <p className="mt-2 text-sm text-red-500">{tabError}</p>}
+          <ErrorDetails error={tabError} />
         </div>
       ) : (
         <>
           {frontFrame === null && (
-            <p className="p-4 text-sm text-gray-500">Cargando {activeTitle}…</p>
+            <p className="p-4 text-sm text-gray-500">{t("viewer.loading", { title: activeTitle })}</p>
           )}
           {[0, 1].map((index) => (
             <iframe
               key={`${index}:${frameVersions[index]}`}
               ref={(frame) => { frames.current[index] = frame; }}
               src={frameUrls[index] ?? undefined}
-              title={`Documentación de ${activeTitle}`}
+              title={t("viewer.iframeTitle", { title: activeTitle })}
               sandbox="allow-scripts"
               scrolling="yes"
               aria-hidden={frontFrame !== index}
@@ -340,7 +343,7 @@ export function Viewer() {
               onLoad={() => onIframeLoad(index, frameUrls[index], frameVersions[index])}
             />
           ))}
-          {tabError !== "" && <p className="p-2 text-sm text-red-500">{tabError}</p>}
+          <ErrorDetails error={tabError} />
         </>
       )}
     </main>
@@ -356,37 +359,38 @@ function FolderPrompt({
   dirMissing: boolean;
   savedDir: string | null;
   choose: () => Promise<void>;
-  error: string;
+  error: unknown;
 }) {
+  const { t } = useT();
   return (
     <div className="flex flex-1 flex-col items-center justify-center p-8">
       {dirMissing ? (
         <>
           <p className="text-sm text-gray-500">
-            La carpeta guardada no está disponible
-            {savedDir ? `: ${savedDir}` : ""} (¿disco desconectado?).
+            {t("viewer.folderGone")}
+            {savedDir ? `: ${savedDir}` : ""} {t("settings.diskHint")}
           </p>
           <button
             onClick={() => void choose()}
             className="mt-3 rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
           >
-            Elegir otra carpeta
+            {t("viewer.chooseAnother")}
           </button>
         </>
       ) : (
         <>
           <p className="text-sm text-gray-500">
-            Elige tu carpeta de docsets para empezar.
+            {t("viewer.pickFolder")}
           </p>
           <button
             onClick={() => void choose()}
             className="mt-3 rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
           >
-            Elegir carpeta
+            {t("viewer.chooseFolder")}
           </button>
         </>
       )}
-      {error !== "" && <p className="mt-2 text-sm text-red-500">{error}</p>}
+      <ErrorDetails error={error} />
     </div>
   );
 }

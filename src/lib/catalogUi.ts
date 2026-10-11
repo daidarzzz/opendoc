@@ -1,7 +1,9 @@
 // Lógica pura de la vista del catálogo (F3): sin React ni Tauri.
 // Todo lo testeable en node vive aquí; los componentes solo pintan.
 
-import type { ApiError, DocsetProgress, FeedEntry, InstallStatus } from "./types";
+import { t, type I18nKey } from "./i18n";
+import type { DocsetProgress, FeedEntry, InstallStatus } from "./types";
+import type { Language } from "./types";
 
 /** Filtro de estado de la lista (además de la búsqueda por texto). */
 export type CatalogFilter = "all" | "installed" | "not-installed" | "updatable";
@@ -30,28 +32,29 @@ export function rowAction(status: InstallStatus | null): RowAction {
 /** Tono del distintivo de estado (el componente lo mapea a clases). */
 export type BadgeTone = "muted" | "ok" | "info" | "warn";
 
-/** Texto y tono del distintivo de una fila. */
+/** Clave de texto y tono del distintivo de una fila (texto vía `t()`). */
 export function statusBadge(status: InstallStatus | null): {
-  text: string;
+  key: I18nKey;
   tone: BadgeTone;
 } {
-  if (!status) return { text: "No instalado", tone: "muted" };
-  if (status.ambiguous) return { text: "Ambigua", tone: "warn" };
-  if (!status.installed) return { text: "No instalado", tone: "muted" };
+  if (!status) return { key: "catalog.badgeNotInstalled", tone: "muted" };
+  if (status.ambiguous) return { key: "catalog.badgeAmbiguous", tone: "warn" };
+  if (!status.installed) return { key: "catalog.badgeNotInstalled", tone: "muted" };
   if (status.update_available === true)
-    return { text: "Actualizable", tone: "info" };
-  return { text: "Instalado", tone: "ok" };
+    return { key: "catalog.badgeUpdatable", tone: "info" };
+  return { key: "catalog.badgeInstalled", tone: "ok" };
 }
 
 /** Línea de versiones: solo con datos reales, sin inventar nada. */
-export function versionLine(status: InstallStatus | null): string {
+export function versionLine(status: InstallStatus | null, lang: Language): string {
   if (!status) return "";
   if (status.ambiguous)
-    return `Coincide con varios: ${status.ambiguous_ids.join(", ")}`;
+    return t(lang, "catalog.versionsAmbiguous", { ids: status.ambiguous_ids.join(", ") });
   const parts: string[] = [];
-  if (status.installed_version) parts.push(`instalada ${status.installed_version}`);
-  else if (status.installed) parts.push("instalada (versión desconocida)");
-  parts.push(`disponible ${status.available_version}`);
+  if (status.installed_version)
+    parts.push(t(lang, "catalog.versionsInstalled", { version: status.installed_version }));
+  else if (status.installed) parts.push(t(lang, "catalog.versionsInstalledUnknown"));
+  parts.push(t(lang, "catalog.versionsAvailable", { version: status.available_version }));
   return parts.join(" · ");
 }
 
@@ -83,92 +86,50 @@ export function filterCatalog(
   });
 }
 
-/** Texto comprensible de un error de comando, sin ocultar el detalle útil. */
-export function apiErrorText(e: unknown): string {
-  if (typeof e === "object" && e !== null && "kind" in e) {
-    const err = e as ApiError;
-    switch (err.kind) {
-      case "no_feed_repo":
-        return "Sin repositorio de feeds: configúralo arriba para descargar el catálogo.";
-      case "feed_failed":
-        return `Fallo del catálogo: ${err.message} Se muestran los datos en caché.`;
-      case "catalog_missing":
-        return "Sin catálogo descargado: configura el repo y pulsa Actualizar.";
-      case "unknown_feed":
-        return `Entrada desconocida: ${err.id}.`;
-      case "no_download_url":
-        return `${err.id}: sin URL de descarga utilizable.`;
-      case "unsupported_package":
-        return `${err.id}: formato no soportado (solo .tgz).`;
-      case "already_installed":
-        return `${err.id} ya está instalado.`;
-      case "ambiguous_match":
-        return `${err.id}: varias carpetas coinciden (${err.candidates.join(", ")}). Resuélvelo en disco.`;
-      case "install_in_progress":
-        return `${err.id}: ya hay una instalación en curso.`;
-      case "download_failed":
-        return `Descarga fallida (${err.id}): ${err.message}`;
-      case "extract_failed":
-        return `Extracción fallida (${err.id}): ${err.message}`;
-      case "invalid_package":
-        return `Paquete inválido (${err.id}): ${err.message}`;
-      case "install_failed":
-        return `Instalación fallida (${err.id}): ${err.message}`;
-      case "no_docsets_dir":
-        return err.path
-          ? `Sin carpeta de docsets (${err.path}): elige una para instalar.`
-          : "Sin carpeta de docsets: elige una para instalar.";
-      case "load_failed":
-        return `Fallo interno: ${err.message}`;
-      case "invalid_dir":
-        return `Carpeta inválida: ${err.path}`;
-      case "unknown_docset":
-        return `Docset desconocido: ${err.id}`;
-      case "no_home_page":
-        return `Sin página de inicio: ${err.id}`;
-      case "extraction_in_progress":
-        return `Extracción en curso: ${err.id}`;
-    }
-  }
-  if (e instanceof Error) return e.message;
-  try {
-    return JSON.stringify(e);
-  } catch {
-    return String(e);
-  }
-}
-
-/** Bytes en forma legible (B/KB/MB/GB). */
-export function formatBytes(n: number): string {
-  if (!Number.isFinite(n) || n < 0) return "0 B";
-  if (n < 1024) return `${Math.floor(n)} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(n / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+/** Bytes en forma legible (número con Intl + unidad). */
+export function formatBytes(lang: Language, n: number): string {
+  if (!Number.isFinite(n) || n < 0) return `0 B`;
+  const num = (v: number, digits: number): string =>
+    new Intl.NumberFormat(lang === "es" ? "es-ES" : "en-US", {
+      maximumFractionDigits: digits,
+      minimumFractionDigits: digits,
+    }).format(v);
+  if (n < 1024) return `${num(Math.floor(n), 0)} B`;
+  if (n < 1024 * 1024) return `${num(n / 1024, 1)} KB`;
+  if (n < 1024 * 1024 * 1024) return `${num(n / (1024 * 1024), 1)} MB`;
+  return `${num(n / (1024 * 1024 * 1024), 1)} GB`;
 }
 
 /**
  * Línea de progreso. El porcentaje solo se muestra con total conocido
  * (dato real del servidor); sin total, solo bytes.
  */
-export function formatProgress(p: DocsetProgress): string {
+export function formatProgress(p: DocsetProgress, lang: Language): string {
   switch (p.stage) {
     case "downloading":
       if (p.total_bytes !== null && p.total_bytes > 0) {
         const pct = Math.floor((p.received_bytes / p.total_bytes) * 100);
-        return `${pct}% · ${formatBytes(p.received_bytes)} de ${formatBytes(p.total_bytes)}`;
+        return t(lang, "catalog.progressDownloading", {
+          pct,
+          done: formatBytes(lang, p.received_bytes),
+          total: formatBytes(lang, p.total_bytes),
+        });
       }
-      return `${formatBytes(p.received_bytes)} descargados`;
+      return t(lang, "catalog.progressDownloaded", {
+        bytes: formatBytes(lang, p.received_bytes),
+      });
     case "extracting":
       return p.files > 0
-        ? `Extrayendo… (${p.files} entradas)`
-        : "Extrayendo…";
+        ? t(lang, "catalog.progressExtractingFiles", { n: p.files })
+        : t(lang, "catalog.progressExtracting");
     case "verifying":
-      return "Verificando…";
+      return t(lang, "catalog.progressVerifying");
     case "done":
-      return "Instalado";
+      return t(lang, "catalog.progressDone");
     case "error":
-      return p.message ? `Error: ${p.message}` : "Error";
+      return p.message
+        ? t(lang, "catalog.progressErrorWith", { message: p.message })
+        : t(lang, "catalog.progressError");
   }
 }
 
@@ -177,15 +138,4 @@ export function progressPercent(p: DocsetProgress): number | null {
   if (p.stage !== "downloading") return null;
   if (p.total_bytes === null || p.total_bytes <= 0) return null;
   return Math.min(100, Math.floor((p.received_bytes / p.total_bytes) * 100));
-}
-
-/** Fecha de última actualización (`fetched_at` en segundos) o "nunca". */
-export function formatFetchedAt(fetchedAt: number | null): string {
-  if (fetchedAt === null) return "nunca";
-  const date = new Date(fetchedAt * 1000);
-  if (Number.isNaN(date.getTime())) return "nunca";
-  return date.toLocaleString("es-ES", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
 }

@@ -4,6 +4,8 @@
 // así que nunca se atribuye al docset equivocado.
 import { memo, useState } from "react";
 import { DocsetIcon } from "./DocsetIcon";
+import { ErrorDetails } from "./ErrorDetails";
+import { useT } from "../hooks/useT";
 import type { FeedEntry, InstallStatus } from "../lib/types";
 import type { FeedOp } from "../store/catalog";
 import {
@@ -13,6 +15,8 @@ import {
   versionLine,
   formatProgress,
 } from "../lib/catalogUi";
+import { tn, type I18nKey } from "../lib/i18n";
+import type { RowAction } from "../lib/catalogUi";
 
 const BADGE_CLASSES: Record<string, string> = {
   muted: "bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300",
@@ -21,12 +25,11 @@ const BADGE_CLASSES: Record<string, string> = {
   warn: "bg-yellow-100 text-yellow-900 dark:bg-yellow-900 dark:text-yellow-100",
 };
 
-const ACTION_LABEL = {
-  install: "Instalar",
-  update: "Actualizar",
-  reinstall: "Reinstalar",
-  none: "",
-} as const;
+const ACTION_KEY: Record<Exclude<RowAction, "none">, I18nKey> = {
+  install: "catalog.actionInstall",
+  update: "catalog.actionUpdate",
+  reinstall: "catalog.actionReinstall",
+};
 
 export const CatalogRow = memo(function CatalogRow({
   entry,
@@ -49,11 +52,17 @@ export const CatalogRow = memo(function CatalogRow({
   onChooseFolder: () => void;
 }) {
   const [confirmUninstall, setConfirmUninstall] = useState(false);
+  const { t, lang } = useT();
   const action = rowAction(status);
   const badge = statusBadge(status);
-  const lines = versionLine(status);
-  const mirrors =
-    entry.urls.length === 1 ? "1 origen" : `${entry.urls.length} orígenes`;
+  const lines = versionLine(status, lang);
+  const mirrors = tn(
+    lang,
+    entry.urls.length,
+    "catalog.sourcesOne",
+    "catalog.sourcesMany",
+    { n: entry.urls.length },
+  );
   const pct = op.progress ? progressPercent(op.progress) : null;
 
   return (
@@ -66,7 +75,7 @@ export const CatalogRow = memo(function CatalogRow({
             <span
               className={`rounded px-1.5 py-0.5 text-[11px] ${BADGE_CLASSES[badge.tone]}`}
             >
-              {badge.text}
+              {t(badge.key)}
             </span>
           </p>
           <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
@@ -84,7 +93,7 @@ export const CatalogRow = memo(function CatalogRow({
                   : "border border-gray-300 hover:bg-gray-200 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
               }`}
             >
-              {op.busy ? "En curso…" : ACTION_LABEL[action]}
+              {op.busy ? t("catalog.actionBusy") : t(ACTION_KEY[action])}
             </button>
           )}
           {status?.installed && (
@@ -95,7 +104,7 @@ export const CatalogRow = memo(function CatalogRow({
                   disabled={op.busy}
                   className="rounded px-2 py-1 text-xs hover:bg-gray-200 disabled:opacity-50 dark:hover:bg-gray-800"
                 >
-                  Cancelar
+                  {t("catalog.cancelUninstall")}
                 </button>
                 <button
                   onClick={() => {
@@ -105,7 +114,7 @@ export const CatalogRow = memo(function CatalogRow({
                   disabled={op.busy}
                   className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700 disabled:opacity-50"
                 >
-                  Confirmar
+                  {t("catalog.confirmUninstall")}
                 </button>
               </>
             ) : (
@@ -114,18 +123,18 @@ export const CatalogRow = memo(function CatalogRow({
                 disabled={op.busy}
                 className="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"
               >
-                {op.busy ? "Desinstalando…" : "Desinstalar"}
+                {op.busy ? t("catalog.uninstalling") : t("catalog.uninstall")}
               </button>
             )
           )}
         </div>
       </div>
-      {(op.progress || op.error !== "" || op.done) && (
+      {(op.progress || op.error !== null || op.done) && (
         <div className="mt-1.5" aria-live="polite">
           {op.progress && !op.error && !op.done && (
             <>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                {formatProgress(op.progress)}
+                {formatProgress(op.progress, lang)}
               </p>
               {pct !== null && (
                 <div
@@ -145,23 +154,25 @@ export const CatalogRow = memo(function CatalogRow({
           )}
           {op.done && (
             <p className="flex items-center justify-between text-xs text-green-700 dark:text-green-300">
-              <span>Instalado correctamente.</span>
+              <span>{t("catalog.installedOk")}</span>
               <button
                 onClick={() => onDismiss(entry.id)}
-                aria-label={`Descartar aviso de ${entry.name}`}
+                aria-label={t("catalog.dismissNotice", { name: entry.name })}
                 className="rounded px-1 hover:bg-gray-200 dark:hover:bg-gray-800"
               >
                 ×
               </button>
             </p>
           )}
-          {op.error !== "" && (
+          {op.error !== null && (
             <div className="text-xs">
               <p className="flex items-start justify-between gap-2 text-red-600 dark:text-red-400">
-                <span>{op.error}</span>
+                <span className="min-w-0 flex-1">
+                  <ErrorDetails error={op.error} />
+                </span>
                 <button
                   onClick={() => onDismiss(entry.id)}
-                  aria-label={`Descartar error de ${entry.name}`}
+                  aria-label={t("catalog.dismissError", { name: entry.name })}
                   className="shrink-0 rounded px-1 hover:bg-gray-200 dark:hover:bg-gray-800"
                 >
                   ×
@@ -172,7 +183,7 @@ export const CatalogRow = memo(function CatalogRow({
                   onClick={onChooseFolder}
                   className="mt-1 underline"
                 >
-                  Elegir carpeta de docsets
+                  {t("catalog.chooseFolder")}
                 </button>
               )}
             </div>

@@ -42,6 +42,17 @@ pub enum ThemeMode {
     System,
 }
 
+/// Idioma de la interfaz (`en` por defecto, sin detectar el sistema).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Language {
+    /// Inglés (por defecto).
+    #[default]
+    En,
+    /// Español.
+    Es,
+}
+
 /// Ajustes de OpenDoc. Extensible sin migrar (campos nuevos con default).
 /// Cada campo tolera valores inválidos (reinicia solo ese campo).
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -69,6 +80,9 @@ pub struct Settings {
     /// no se lee ni se escribe `session.json` (y no se borra el existente).
     #[serde(default = "default_restore_tabs", deserialize_with = "bool_or_true")]
     pub restore_tabs: bool,
+    /// Idioma de la interfaz (`en` por defecto; inválido → `en`).
+    #[serde(default, deserialize_with = "lang_or_default")]
+    pub language: Language,
 }
 
 /// `u32` o default (nunca tumba el parseo).
@@ -106,6 +120,14 @@ fn bool_or_true<'de, D: serde::Deserializer<'de>>(d: D) -> Result<bool, D::Error
     Ok(v.as_bool().unwrap_or(true))
 }
 
+/// `"en"`/`"es"` o `En` para cualquier otra cosa (nunca tumba el parseo).
+fn lang_or_default<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Language, D::Error> {
+    let v = serde_json::Value::deserialize(d)?;
+    Ok(match v.as_str() {
+        Some("es") => Language::Es,
+        _ => Language::default(),
+    })
+}
 /// `"light"`/`"dark"` o `System` para cualquier otra cosa.
 fn theme_or_default<'de, D: serde::Deserializer<'de>>(d: D) -> Result<ThemeMode, D::Error> {
     let v = serde_json::Value::deserialize(d)?;
@@ -126,6 +148,7 @@ impl Default for Settings {
             catalog_fetched_at: None,
             fast_mirror: None,
             restore_tabs: true,
+            language: Language::default(),
         }
     }
 }
@@ -199,6 +222,7 @@ mod tests {
             catalog_fetched_at: Some(1_700_000_000),
             fast_mirror: Some("sanfrancisco.kapeli.com".to_string()),
             restore_tabs: true,
+            language: Language::Es,
         };
         assert!(save_if_changed(&path, &settings).expect("guardar"));
         assert_eq!(load(&path), settings);
@@ -271,6 +295,26 @@ mod tests {
         let settings = load(&path);
         assert!(settings.restore_tabs);
         assert_eq!(settings.theme, ThemeMode::Dark);
+    }
+
+    #[test]
+    fn language_defaults_to_english_and_tolerates_garbage() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = write_raw(dir.path(), r#"{"version": 1, "theme": "dark"}"#);
+        assert_eq!(load(&path).language, Language::En);
+        let path = write_raw(dir.path(), r#"{"version": 1, "language": "es"}"#);
+        assert_eq!(load(&path).language, Language::Es);
+        let path = write_raw(dir.path(), r#"{"version": 1, "language": "fr"}"#);
+        assert_eq!(load(&path).language, Language::En);
+        // El valor viaja en roundtrip como "es".
+        let spanish = Settings {
+            language: Language::Es,
+            ..Settings::default()
+        };
+        assert!(save_if_changed(&path, &spanish).expect("guardar"));
+        assert_eq!(load(&path).language, Language::Es);
+        let raw = std::fs::read_to_string(&path).expect("leer");
+        assert!(raw.contains("\"language\": \"es\""), "{raw}");
     }
 
     #[test]

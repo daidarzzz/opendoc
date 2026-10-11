@@ -85,8 +85,9 @@ search	SearchRequest { request_id, query, docset_ids?, limit? } (query admite `a
 list_kinds	docset_id	Vec<KindInfo { kind, label, inferred, count }> (orden fijo de comunes + inferidas + resto A-Z)
 list_entries	docset_id, kind, offset?, limit? (defecto 0/100, tope 500)	Vec<NavEntry { docset_id, name, kind, path, url }> (orden plegado; tipo inexistente → vacío)
 get_docset_home	docset_id	URL opendoc://...
-get_settings	n/a	Settings { version, docsets_dir?, theme, feed_url?, catalog_fetched_at?, fast_mirror?, restore_tabs }
+get_settings	n/a	Settings { version, docsets_dir?, theme, feed_url?, catalog_fetched_at?, fast_mirror?, restore_tabs, language }
 set_theme	theme	Settings (persiste solo si cambió)
+set_language	language	Settings (idioma de la interfaz en/es; persiste solo si cambió)
 set_restore_tabs	restore	Settings (restaurar pestañas al abrir; con false no se lee ni se escribe session.json)
 get_session	n/a	Session { version, tabs: Vec<SavedTab { docset_id, docset_name?, bundle_id?, history: Vec<{ path, title }>, history_index, scroll? }>, active } (vacía si no hay nada; nunca falla)
 save_session	Session	bool (escribe si cambió; con restore_tabs=false no toca el disco)
@@ -105,6 +106,7 @@ Los tipos se comparten con el frontend (generar bindings, por ejemplo con specta
 Layout: barra lateral (docsets / navegación), área central con el visor, Command Palette modal.
 Estado: ligero (Zustand o similar). Sin librerías pesadas de componentes.
 Accesibilidad básica: foco, navegación por teclado completa en la paleta.
+Idiomas: inglés por defecto + español (`src/lib/i18n.ts`, diccionarios tipados con paridad comprobada; `document.documentElement.lang` sigue al ajuste; errores del backend por `kind`, nunca texto crudo).
 5. Plataformas
 
 Windows (WebView2), macOS (WebKit) y Linux (WebKitGTK). En Linux WebKitGTK puede dar problemas de rendimiento o compatibilidad: probar pronto con un docset grande y documentar hallazgos.

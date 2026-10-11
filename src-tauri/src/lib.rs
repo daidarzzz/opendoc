@@ -16,8 +16,8 @@ pub mod settings;
 use commands::{
     extract_tarix, get_catalog_status, get_docset_home, get_install_status, get_session,
     get_settings, install_docset, list_catalog, list_docsets, list_entries, list_kinds,
-    refresh_catalog, save_session, search, set_docsets_dir, set_feed_repo, set_restore_tabs,
-    set_theme, uninstall_docset, AppState,
+    refresh_catalog, save_session, search, set_docsets_dir, set_feed_repo, set_language,
+    set_restore_tabs, set_theme, uninstall_docset, AppState,
 };
 
 /// Carga ajustes al arrancar. Si no hay carpeta configurada, asigna
@@ -102,6 +102,7 @@ pub fn run() {
             get_docset_home,
             get_settings,
             set_theme,
+            set_language,
             set_restore_tabs,
             get_session,
             save_session,

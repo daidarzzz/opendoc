@@ -2,6 +2,8 @@
 // Minimalista a propósito: título, búsqueda, atajos y ejemplo del filtro.
 // Sin tarjetas, degradados, emojis ni iconos de terceros.
 import { platform } from "@tauri-apps/plugin-os";
+import { useT } from "../hooks/useT";
+import { tn } from "../lib/i18n";
 import { usePalette } from "../store/palette";
 import { useCatalog } from "../store/catalog";
 
@@ -19,6 +21,7 @@ function Shortcut({ keys, label }: { keys: string; label: string }) {
 export function Welcome({ docCount }: { docCount: number }) {
   const setOpen = usePalette((s) => s.setOpen);
   const openCatalog = useCatalog((s) => s.open);
+  const { t, lang } = useT();
   // Símbolo del modificador según plataforma (macOS: ⌘).
   const mod = platform() === "macos" ? "⌘" : "Ctrl";
 
@@ -29,23 +32,23 @@ export function Welcome({ docCount }: { docCount: number }) {
       </h1>
       <div className="mt-6 flex flex-col items-center gap-2">
         <button onClick={() => setOpen(true)} className="text-sm text-gray-500 underline decoration-gray-300 underline-offset-4 hover:text-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-400 dark:decoration-gray-700 dark:hover:text-gray-100">
-          Buscar documentación · {mod} K
+          {t("welcome.searchDocs", { mod })}
         </button>
         <button onClick={openCatalog} className="text-sm text-gray-500 underline decoration-gray-300 underline-offset-4 hover:text-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-400 dark:decoration-gray-700 dark:hover:text-gray-100">
-          Buscar en el catálogo
+          {t("welcome.searchCatalog")}
         </button>
       </div>
-      <ul className="mt-8 space-y-1.5" aria-label="Atajos de teclado">
-        <Shortcut keys={`${mod} K`} label="Buscar" />
-        <Shortcut keys={`${mod} T`} label="Nueva pestaña" />
-        <Shortcut keys={`${mod} W`} label="Cerrar pestaña" />
+      <ul className="mt-8 space-y-1.5" aria-label={t("welcome.shortcuts")}>
+        <Shortcut keys={`${mod} K`} label={t("welcome.search")} />
+        <Shortcut keys={`${mod} T`} label={t("welcome.newTab")} />
+        <Shortcut keys={`${mod} W`} label={t("welcome.closeTab")} />
       </ul>
       <p className="mt-8 text-xs text-gray-400 dark:text-gray-500">
-        Filtra por docset:{" "}
+        {t("welcome.filterBy")}{" "}
         <code className="font-mono text-gray-500 dark:text-gray-400">cpp:vector</code>
       </p>
       <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
-        {docCount === 1 ? "1 docset cargado" : `${docCount} docsets cargados`}
+        {tn(lang, docCount, "welcome.docCountOne", "welcome.docCountMany", { n: docCount })}
       </p>
     </div>
   );

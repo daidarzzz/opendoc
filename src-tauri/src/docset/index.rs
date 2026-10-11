@@ -38,7 +38,7 @@ pub struct IndexData {
 #[derive(Debug, thiserror::Error)]
 pub enum IndexError {
     /// El `.dsidx` no se puede abrir en solo lectura.
-    #[error("no se puede abrir el índice en solo lectura: {}", path.display())]
+    #[error("cannot open index read-only: {}", path.display())]
     Unreadable {
         /// Ruta del `.dsidx`.
         path: PathBuf,
@@ -47,7 +47,7 @@ pub enum IndexError {
         source: rusqlite::Error,
     },
     /// Ningún esquema conocido en `sqlite_master`.
-    #[error("esquema de índice no reconocido en {} (tablas: {})", path.display(), tables.join(", "))]
+    #[error("unrecognized index schema in {} (tables: {})", path.display(), tables.join(", "))]
     UnknownSchema {
         /// Ruta del `.dsidx`.
         path: PathBuf,
@@ -55,7 +55,7 @@ pub enum IndexError {
         tables: Vec<String>,
     },
     /// Fallo al consultar el índice.
-    #[error("error leyendo el índice {}: {source}", path.display())]
+    #[error("error reading index {}: {source}", path.display())]
     Query {
         /// Ruta del `.dsidx`.
         path: PathBuf,

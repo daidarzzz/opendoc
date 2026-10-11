@@ -265,7 +265,7 @@ pub fn install_pending(
     }
     let orig_dsidx = resources.join("docSet.dsidx");
     let data = read_index(&orig_dsidx, &pending.id)
-        .map_err(|e| TarixError::Corrupt(format!("índice: {e}")))?;
+        .map_err(|e| TarixError::Corrupt(format!("index: {e}")))?;
     if docset.home_path.is_none() {
         if let Some(first) = data.entries.first() {
             docset.home_path = Some(first.path.clone());

@@ -1,6 +1,7 @@
 // Icono de docset con reserva genérica (SVG propio, ningún logo ajeno).
 // El <img> lleva onError por si el data-URL llegara corrupto.
 import { memo, useState } from "react";
+import { useT } from "../hooks/useT";
 
 interface DocsetIconProps {
   icon: string | null;
@@ -14,13 +15,14 @@ export const DocsetIcon = memo(function DocsetIcon({
   size = 16,
 }: DocsetIconProps) {
   const [broken, setBroken] = useState(false);
+  const { t } = useT();
   if (!icon || broken) {
     return (
       <svg
         width={size}
         height={size}
         viewBox="0 0 16 16"
-        aria-label={`Icono genérico de ${name}`}
+        aria-label={t("common.genericIcon", { name })}
         role="img"
         className="shrink-0 text-gray-400"
         fill="currentColor"

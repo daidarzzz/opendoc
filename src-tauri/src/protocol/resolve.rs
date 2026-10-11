@@ -25,13 +25,13 @@ pub struct ResolvedFile {
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ResolveError {
     /// La ruta pide salir de `Documents/` o es absoluta/externa.
-    #[error("ruta fuera de Documents/: {0}")]
+    #[error("path outside Documents/: {0}")]
     OutsideDocuments(String),
     /// No existe o no es un fichero servible.
-    #[error("no encontrado: {0}")]
+    #[error("not found: {0}")]
     NotFound(String),
     /// Es o pasa por un enlace simbólico.
-    #[error("enlace simbólico no permitido: {0}")]
+    #[error("symlinks not allowed: {0}")]
     Symlink(String),
 }
 

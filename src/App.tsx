@@ -15,7 +15,10 @@ import {
 } from "./lib/sessionSync";
 import { useCatalog } from "./store/catalog";
 import { useDocsets } from "./store/docsets";
+import { useLang } from "./store/lang";
 import { useTheme } from "./store/theme";
+import { useT } from "./hooks/useT";
+import { t as translate } from "./lib/i18n";
 
 const SIDEBAR_MIN = 180;
 const SIDEBAR_MAX = 480;
@@ -36,8 +39,11 @@ function initialSidebarWidth(): number {
 export default function App() {
   const initDocsets = useDocsets((s) => s.init);
   const initTheme = useTheme((s) => s.init);
+  const initLang = useLang((s) => s.init);
+  const langLoaded = useLang((s) => s.loaded);
   const view = useCatalog((s) => s.view);
   const [sidebarWidth, setSidebarWidth] = useState(initialSidebarWidth);
+  const { t } = useT();
   useGlobalKeys();
 
   const resizeSidebar = useCallback((clientX: number) => {
@@ -45,12 +51,14 @@ export default function App() {
     setSidebarWidth(Math.round(Math.max(SIDEBAR_MIN, Math.min(max, clientX))));
   }, []);
 
-  // Arranque: tema guardado (con anti-flash ya aplicado) + carpeta guardada.
+  // Arranque: tema e idioma guardados (con anti-flash ya aplicado) +
+  // carpeta guardada. No se pinta texto hasta cargar el idioma.
   // Tras el escaneo se hidratan las pestañas (nunca antes: la bienvenida
   // inicial no debe pisar session.json). El cierre vuelca el último estado
   // con tope para no colgar la ventana (ver sessionSync).
   useEffect(() => {
     void initTheme();
+    void initLang();
     let alive = true;
     const stopSync = startSessionSync();
     void (async () => {
@@ -79,7 +87,10 @@ export default function App() {
             // Sin esto la ventana quedaría bloqueada (el backend ya canceló
             // el cierre nativo al existir este listener): se permite reintentar.
             closing = false;
-            console.error("[opendoc] no se pudo cerrar la ventana", err);
+            console.error(
+              `[opendoc] ${translate(useLang.getState().lang, "app.closeFailed")}`,
+              err,
+            );
           }
         });
       } catch {
@@ -102,12 +113,14 @@ export default function App() {
     }
   }, [sidebarWidth]);
 
+  if (!langLoaded) return null;
+
   return (
     <div className="flex h-screen overflow-hidden bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100">
       <Sidebar style={{ width: sidebarWidth, flexBasis: sidebarWidth }} />
       <div
         role="separator"
-        aria-label="Cambiar ancho del panel lateral"
+        aria-label={t("app.resizeSidebar")}
         aria-orientation="vertical"
         aria-valuemin={SIDEBAR_MIN}
         aria-valuemax={SIDEBAR_MAX}

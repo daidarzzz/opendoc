@@ -35,7 +35,7 @@ pub struct InfoPlist {
 #[derive(Debug, thiserror::Error)]
 pub enum PlistError {
     /// El fichero existe pero no se puede leer.
-    #[error("no se puede leer Info.plist: {}", path.display())]
+    #[error("cannot read Info.plist: {}", path.display())]
     Unreadable {
         /// Ruta del `Info.plist`.
         path: PathBuf,
@@ -44,7 +44,7 @@ pub enum PlistError {
         source: std::io::Error,
     },
     /// El fichero se leyó pero no es un plist válido.
-    #[error("Info.plist inválido: {}", path.display())]
+    #[error("invalid Info.plist: {}", path.display())]
     Invalid {
         /// Ruta del `Info.plist`.
         path: PathBuf,

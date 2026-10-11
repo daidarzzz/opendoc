@@ -33,7 +33,7 @@ export interface OpenOpts {
 interface TabsState {
   tabs: Tab[];
   activeId: string;
-  error: string;
+  error: unknown;
   /** Restauración terminada (o innecesaria): ya se puede guardar sesión. */
   hydrated: boolean;
   /** Teclas reenviadas recientes (tasa ≤10/s, anti-bucle de un docset). */
@@ -72,9 +72,6 @@ interface TabsState {
   markHydrated: () => void;
 }
 
-function errText(e: unknown): string {
-  return e instanceof Error ? e.message : JSON.stringify(e);
-}
 
 /** docsetId de una URL canónica `opendoc://<id>/…`. */
 function docsetOf(url: string): string {
@@ -89,7 +86,7 @@ export const useTabs = create<TabsState>()((set, get) => {
   return {
     tabs: [fresh],
     activeId: fresh.id,
-    error: "",
+    error: null,
     hydrated: false,    keyTimes: [],
     openTabTimes: [],
     closed: [],
@@ -106,18 +103,18 @@ export const useTabs = create<TabsState>()((set, get) => {
             const r = appendTab(s.tabs, s.activeId, {
               ...tabWithEntry(docsetId, item),
             });
-            return { tabs: r.tabs, activeId: r.activeId, error: "" };
+            return { tabs: r.tabs, activeId: r.activeId, error: null };
           }
           const tab = s.tabs.find((t) => t.id === s.activeId);
           if (!tab) return s;
           const next = { ...navigateTab(tab, item), docsetId };
           return {
             tabs: s.tabs.map((t) => (t.id === tab.id ? next : t)),
-            error: "",
+            error: null,
           };
         });
       } catch (e) {
-        set({ error: errText(e) });
+        set({ error: e });
       }
     },
 
@@ -132,18 +129,18 @@ export const useTabs = create<TabsState>()((set, get) => {
             const r = appendTab(s.tabs, s.activeId, {
               ...tabWithEntry(docsetId, item),
             });
-            return { tabs: r.tabs, activeId: r.activeId, error: "" };
+            return { tabs: r.tabs, activeId: r.activeId, error: null };
           }
           const tab = s.tabs.find((t) => t.id === s.activeId);
           if (!tab) return s;
           const next = { ...navigateTab(tab, item), docsetId };
           return {
             tabs: s.tabs.map((t) => (t.id === tab.id ? next : t)),
-            error: "",
+            error: null,
           };
         });
       } catch (e) {
-        set({ error: errText(e) });
+        set({ error: e });
       }
     },
 
@@ -165,7 +162,7 @@ export const useTabs = create<TabsState>()((set, get) => {
     newTab: () => {
       const s = get();
       const r = appendTab(s.tabs, s.activeId, emptyTab());
-      set({ tabs: r.tabs, activeId: r.activeId, error: "" });
+      set({ tabs: r.tabs, activeId: r.activeId, error: null });
     },
 
     moveTab: (id: string, to: number) => {
@@ -267,7 +264,7 @@ export const useTabs = create<TabsState>()((set, get) => {
           ...tabWithEntry(docsetOf(url), { url, title: fallbackTitle }),
         },
       );
-      set({ tabs: r.tabs, activeId: r.activeId, error: "" });
+      set({ tabs: r.tabs, activeId: r.activeId, error: null });
     },
 
     reopenLast: () => {
@@ -279,7 +276,7 @@ export const useTabs = create<TabsState>()((set, get) => {
         s.activeId,
         last,
       );
-      set({ tabs: r.tabs, activeId: r.activeId, closed: s.closed.slice(0, -1), error: "" });
+      set({ tabs: r.tabs, activeId: r.activeId, closed: s.closed.slice(0, -1), error: null });
     },
 
     restoreSession: (tabs: Tab[], activeId: string) => {
@@ -288,7 +285,7 @@ export const useTabs = create<TabsState>()((set, get) => {
         tabs,
         activeId: ok ? activeId : (tabs[tabs.length - 1]?.id ?? ""),
         hydrated: true,
-        error: "",
+        error: null,
       });
     },
 

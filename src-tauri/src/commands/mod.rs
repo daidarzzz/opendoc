@@ -1,7 +1,7 @@
 //! Comandos Tauri finos (contrato SPEC §4.4 + ajustes T9 + navegación v0.2 + F2):
 //! `list_docsets`, `set_docsets_dir`, `search`, `list_kinds`,
 //! `list_entries`, `get_docset_home`, `get_settings`, `set_theme`,
-//! `set_restore_tabs`, `get_session`, `save_session`, `extract_tarix`,
+//! `set_language`, `set_restore_tabs`, `get_session`, `save_session`, `extract_tarix`,
 //! `get_catalog_status`, `set_feed_repo`, `refresh_catalog`,
 //! `list_catalog`, `install_docset`, `get_install_status`,
 //! `uninstall_docset`.
@@ -488,7 +488,7 @@ pub async fn install_docset(
         let client = crate::catalog::feed::http_client().map_err(|e| {
             crate::docset::InstallError::DownloadFailed {
                 id: feed_task.clone(),
-                message: format!("no se pudo crear el cliente HTTP: {e}"),
+                message: format!("could not create HTTP client: {e}"),
             }
         })?;
         let emit = |report: crate::docset::ProgressReport| {
@@ -684,7 +684,7 @@ pub async fn uninstall_docset(
             let base = std::fs::canonicalize(&expected_dir).map_err(|e| e.to_string())?;
             let metadata = std::fs::symlink_metadata(&root).map_err(|e| e.to_string())?;
             if metadata.file_type().is_symlink() || !metadata.is_dir() {
-                return Err("la ruta del docset no es una carpeta segura".to_string());
+                return Err("docset path is not a safe folder".to_string());
             }
             let canonical_root = std::fs::canonicalize(&root).map_err(|e| e.to_string())?;
             if canonical_root.parent() != Some(base.as_path())
@@ -692,7 +692,7 @@ pub async fn uninstall_docset(
                     .file_name()
                     .is_some_and(|name| name.to_string_lossy().to_lowercase().ends_with(".docset"))
             {
-                return Err("el docset está fuera de la carpeta configurada".to_string());
+                return Err("docset is outside the configured folder".to_string());
             }
             std::fs::remove_dir_all(&canonical_root).map_err(|e| e.to_string())
         })
@@ -906,6 +906,37 @@ pub fn set_restore_tabs(
         .lock()
         .map(|mut guard| {
             guard.restore_tabs = restore;
+            guard.clone()
+        })
+        .map_err(|e| ApiError::LoadFailed {
+            message: e.to_string(),
+        })?;
+    {
+        use tauri::Manager;
+        if let Ok(data_dir) = app.path().app_data_dir() {
+            let path = crate::settings::settings_file(&data_dir);
+            crate::settings::save_if_changed(&path, &settings).map_err(|e| {
+                ApiError::LoadFailed {
+                    message: e.to_string(),
+                }
+            })?;
+        }
+    }
+    Ok(settings)
+}
+
+/// Cambia el idioma de la interfaz y lo persiste (solo si cambió).
+#[tauri::command]
+pub fn set_language(
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+    language: crate::settings::Language,
+) -> Result<crate::settings::Settings, ApiError> {
+    let settings = state
+        .settings
+        .lock()
+        .map(|mut guard| {
+            guard.language = language;
             guard.clone()
         })
         .map_err(|e| ApiError::LoadFailed {

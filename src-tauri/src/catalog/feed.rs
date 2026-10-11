@@ -29,7 +29,7 @@ impl RepoRef {
 #[derive(Debug, thiserror::Error)]
 pub enum FeedError {
     /// Fallo HTTP o de conexión.
-    #[error("error de red con {url}: {message}")]
+    #[error("network error for {url}: {message}")]
     Network {
         /// URL que fallaba.
         url: String,
@@ -37,7 +37,7 @@ pub enum FeedError {
         message: String,
     },
     /// La API devolvió un estado inesperado.
-    #[error("la API de GitHub devolvió {status} en {url}")]
+    #[error("GitHub API returned {status} for {url}")]
     Api {
         /// URL pedida.
         url: String,
@@ -45,7 +45,7 @@ pub enum FeedError {
         status: u16,
     },
     /// XML ilegible o sin los campos necesarios.
-    #[error("feed ilegible en {url}: {message}")]
+    #[error("unreadable feed at {url}: {message}")]
     Parse {
         /// URL del XML.
         url: String,
@@ -53,7 +53,7 @@ pub enum FeedError {
         message: String,
     },
     /// Demasiados ficheros (sanidad, no un repo de feeds normal).
-    #[error("demasiados XML en el repo ({found}, tope {max})")]
+    #[error("too many XML files in repo ({found}, max {max})")]
     TooManyFiles {
         /// Encontrados.
         found: usize,
@@ -102,7 +102,7 @@ pub fn normalize_repo(raw: &str) -> Result<RepoRef, FeedError> {
     if trimmed.is_empty() {
         return Err(FeedError::Parse {
             url: raw.to_string(),
-            message: "repositorio vacío (usa owner/repo o URL de GitHub)".to_string(),
+            message: "empty repository (use owner/repo or a GitHub URL)".to_string(),
         });
     }
     // Quita esquema y posible `.git` final.
@@ -125,7 +125,7 @@ pub fn normalize_repo(raw: &str) -> Result<RepoRef, FeedError> {
         }),
         _ => Err(FeedError::Parse {
             url: raw.to_string(),
-            message: "repositorio inválido (usa owner/repo o URL de GitHub)".to_string(),
+            message: "invalid repository (use owner/repo or a GitHub URL)".to_string(),
         }),
     }
 }
@@ -226,7 +226,7 @@ fn default_branch(client: &reqwest::blocking::Client, repo: &RepoRef) -> Result<
         .map(str::to_string)
         .ok_or_else(|| FeedError::Parse {
             url,
-            message: "sin default_branch".to_string(),
+            message: "missing default_branch".to_string(),
         })
 }
 
@@ -260,7 +260,7 @@ fn xml_files(
         .and_then(serde_json::Value::as_array)
         .ok_or_else(|| FeedError::Parse {
             url: url.clone(),
-            message: "sin árbol".to_string(),
+            message: "missing tree".to_string(),
         })?;
     Ok(tree
         .iter()

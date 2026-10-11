@@ -2,6 +2,7 @@
 // Filtros por docset (`cpp:vector`): chips con icono dentro del campo,
 // fantasma de Tab-completado, aviso con filtro vacío.
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
+import { useT } from "../hooks/useT";
 import { usePalette } from "../store/palette";
 import { useDocsets } from "../store/docsets";
 import type { SearchResult } from "../lib/types";
@@ -76,6 +77,7 @@ export function CommandPalette() {
   const inputRef = useRef<HTMLInputElement>(null);
   const docsets = useDocsets((s) => s.docsets);
   const pending = useDocsets((s) => s.pending);
+  const { t } = useT();
 
   // Mapa id -> (icono, nombre): una sola copia de cada data-URL (incluye
   // pendientes para los chips "(sin instalar)").
@@ -154,14 +156,14 @@ export function CommandPalette() {
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Buscar en la documentación"
+        aria-label={t("palette.dialog")}
         className="w-full max-w-xl overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-900"
         onClick={(e) => e.stopPropagation()}
       >
         {(applied.length > 0 || unknown.length > 0) && (
           <div
             role="group"
-            aria-label="Filtros de docsets"
+            aria-label={t("palette.filters")}
             className="flex flex-wrap gap-1 px-4 pt-2"
           >
             {applied.map((f) => {
@@ -171,13 +173,13 @@ export function CommandPalette() {
                 <button
                   key={f.docset_id}
                   onClick={() => removeFilter(f.token)}
-                  aria-label={`Filtro: ${name}, quitar`}
-                  title={`Filtro: ${name} (clic para quitar)`}
+                  aria-label={t("palette.removeFilter", { name })}
+                  title={t("palette.removeFilterTitle", { name })}
                   className="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-900 dark:bg-blue-900 dark:text-blue-100"
                 >
                   <DocsetIcon icon={meta?.icon ?? null} name={name} size={12} />
                   <span>{name}</span>
-                  {!f.installed && <span>(sin instalar)</span>}
+                  {!f.installed && <span>{t("palette.notInstalled")}</span>}
                   <span aria-hidden>×</span>
                 </button>
               );
@@ -186,11 +188,11 @@ export function CommandPalette() {
               <button
                 key={`unknown:${u}`}
                 onClick={() => removeFilter(u)}
-                aria-label={`Filtro desconocido: ${u}, quitar`}
-                title="No coincide con ningún docset (clic para quitar)"
+                aria-label={t("palette.unknownFilter", { name: u })}
+                title={t("palette.unknownTitle")}
                 className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-400 line-through dark:bg-gray-800"
               >
-                {u} · no encontrado
+                {t("palette.unknownSuffix", { name: u })}
               </button>
             ))}
           </div>
@@ -201,7 +203,7 @@ export function CommandPalette() {
             className="pointer-events-none select-none overflow-hidden whitespace-pre px-4 py-3 text-sm text-gray-900 dark:text-gray-100"
           >
             {query === "" ? (
-              <span className="text-gray-400">Buscar… (Esc para cerrar)</span>
+              <span className="text-gray-400">{t("palette.ghost")}</span>
             ) : (
               <>
                 <span>{query}</span>
@@ -215,7 +217,7 @@ export function CommandPalette() {
             onChange={(e) => setQuery(e.currentTarget.value)}
             onKeyDown={onKey}
             placeholder=""
-            aria-label="Buscar en la documentación"
+            aria-label={t("palette.input")}
             aria-expanded={results.length > 0}
             aria-activedescendant={
               results.length > 0 ? `palette-option-${activeIndex}` : undefined
@@ -227,14 +229,14 @@ export function CommandPalette() {
         </div>
         {query.trim() === "" ? (
           <p className="px-4 py-3 text-xs text-gray-500">
-            Escribe para buscar en los docsets cargados.
+            {t("palette.emptyHint")}
           </p>
         ) : noticeMode ? (
           <p className="px-4 py-3 text-xs text-gray-500">
-            Buscando en {noticeNames.join(", ")}…
+            {t("palette.searchingIn", { names: noticeNames.join(", ") })}
           </p>
         ) : results.length === 0 ? (
-          <p className="px-4 py-3 text-xs text-gray-500">Sin resultados.</p>
+          <p className="px-4 py-3 text-xs text-gray-500">{t("palette.noResults")}</p>
         ) : (
           <ul role="listbox" className="max-h-80 overflow-y-auto py-1">
             {results.map((r, i) => {

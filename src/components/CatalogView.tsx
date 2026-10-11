@@ -4,27 +4,27 @@
 // cada fila muestra nombre, versiones reales y número de orígenes.
 import { useEffect, useMemo } from "react";
 import { CatalogRow } from "./CatalogRow";
+import { ErrorDetails } from "./ErrorDetails";
+import { useT } from "../hooks/useT";
 import { useCatalog } from "../store/catalog";
 import { useDocsets } from "../store/docsets";
-import {
-  filterCatalog,
-  formatFetchedAt,
-} from "../lib/catalogUi";
+import { formatDateTime, tn, type I18nKey } from "../lib/i18n";
+import { filterCatalog } from "../lib/catalogUi";
 import type { CatalogFilter, CatalogRowData } from "../lib/catalogUi";
 import type { FeedOp } from "../store/catalog";
 
-const FILTER_LABEL: Record<CatalogFilter, string> = {
-  all: "Todos",
-  installed: "Instalados",
-  "not-installed": "No instalados",
-  updatable: "Actualizables",
+const FILTER_KEYS: Record<CatalogFilter, I18nKey> = {
+  all: "catalog.filterAll",
+  installed: "catalog.filterInstalled",
+  "not-installed": "catalog.filterNotInstalled",
+  updatable: "catalog.filterUpdatable",
 };
 
 /** Operación inactiva compartida (no rompe la memoización de filas). */
 const IDLE_OP: FeedOp = {
   busy: false,
   progress: null,
-  error: "",
+  error: null,
   errorKind: "",
   done: false,
 };
@@ -55,6 +55,7 @@ export function CatalogView() {
   const setRepoInput = useCatalog((s) => s.setRepoInput);
   const choose = useDocsets((s) => s.choose);
   const docsets = useDocsets((s) => s.docsets);
+  const { t, lang } = useT();
 
   // Progreso en vivo; se libera al desmontar (al volver al visor).
   // La carga la dispara `open()` del store; aquí solo el listener.
@@ -83,54 +84,55 @@ export function CatalogView() {
   return (
     <main
       className="flex min-w-0 flex-1 flex-col"
-      aria-label="Catálogo de docsets"
+      aria-label={t("catalog.main")}
     >
       <div className="flex items-center gap-2 border-b border-gray-200 p-3 dark:border-gray-800">
         <button
           onClick={showViewer}
-          title="Volver al visor"
+          title={t("catalog.backToViewer")}
           className="rounded px-2 py-1 text-xs text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800"
         >
-          ← Visor
+          ← {t("catalog.viewer")}
         </button>
-        <h2 className="text-sm font-semibold">Catálogo</h2>
+        <h2 className="text-sm font-semibold">{t("catalog.title")}</h2>
         {status && status.count > 0 && (
           <span className="text-xs text-gray-500 dark:text-gray-400">
-            {status.count} entradas
+            {tn(lang, status.count, "catalog.entriesOne", "catalog.entriesMany", { n: status.count })}
           </span>
         )}
         <span className="flex-1" />
         <button
           onClick={() => void refresh()}
           disabled={refreshing}
-          title="Descargar de nuevo el catálogo"
+          title={t("catalog.refreshTitle")}
           className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-200 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
         >
-          {refreshing ? "Actualizando…" : "Actualizar"}
+          {refreshing ? t("catalog.refreshing") : t("catalog.refresh")}
         </button>
       </div>
 
       <div className="border-b border-gray-200 p-3 text-xs dark:border-gray-800">
         <p className="text-gray-500 dark:text-gray-400">
-          Repo:{" "}
+          {t("catalog.repo")}{" "}
           <span className="font-mono">
-            {status?.repo ?? "sin configurar"}
+            {status?.repo ?? t("catalog.notConfigured")}
           </span>{" "}
-          · actualizado: {formatFetchedAt(status?.fetched_at ?? null)}
-          {refreshNote !== "" && <span> · {refreshNote}</span>}
+          {t("catalog.updatedAt", { date: formatDateTime(lang, status?.fetched_at ?? null) })}
+          {refreshNote && (
+            <span> · {t("catalog.refreshedMany", { count: refreshNote.count, skipped: refreshNote.skipped })}</span>
+          )}
         </p>
         {!status?.repo && (
           <p className="mt-1 text-gray-600 dark:text-gray-300">
-            Configura el repositorio de feeds (owner/repo o URL de GitHub)
-            para descargar el catálogo.
+            {t("catalog.setupHelp")}
           </p>
         )}
         <div className="mt-2 flex gap-2">
           <input
             value={repoInput}
             onChange={(e) => setRepoInput(e.target.value)}
-            placeholder="owner/repo o URL de GitHub"
-            aria-label="Repositorio de feeds"
+            placeholder={t("catalog.repoPlaceholder")}
+            aria-label={t("catalog.repoLabel")}
             className="min-w-0 flex-1 rounded border border-gray-300 px-2 py-1.5 text-xs dark:border-gray-700 dark:bg-gray-800"
           />
           <button
@@ -138,34 +140,32 @@ export function CatalogView() {
             disabled={repoBusy}
             className="shrink-0 rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            {repoBusy ? "Guardando…" : "Guardar"}
+            {repoBusy ? t("catalog.saving") : t("common.save")}
           </button>
         </div>
-        {repoError !== "" && (
-          <p className="mt-1 text-red-600 dark:text-red-400">{repoError}</p>
-        )}
+        <ErrorDetails error={repoError} />
       </div>
 
       <div className="flex gap-2 border-b border-gray-200 p-3 dark:border-gray-800">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar docsets…"
-          aria-label="Buscar docsets"
+          placeholder={t("catalog.searchPlaceholder")}
+          aria-label={t("catalog.searchLabel")}
           className="min-w-0 flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800"
         />
         <select
           value={filter}
           onChange={(e) => {
             const value = e.target.value;
-            if (value in FILTER_LABEL) setFilter(value as CatalogFilter);
+            if (value in FILTER_KEYS) setFilter(value as CatalogFilter);
           }}
-          aria-label="Filtrar por estado"
+          aria-label={t("catalog.filterLabel")}
           className="shrink-0 rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800"
         >
-          {Object.entries(FILTER_LABEL).map(([value, label]) => (
+          {Object.entries(FILTER_KEYS).map(([value, key]) => (
             <option key={value} value={value}>
-              {label}
+              {t(key)}
             </option>
           ))}
         </select>
@@ -173,24 +173,24 @@ export function CatalogView() {
 
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
         {loading ? (
-          <p className="text-sm text-gray-500">Cargando catálogo…</p>
-        ) : error !== "" && entries.length === 0 ? (
+          <p className="text-sm text-gray-500">{t("catalog.loading")}</p>
+        ) : error !== null && entries.length === 0 ? (
           <div className="text-sm">
-            <p className="text-red-600 dark:text-red-400">{error}</p>
+            <ErrorDetails error={error} />
             <button
               onClick={() => void load()}
               className="mt-2 rounded border border-gray-300 px-3 py-1 text-xs hover:bg-gray-200 dark:border-gray-700 dark:hover:bg-gray-800"
             >
-              Reintentar
+              {t("catalog.retry")}
             </button>
           </div>
         ) : entries.length === 0 ? (
           <p className="text-sm text-gray-500">
-            Catálogo vacío: configura el repo y pulsa Actualizar.
+            {t("catalog.emptySetup")}
           </p>
         ) : visible.length === 0 ? (
           <p className="text-sm text-gray-500">
-            Sin resultados{query.trim() !== "" && ` para «${query.trim()}»`}.
+            {query.trim() !== "" ? t("catalog.noResultsFor", { query: query.trim() }) : t("catalog.noResults")}.
           </p>
         ) : (
           <ul className="space-y-2">
@@ -209,10 +209,10 @@ export function CatalogView() {
             ))}
           </ul>
         )}
-        {error !== "" && entries.length > 0 && (
-          <p className="mt-2 text-xs text-yellow-700 dark:text-yellow-300">
-            {error}
-          </p>
+        {error !== null && entries.length > 0 && (
+          <div className="mt-2 text-xs text-yellow-700 dark:text-yellow-300">
+            <ErrorDetails error={error} />
+          </div>
         )}
       </div>
     </main>

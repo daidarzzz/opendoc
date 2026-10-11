@@ -14,6 +14,7 @@ import type {
   InstallStatus,
   InstallSummary,
   KindInfo,
+  Language,
   NavEntry,
   ScanReport,
   SearchRequest,
@@ -72,6 +73,11 @@ export async function getSettings(): Promise<Settings> {
 /** Cambia el tema (persiste solo si cambió). */
 export async function setTheme(theme: ThemeMode): Promise<Settings> {
   return invoke<Settings>("set_theme", { theme });
+}
+
+/** Cambia el idioma de la interfaz (en/es; persiste solo si cambió). */
+export async function setLanguage(language: Language): Promise<Settings> {
+  return invoke<Settings>("set_language", { language });
 }
 
 /** Activa/desactiva restaurar pestañas (persiste; con false no se lee ni

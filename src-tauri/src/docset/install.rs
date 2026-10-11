@@ -65,25 +65,25 @@ pub struct ProgressReport {
 #[derive(Debug, thiserror::Error)]
 pub enum InstallError {
     /// La carpeta de docsets no existe o no es un directorio.
-    #[error("la carpeta de docsets no existe o no es un directorio: {}", path.display())]
+    #[error("docsets folder does not exist or is not a directory: {}", path.display())]
     NoDocsetsDir {
         /// Ruta rechazada.
         path: PathBuf,
     },
     /// La entrada no trae ninguna URL.
-    #[error("la entrada no trae URL de descarga utilizable: {id}")]
+    #[error("entry has no usable download URL: {id}")]
     NoDownloadUrl {
         /// Id del feed.
         id: String,
     },
     /// Ninguna URL es un `.tgz` (único formato de F2).
-    #[error("formato no soportado (solo .tgz): {id}")]
+    #[error("unsupported format (only .tgz): {id}")]
     UnsupportedPackage {
         /// Id del feed.
         id: String,
     },
     /// Todas las URLs fallaron (red o HTTP).
-    #[error("fallo descargando {id}: {message}")]
+    #[error("download failed for {id}: {message}")]
     DownloadFailed {
         /// Id del feed.
         id: String,
@@ -91,7 +91,7 @@ pub enum InstallError {
         message: String,
     },
     /// El `.tgz` no se pudo extraer (corrupto, malicioso, límites...).
-    #[error("fallo extrayendo {id}: {message}")]
+    #[error("extraction failed for {id}: {message}")]
     ExtractFailed {
         /// Id del feed.
         id: String,
@@ -99,7 +99,7 @@ pub enum InstallError {
         message: String,
     },
     /// Extraído pero sin estructura de docset clásico.
-    #[error("paquete inválido (no es un docset clásico): {id}: {message}")]
+    #[error("invalid package (not a classic docset): {id}: {message}")]
     InvalidPackage {
         /// Id del feed.
         id: String,
@@ -107,7 +107,7 @@ pub enum InstallError {
         message: String,
     },
     /// Fallo de disco o en los renombrados atómicos.
-    #[error("fallo instalando {id}: {message}")]
+    #[error("install failed for {id}: {message}")]
     InstallFailed {
         /// Id del feed.
         id: String,
@@ -471,15 +471,15 @@ fn download_extract_replace(
         return Err(InstallError::InvalidPackage {
             id: entry.id.clone(),
             message: if tarix_inside {
-                "es un paquete tarix anidado (no soportado en F2)".to_string()
+                "nested tarix package (not supported)".to_string()
             } else {
-                "falta Contents/Resources/docSet.dsidx o Documents/".to_string()
+                "missing Contents/Resources/docSet.dsidx or Documents/".to_string()
             },
         });
     }
     let data = read_index(&dsidx, &id).map_err(|e| InstallError::InvalidPackage {
         id: entry.id.clone(),
-        message: format!("índice ilegible: {e}"),
+        message: format!("unreadable index: {e}"),
     })?;
     let (mut docset, entries) = assemble_docset(entry, final_dir, &contents, id, data);
     let entry_count = entries.len();
@@ -550,7 +550,7 @@ fn download_mirrors(
             id: entry.id.clone(),
         });
     }
-    let mut last_error = String::from("sin mirrors utilizables");
+    let mut last_error = String::from("no usable mirrors");
     let mut slow_seen = false;
     for url in &urls {
         match download_one(
@@ -644,7 +644,7 @@ fn download_one(
     }
     let response = request
         .send()
-        .map_err(|e| fail(format!("red en {url}: {e}"), false))?;
+        .map_err(|e| fail(format!("network error for {url}: {e}"), false))?;
     let status = response.status();
     // 206 = reanuda; 200 = servidor sin rangos (o sin parcial): de cero.
     // 416 = el parcial no encaja: se borra y se reintenta en limpio
@@ -664,7 +664,7 @@ fn download_one(
         let _ = std::fs::remove_file(dl_path);
         download_one(client, url, dl_path, limits, on_progress, patient)
     } else if !status.is_success() {
-        Err(fail(format!("HTTP {} en {url}", status.as_u16()), false))
+        Err(fail(format!("HTTP {} for {url}", status.as_u16()), false))
     } else {
         download_one_body(
             response,
@@ -703,7 +703,7 @@ fn download_one_body(
         if announced > limits.max_bytes {
             return Err(fail(
                 format!(
-                    "tamaño anunciado {announced} supera el tope {} en {url}",
+                    "announced size {announced} exceeds limit {} for {url}",
                     limits.max_bytes
                 ),
                 false,
@@ -716,17 +716,13 @@ fn download_one_body(
             .open(dl_path)
             .map_err(|e| {
                 fail(
-                    format!("no se puede anexar a {}: {e}", dl_path.display()),
+                    format!("cannot append to {}: {e}", dl_path.display()),
                     false,
                 )
             })?
     } else {
-        std::fs::File::create(dl_path).map_err(|e| {
-            fail(
-                format!("no se puede escribir en {}: {e}", dl_path.display()),
-                false,
-            )
-        })?
+        std::fs::File::create(dl_path)
+            .map_err(|e| fail(format!("cannot write to {}: {e}", dl_path.display()), false))?
     };
     on_progress(ProgressReport {
         stage: ProgressStage::Downloading,
@@ -741,7 +737,7 @@ fn download_one_body(
     loop {
         let n = response
             .read(&mut buffer)
-            .map_err(|e| fail(format!("corte de red en {url}: {e}"), false))?;
+            .map_err(|e| fail(format!("network cut off for {url}: {e}"), false))?;
         if n == 0 {
             break;
         }
@@ -750,18 +746,14 @@ fn download_one_body(
         if received > limits.max_bytes {
             return Err(fail(
                 format!(
-                    "tamaño descargado supera el tope {} en {url}",
+                    "downloaded size exceeds limit {} for {url}",
                     limits.max_bytes
                 ),
                 false,
             ));
         }
-        out.write_all(&buffer[..n]).map_err(|e| {
-            fail(
-                format!("fallo de disco en {}: {e}", dl_path.display()),
-                false,
-            )
-        })?;
+        out.write_all(&buffer[..n])
+            .map_err(|e| fail(format!("disk failure at {}: {e}", dl_path.display()), false))?;
         if !patient && is_slow(t_dl.elapsed().as_millis(), attempt_bytes) {
             let kb_s =
                 (attempt_bytes as u128).saturating_mul(1000) / t_dl.elapsed().as_millis().max(1);
@@ -829,16 +821,16 @@ fn atomic_replace(
     let old_dir = final_dir.with_extension("docset.old");
     if !final_dir.exists() && old_dir.exists() {
         std::fs::rename(&old_dir, final_dir)
-            .map_err(|e| fail(format!("recuperando respaldo previo: {e}")))?;
+            .map_err(|e| fail(format!("restoring previous backup: {e}")))?;
     }
     if old_dir.exists() {
         std::fs::remove_dir_all(&old_dir)
-            .map_err(|e| fail(format!("limpiando respaldo obsoleto: {e}")))?;
+            .map_err(|e| fail(format!("cleaning up stale backup: {e}")))?;
     }
     let had_previous = final_dir.exists();
     if had_previous {
         std::fs::rename(final_dir, &old_dir)
-            .map_err(|e| fail(format!("apartando la instalación anterior: {e}")))?;
+            .map_err(|e| fail(format!("moving previous install aside: {e}")))?;
     }
     match std::fs::rename(tmp_dir, final_dir) {
         Ok(()) => Ok(had_previous.then_some(old_dir)),
@@ -846,12 +838,12 @@ fn atomic_replace(
             if had_previous && old_dir.exists() && !final_dir.exists() {
                 if let Err(restore_error) = std::fs::rename(&old_dir, final_dir) {
                     return Err(fail(format!(
-                        "colocando la nueva versión: {rename_error}; \
-                         la anterior no se pudo restaurar: {restore_error}"
+                        "placing the new version: {rename_error}; \
+                         previous version could not be restored: {restore_error}"
                     )));
                 }
             }
-            Err(fail(format!("colocando la nueva versión: {rename_error}")))
+            Err(fail(format!("placing the new version: {rename_error}")))
         }
     }
 }

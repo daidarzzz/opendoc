@@ -1,17 +1,25 @@
 // Barra lateral: árbol de navegación, carpeta, catálogo, pendientes, estado, tema.
 import { BrowseTree } from "./BrowseTree";
 import { DocsetIcon } from "./DocsetIcon";
+import { ErrorDetails } from "./ErrorDetails";
+import { useT } from "../hooks/useT";
+import { LANGUAGE_NAMES, formatCount } from "../lib/i18n";
 import { getSettings, setRestoreTabs } from "../lib/commands";
 import { setSessionEnabled } from "../lib/sessionSync";
 import { useDocsets } from "../store/docsets";
+import { useLang } from "../store/lang";
 import { useTheme } from "../store/theme";
 import { useEffect, useState, type CSSProperties } from "react";
+import type { Language } from "../lib/types";
 
-const THEME_LABEL = { light: "Claro", dark: "Oscuro", system: "Sistema" } as const;
+const THEME_VALUES = ["system", "light", "dark"] as const;
+const LANG_VALUES: Language[] = ["en", "es"];
 
 export function Sidebar({ style }: { style: CSSProperties }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [restoreTabs, setRestoreTabsState] = useState(true);
+  const { t, lang } = useT();
+  const setLang = useLang((s) => s.setLang);
   const {
     pending,
     extractingIds,
@@ -24,6 +32,12 @@ export function Sidebar({ style }: { style: CSSProperties }) {
     extract,
   } = useDocsets();
   const mode = useTheme((s) => s.mode);
+  const themeLabel = (value: (typeof THEME_VALUES)[number]): string =>
+    value === "light"
+      ? t("settings.themeLight")
+      : value === "dark"
+        ? t("settings.themeDark")
+        : t("settings.themeSystem");
 
   useEffect(() => {
     if (!settingsOpen) return;
@@ -56,8 +70,8 @@ export function Sidebar({ style }: { style: CSSProperties }) {
         <h1 className="text-sm font-semibold">OpenDoc</h1>
         <button
           onClick={() => setSettingsOpen(true)}
-          title="Ajustes"
-          aria-label="Ajustes"
+          title={t("settings.title")}
+          aria-label={t("settings.title")}
           className="rounded p-1.5 text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800"
         >
           <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
@@ -68,21 +82,22 @@ export function Sidebar({ style }: { style: CSSProperties }) {
 
       {settingsOpen && (
         <div className="fixed inset-0 z-40 flex items-start justify-center bg-black/40 p-4 pt-[18vh]" onClick={() => setSettingsOpen(false)} role="presentation">
-          <section role="dialog" aria-modal="true" aria-label="Ajustes" className="w-full max-w-sm space-y-4 rounded-lg bg-white p-5 shadow-xl dark:bg-gray-900" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between"><h2 className="text-base font-semibold">Ajustes</h2><button aria-label="Cerrar ajustes" onClick={() => setSettingsOpen(false)}>×</button></div>
-            <div><p className="mb-2 text-xs text-gray-500">Tema</p><div className="flex gap-2">{(["system", "light", "dark"] as const).map((value) => <button key={value} aria-pressed={mode === value} onClick={() => void useTheme.getState().setMode(value)} className={`rounded border px-3 py-1 text-sm ${mode === value ? "border-blue-500" : "border-gray-300 dark:border-gray-700"}`}>{THEME_LABEL[value]}</button>)}</div></div>
-            <div><label className="flex cursor-pointer items-center gap-2 text-sm"><input type="checkbox" checked={restoreTabs} onChange={toggleRestoreTabs} className="accent-blue-600" />Restaurar pestañas al abrir</label></div>
-            <div><p className="mb-1 text-xs text-gray-500">Carpeta de docsets</p><p className="break-all text-xs text-gray-600 dark:text-gray-300">{savedDir ?? "Sin configurar"}</p><button onClick={() => void choose()} className="mt-2 rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800">Elegir carpeta…</button></div>
+          <section role="dialog" aria-modal="true" aria-label={t("settings.title")} className="w-full max-w-sm space-y-4 rounded-lg bg-white p-5 shadow-xl dark:bg-gray-900" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between"><h2 className="text-base font-semibold">{t("settings.title")}</h2><button aria-label={t("settings.close")} onClick={() => setSettingsOpen(false)}>×</button></div>
+            <div><p className="mb-2 text-xs text-gray-500">{t("settings.theme")}</p><div className="flex gap-2">{THEME_VALUES.map((value) => <button key={value} aria-pressed={mode === value} onClick={() => void useTheme.getState().setMode(value)} className={`rounded border px-3 py-1 text-sm ${mode === value ? "border-blue-500" : "border-gray-300 dark:border-gray-700"}`}>{themeLabel(value)}</button>)}</div></div>
+            <div><p className="mb-2 text-xs text-gray-500">{t("settings.language")}</p><div className="flex gap-2">{LANG_VALUES.map((value) => <button key={value} aria-pressed={lang === value} onClick={() => void setLang(value)} className={`rounded border px-3 py-1 text-sm ${lang === value ? "border-blue-500" : "border-gray-300 dark:border-gray-700"}`}>{LANGUAGE_NAMES[value]}</button>)}</div></div>
+            <div><label className="flex cursor-pointer items-center gap-2 text-sm"><input type="checkbox" checked={restoreTabs} onChange={toggleRestoreTabs} className="accent-blue-600" />{t("settings.restoreTabs")}</label></div>
+            <div><p className="mb-1 text-xs text-gray-500">{t("settings.docsetsFolder")}</p><p className="break-all text-xs text-gray-600 dark:text-gray-300">{savedDir ?? t("settings.notConfigured")}</p><button onClick={() => void choose()} className="mt-2 rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800">{t("settings.chooseFolder")}</button></div>
           </section>
         </div>
       )}
 
-      <nav aria-label="Docsets" className="flex min-h-0 flex-1 flex-col px-2">
+      <nav aria-label={t("settings.docsetsNav")} className="flex min-h-0 flex-1 flex-col px-2">
         <BrowseTree />
         {pending.length > 0 && (
           <>
             <p className="px-2 pb-1 pt-2 text-[11px] uppercase text-gray-400">
-              Por instalar (tarix)
+              {t("settings.pendingTarix")}
             </p>
             <ul className="space-y-0.5">
               {pending.map((p) => {
@@ -101,7 +116,7 @@ export function Sidebar({ style }: { style: CSSProperties }) {
                       disabled={busy}
                       className="rounded border border-gray-300 px-2 py-0.5 text-xs hover:bg-gray-200 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
                     >
-                      {busy ? "Extrayendo…" : "Instalar"}
+                      {busy ? t("settings.extracting") : t("common.install")}
                     </button>
                   </li>
                 );
@@ -112,20 +127,20 @@ export function Sidebar({ style }: { style: CSSProperties }) {
       </nav>
 
       <div className="border-t border-gray-200 p-3 text-xs text-gray-500 dark:border-gray-800">
-        <p>{status}</p>
+        <p>{t(status.key, status.vars)}</p>
         {dirMissing && (
           <div className="mt-1 rounded bg-yellow-100 p-2 text-yellow-900 dark:bg-yellow-900 dark:text-yellow-100">
-            <p>Carpeta no disponible{savedDir ? `: ${savedDir}` : ""}.</p>
+            <p>{t("settings.dirUnavailable")}{savedDir ? `: ${savedDir}` : ""} {t("settings.diskHint")}</p>
             <button
               onClick={() => void choose()}
               className="mt-1 underline"
             >
-              Elegir otra carpeta
+              {t("settings.chooseAnother")}
             </button>
           </div>
         )}
-        {issues.length > 0 && <p>{issues.length} issues (ver consola T6)</p>}
-        {error !== "" && <p className="text-red-500">{error}</p>}
+        {issues.length > 0 && <p>{formatCount(lang, issues.length)} {t("settings.issuesSuffix")}</p>}
+        <ErrorDetails error={error} />
       </div>
     </aside>
   );

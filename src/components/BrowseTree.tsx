@@ -6,6 +6,9 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { BROWSE_PAGE, useBrowse } from "../store/browse";
 import { useDocsets } from "../store/docsets";
 import { useTabs } from "../store/tabs";
+import { useT } from "../hooks/useT";
+import { errorTitle, toAppError } from "../lib/appError";
+import { formatCount } from "../lib/i18n";
 import type { NavEntry } from "../lib/types";
 import { DocsetIcon } from "./DocsetIcon";
 
@@ -15,10 +18,10 @@ const OVERSCAN = 8;
 type Row =
   | { type: "doc"; id: string; docsetId: string; name: string; icon: string | null; di: number; setsize: number; expanded: boolean }
   | { type: "kinds-loading"; id: string; docsetId: string }
-  | { type: "kinds-error"; id: string; docsetId: string; message: string }
+  | { type: "kinds-error"; id: string; docsetId: string; message: unknown }
   | { type: "kinds-empty"; id: string; docsetId: string }
   | { type: "kind"; id: string; docsetId: string; kind: string; label: string; inferred: boolean; count: number; ki: number; ksize: number; expanded: boolean }
-  | { type: "entries-error"; id: string; docsetId: string; kind: string; count: number; message: string }
+  | { type: "entries-error"; id: string; docsetId: string; kind: string; count: number; message: unknown }
   | { type: "entry"; id: string; docsetId: string; kind: string; entry: NavEntry; ei: number; esize: number }
   | { type: "skeleton"; id: string; docsetId: string; kind: string; ei: number; esize: number };
 
@@ -44,6 +47,7 @@ export function BrowseTree() {
   const openEntry = useTabs((s) => s.openEntry);
   const openHome = useTabs((s) => s.openHome);
   const activeDoc = useTabs((s) => s.tabs.find((t) => t.id === s.activeId)?.docsetId ?? null);
+  const { t } = useT();
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -62,7 +66,7 @@ export function BrowseTree() {
       if (state !== "ready") {
         out.push(
           state === "error"
-            ? { type: "kinds-error", id: rowId(di, -2, -1), docsetId: d.id, message: kindsError[d.id] ?? "" }
+            ? { type: "kinds-error", id: rowId(di, -2, -1), docsetId: d.id, message: kindsError[d.id] ?? null }
             : { type: "kinds-loading", id: rowId(di, -2, -1), docsetId: d.id },
         );
         return;
@@ -216,7 +220,7 @@ export function BrowseTree() {
     <div
       ref={scrollRef}
       role="tree"
-      aria-label="Navegación por docsets"
+      aria-label={t("browse.tree")}
       aria-activedescendant={activeId}
       tabIndex={0}
       onKeyDown={onKeyDown}
@@ -224,7 +228,7 @@ export function BrowseTree() {
       className="relative flex-1 overflow-y-auto outline-none"
     >
       {rows.length === 0 ? (
-        <p className="px-2 py-1 text-xs text-gray-500">Sin docsets cargados.</p>
+        <p className="px-2 py-1 text-xs text-gray-500">{t("browse.empty")}</p>
       ) : (
         <div style={{ height: rows.length * ROW_H }} className="relative">
           {rows.slice(start, end).map((r, k) => (
@@ -270,6 +274,7 @@ interface RowViewProps {
 }
 
 const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDoc, onToggleKind, onActivate, onAuxEntry, onOpenHome }: RowViewProps) {
+  const { t, lang } = useT();
   const base: React.CSSProperties = {
     position: "absolute",
     top,
@@ -296,7 +301,7 @@ const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDo
         }`}
       >
         <button
-          aria-label={row.expanded ? "Contraer" : "Expandir"}
+          aria-label={row.expanded ? t("browse.collapse") : t("browse.expand")}
           onClick={() => onToggleDoc(row.docsetId)}
           className="w-5 shrink-0 text-xs text-gray-500"
         >
@@ -325,11 +330,12 @@ const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDo
   if (row.type === "kinds-loading") {
     return (
       <div id={row.id} style={{ ...base, paddingLeft: 28 }} className="flex items-center text-xs text-gray-500">
-        Cargando tipos…
+        {t("browse.loadingKinds")}
       </div>
     );
   }
   if (row.type === "kinds-error") {
+    const info = toAppError(row.message);
     return (
       <div
         id={row.id}
@@ -338,16 +344,17 @@ const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDo
         style={{ ...base, paddingLeft: 28 }}
         className={`flex items-center gap-2 text-xs text-red-500 ${hl}`}
         onClick={onActivate}
+        title={info?.detail ?? undefined}
       >
-        <span className="truncate">Error al cargar tipos</span>
-        <span className="underline">Reintentar</span>
+        <span className="truncate">{info ? errorTitle(lang, info) : t("browse.kindsError")}</span>
+        <span className="underline">{t("common.retry")}</span>
       </div>
     );
   }
   if (row.type === "kinds-empty") {
     return (
       <div id={row.id} style={{ ...base, paddingLeft: 28 }} className="flex items-center text-xs text-gray-500">
-        Sin entradas.
+        {t("browse.noEntries")}
       </div>
     );
   }
@@ -366,17 +373,18 @@ const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDo
         onClick={() => onToggleKind(row.docsetId, row.kind)}
       >
         <span className="w-4 shrink-0 text-xs text-gray-500">{row.expanded ? "▾" : "▸"}</span>
-        <span className="truncate" title={row.inferred ? `Etiqueta inferida, no oficial en Dash (código: ${row.kind})` : row.label}>
+        <span className="truncate" title={row.inferred ? t("browse.inferredTitle", { kind: row.kind }) : row.label}>
           {row.label}
         </span>
         {row.inferred && (
           <span className="shrink-0 text-xs italic text-gray-400">{row.kind}</span>
         )}
-        <span className="shrink-0 text-xs text-gray-400">{row.count}</span>
+        <span className="shrink-0 text-xs text-gray-400">{formatCount(lang, row.count)}</span>
       </div>
     );
   }
   if (row.type === "entries-error") {
+    const info = toAppError(row.message);
     return (
       <div
         id={row.id}
@@ -385,10 +393,10 @@ const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDo
         style={{ ...base, paddingLeft: 44 }}
         className={`flex cursor-pointer items-center gap-2 text-xs text-red-500 ${hl}`}
         onClick={onActivate}
-        title={row.message}
+        title={info?.detail ?? undefined}
       >
-        <span>Error al cargar entradas.</span>
-        <span className="underline">Reintentar</span>
+        <span>{info ? errorTitle(lang, info) : t("browse.entriesError")}</span>
+        <span className="underline">{t("common.retry")}</span>
       </div>
     );
   }
@@ -400,7 +408,7 @@ const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDo
         aria-level={3}
         aria-setsize={row.esize}
         aria-posinset={row.ei + 1}
-        aria-label="Cargando entrada"
+        aria-label={t("browse.loadingEntry")}
         style={{ ...base, paddingLeft: 44 }}
         className="flex items-center"
       >

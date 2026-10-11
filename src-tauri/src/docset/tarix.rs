@@ -81,7 +81,7 @@ struct CacheManifest {
 #[derive(Debug, thiserror::Error)]
 pub enum TarixError {
     /// No se puede abrir el `.tgz`.
-    #[error("no se puede leer {path}: {source}")]
+    #[error("cannot read {path}: {source}")]
     Unreadable {
         /// Ruta del `.tgz`.
         path: PathBuf,
@@ -90,25 +90,25 @@ pub enum TarixError {
         source: std::io::Error,
     },
     /// Flujo gzip/tar roto o truncado.
-    #[error("tgz corrupto o truncado: {0}")]
+    #[error("corrupt or truncated tgz: {0}")]
     Corrupt(String),
     /// Entrada maliciosa (`..`, absoluta, unidad, NUL, raíz múltiple).
-    #[error("entrada insegura en el tgz: {0}")]
+    #[error("unsafe entry in tgz: {0}")]
     UnsafeEntry(String),
     /// Límite de tamaño superado (bytes reales).
-    #[error("límite de tamaño superado ({max} bytes)")]
+    #[error("size limit exceeded ({max} bytes)")]
     TooBig {
         /// Tope aplicado.
         max: u64,
     },
     /// Límite de entradas superado.
-    #[error("límite de ficheros superado ({max})")]
+    #[error("file limit exceeded ({max})")]
     TooManyFiles {
         /// Tope aplicado.
         max: u64,
     },
     /// Fallo de disco al escribir (p. ej. disco lleno).
-    #[error("fallo de disco: {0}")]
+    #[error("disk failure: {0}")]
     Io(#[from] std::io::Error),
 }
 
@@ -415,7 +415,7 @@ pub(crate) fn strip_single_root(
     }
     match root {
         Some(expected) if expected != first => {
-            return Err(TarixError::UnsafeEntry(format!("raíz múltiple: {first}")));
+            return Err(TarixError::UnsafeEntry(format!("multiple roots: {first}")));
         }
         Some(_) => {}
         None => *root = Some(first.to_string()),

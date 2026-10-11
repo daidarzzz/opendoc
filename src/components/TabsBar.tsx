@@ -1,6 +1,7 @@
 // Barra de pestañas (v0.2 V2-3): atrás/adelante, tablist accesible,
 // cerrar, nueva pestaña y reordenar por arrastre.
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useT } from "../hooks/useT";
 import { useDocsets } from "../store/docsets";
 import { usePalette } from "../store/palette";
 import { useTabs } from "../store/tabs";
@@ -18,6 +19,7 @@ const TabButton = memo(function TabButton({
   onPointerDown,
   dragging,
   unavailable,
+  closeLabel,
 }: {
   id: string;
   title: string;
@@ -30,6 +32,8 @@ const TabButton = memo(function TabButton({
   dragging: boolean;
   /** El docset no está cargado (o es un tarix sin instalar): atenuada. */
   unavailable: boolean;
+  /** Etiqueta accesible del botón cerrar (ya traducida). */
+  closeLabel: string;
 }) {
   return (
     <div
@@ -69,7 +73,7 @@ const TabButton = memo(function TabButton({
       <DocsetIcon icon={icon} name={docName} size={14} />
       <span className="flex-1 truncate">{title}</span>
       <button
-        aria-label={`Cerrar pestaña ${title}`}
+        aria-label={closeLabel}
         tabIndex={-1}
         onClick={(e) => {
           e.stopPropagation();
@@ -219,6 +223,7 @@ export function TabsBar() {
   const active = tabs.find((t) => t.id === activeId);
   const canBack = active ? canGoBack(active) : false;
   const canForward = active ? canGoForward(active) : false;
+  const { t: tr } = useT();
 
   const onListKeyDown = (e: React.KeyboardEvent): void => {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
@@ -234,8 +239,8 @@ export function TabsBar() {
   return (
     <div className="flex items-end gap-1 border-b border-gray-200 bg-gray-50 px-2 pt-1 dark:border-gray-800 dark:bg-gray-950">
       <button
-        aria-label="Atrás (Alt+←)"
-        title="Atrás (Alt+←)"
+        aria-label={tr("tabs.back")}
+        title={tr("tabs.back")}
         disabled={!canBack}
         onClick={() => goBack()}
         className="rounded px-2 py-1.5 text-sm text-gray-600 disabled:opacity-30 dark:text-gray-300"
@@ -243,15 +248,15 @@ export function TabsBar() {
         ←
       </button>
       <button
-        aria-label="Adelante (Alt+→)"
-        title="Adelante (Alt+→)"
+        aria-label={tr("tabs.forward")}
+        title={tr("tabs.forward")}
         disabled={!canForward}
         onClick={() => goForward()}
         className="rounded px-2 py-1.5 text-sm text-gray-600 disabled:opacity-30 dark:text-gray-300"
       >
         →
       </button>
-      <div role="tablist" aria-label="Pestañas" onKeyDown={onListKeyDown} className="flex flex-1 items-end gap-0.5 overflow-x-auto">
+      <div role="tablist" aria-label={tr("tabs.list")} onKeyDown={onListKeyDown} className="flex flex-1 items-end gap-0.5 overflow-x-auto">
         {tabs.map((t) => {
           const m = meta.get(t.docsetId);
           const hasContent = currentEntry(t) !== null;
@@ -262,15 +267,17 @@ export function TabsBar() {
             !pending.some((p) => p.id === t.docsetId);
           const pendingInstall =
             hasContent && t.docsetId !== "" && pending.some((p) => p.id === t.docsetId);
+          const tabTitle = currentEntry(t)?.title ?? tr("tabs.newTab");
           return (
             <TabButton
               key={t.id}
               id={t.id}
-              title={currentEntry(t)?.title ?? "Nueva pestaña"}
+              title={tabTitle}
               icon={m?.icon ?? null}
               docName={m?.name ?? t.docsetId}
               selected={t.id === activeId}
               unavailable={unavailable || pendingInstall}
+              closeLabel={tr("tabs.closeTab", { title: tabTitle })}
               onClose={() => closeTab(t.id)}
               onPointerDown={(e) => {
                 if (!e.isPrimary || e.button !== 0 || (e.target instanceof Element && e.target.closest("button"))) return;
@@ -296,8 +303,8 @@ export function TabsBar() {
         })}
       </div>
       <button
-        aria-label="Nueva pestaña"
-        title="Nueva pestaña"
+        aria-label={tr("tabs.newTab")}
+        title={tr("tabs.newTab")}
         onClick={() => {
           newTab();
           usePalette.getState().setOpen(true);
