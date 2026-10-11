@@ -75,8 +75,11 @@ export default function App() {
           }
           try {
             await destroyWindow();
-          } catch {
-            // La ventana ya se estaba cerrando.
+          } catch (err) {
+            // Sin esto la ventana quedaría bloqueada (el backend ya canceló
+            // el cierre nativo al existir este listener): se permite reintentar.
+            closing = false;
+            console.error("[opendoc] no se pudo cerrar la ventana", err);
           }
         });
       } catch {
