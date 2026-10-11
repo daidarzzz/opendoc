@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   isValidNavUrl,
+  KEY_RATE_MAX,
   keyRateAllow,
   matchParentShortcut,
   OPEN_TAB_RATE_MAX,
@@ -237,14 +238,14 @@ describe("validateKeyMessage", () => {
 });
 
 describe("keyRateAllow", () => {
-  it("máximo 10/s con ventana deslizante", () => {
+  it("tope holgado con ventana deslizante (repetición por mantener)", () => {
     let times: number[] = [];
-    for (let i = 0; i < 10; i++) {
-      const r = keyRateAllow(times, i * 50);
+    for (let i = 0; i < KEY_RATE_MAX; i++) {
+      const r = keyRateAllow(times, i * 30);
       expect(r.allowed).toBe(true);
       times = r.times;
     }
-    expect(keyRateAllow(times, 500).allowed).toBe(false);
+    expect(keyRateAllow(times, KEY_RATE_MAX * 30).allowed).toBe(false);
     // Tras la ventana se permite de nuevo y se poda lo viejo.
     const r = keyRateAllow(times, 2000);
     expect(r.allowed).toBe(true);
@@ -270,5 +271,23 @@ describe("matchParentShortcut", () => {
       matchParentShortcut({ key: "ArrowRight", ctrlKey: false, metaKey: false, altKey: true, shiftKey: false }),
     ).toEqual({ action: "forward" });
     expect(matchParentShortcut({ ...base, key: "ArrowLeft" })).toBeNull();
+  });
+
+  it("prefiere code (layouts no latinos) con fallback a key", () => {
+    const base = { key: "", ctrlKey: true, metaKey: false, altKey: false, shiftKey: false };
+    // Cirílico: la tecla dice "ц" pero la posición es KeyW.
+    expect(matchParentShortcut({ ...base, key: "ц", code: "KeyW" })).toEqual({
+      action: "close-tab",
+    });
+    expect(matchParentShortcut({ ...base, key: "3", code: "Digit3" })).toEqual({
+      action: "tab-n",
+      index: 2,
+    });
+    expect(matchParentShortcut({ ...base, key: "1", code: "Numpad1" })).toEqual({
+      action: "tab-n",
+      index: 0,
+    });
+    // Sin code, manda key como antes.
+    expect(matchParentShortcut({ ...base, key: "w" })).toEqual({ action: "close-tab" });
   });
 });

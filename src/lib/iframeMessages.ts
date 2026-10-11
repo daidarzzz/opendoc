@@ -7,8 +7,12 @@ export const MAX_TITLE_LEN = 200;
 export const MAX_SCROLL_Y = 10_000_000;
 /** Ventana para la tasa de teclas reenviadas. */
 export const KEY_RATE_WINDOW_MS = 1000;
-/** Máximo de teclas reenviadas por ventana (anti-bucle de un docset). */
-export const KEY_RATE_MAX = 10;
+/**
+ * Máximo de teclas reenviadas por ventana (anti-bucle de un docset).
+ * Holgado para no comerse la repetición por mantener pulsado (en macOS
+ * ronda 20-30/s); el bucle malicioso sigue acotado.
+ */
+export const KEY_RATE_MAX = 25;
 /** Ventana para abrir pestañas desde enlaces del documento. */
 export const OPEN_TAB_RATE_WINDOW_MS = 1000;
 /** Máximo de pestañas abiertas desde el documento por ventana. */
@@ -229,10 +233,13 @@ export interface MatchedShortcut {
 /**
  * Normaliza un KeyboardEvent del padre. Solo combinaciones exactas
  * (Ctrl/Cmd sin Alt salvo Alt+←/→); no choca con Ctrl+K ni con el webview
- * (WebView2 no usa estas teclas: sin pestañas ni chrome de navegador).
+ * (sin chrome de navegador ni menú nativo con estas teclas).
+ * Las letras y dígitos se leen de `code` (posición física, independiente
+ * del layout: en cirílico/griego `key` no es "w"); sin `code` se usa `key`.
  */
 export function matchParentShortcut(e: {
   key: string;
+  code?: string;
   ctrlKey: boolean;
   metaKey: boolean;
   altKey: boolean;
@@ -243,7 +250,7 @@ export function matchParentShortcut(e: {
     return { action: e.key === "ArrowLeft" ? "back" : "forward" };
   }
   if (!mod || e.altKey) return null;
-  const k = e.key.toLowerCase();
+  const k = keyFromCode(e.code) ?? e.key.toLowerCase();
   if (k === "w" && !e.shiftKey) return { action: "close-tab" };
   if (k === "t" && !e.shiftKey) return { action: "new-tab" };
   if (k === "t" && e.shiftKey) return { action: "reopen-tab" };
@@ -252,5 +259,19 @@ export function matchParentShortcut(e: {
   if (k.length === 1 && k >= "1" && k <= "9" && !e.shiftKey) {
     return { action: "tab-n", index: Number(k) - 1 };
   }
+  return null;
+}
+
+/**
+ * Letra/dígito por posición física (`KeyW`, `Digit1`…). Null si el código
+ * no es uno de los nuestros (flechas y resto van por `key`).
+ */
+function keyFromCode(code: string | undefined): string | null {
+  if (!code) return null;
+  if (code === "KeyW") return "w";
+  if (code === "KeyT") return "t";
+  if (code === "Tab") return "tab";
+  const digit = /^Digit([1-9])$/.exec(code) ?? /^Numpad([1-9])$/.exec(code);
+  if (digit?.[1]) return digit[1];
   return null;
 }

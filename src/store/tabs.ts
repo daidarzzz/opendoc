@@ -36,7 +36,7 @@ interface TabsState {
   error: unknown;
   /** Restauración terminada (o innecesaria): ya se puede guardar sesión. */
   hydrated: boolean;
-  /** Teclas reenviadas recientes (tasa ≤10/s, anti-bucle de un docset). */
+  /** Teclas reenviadas recientes (tasa acotada, anti-bucle de un docset). */
   keyTimes: number[];
   /** Peticiones open-tab recientes (tasa ≤3/s). */
   openTabTimes: number[];
@@ -223,8 +223,12 @@ export const useTabs = create<TabsState>()((set, get) => {
       set({ keyTimes: times });
       if (!allowed) return;
       const s = get();
+      // Combinaciones exactas, igual que el padre (matchParentShortcut):
+      // `w`/`t`/`k` sin shift las consume el Viewer antes de llegar aquí.
       if (key === "w") {
-        s.closeTab(s.activeId);
+        if (!shift) s.closeTab(s.activeId);
+      } else if (key === "t") {
+        if (shift) s.reopenLast();
       } else if (key === "tab") {
         const idx = s.tabs.findIndex((t) => t.id === s.activeId);
         const next = shift
@@ -239,7 +243,8 @@ export const useTabs = create<TabsState>()((set, get) => {
         s.goBack();
       } else if (key === "mouse-forward") {
         s.goForward();
-      } else {
+      } else if (!shift) {
+        // Dígitos sin shift, como el padre (`t`/`k`/`w` con shift ya van arriba).
         const idx = Number(key) - 1;
         const target = s.tabs[idx];
         if (target) s.activateTab(target.id);

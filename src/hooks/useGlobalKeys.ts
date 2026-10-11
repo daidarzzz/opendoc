@@ -1,9 +1,10 @@
-// Atajos globales (sin choques: todo con modificador; WebView2 no usa
-// estas teclas al no tener chrome de navegador con pestañas).
+// Atajos globales (sin choques: todo con modificador; el webview no tiene
+// chrome de navegador ni menú nativo con estas teclas).
 // - Ctrl/Cmd+K: paleta. Ctrl+W: cerrar pestaña. Ctrl+Tab/Shift: cambiar.
 //   Ctrl/Cmd+1..9: saltar. Alt+←/→: atrás/adelante.
 // El foco dentro del iframe no llega aquí: el script inyectado reenvía
 // esas mismas teclas por postMessage (ver Viewer).
+// Nota macOS: Cmd+Tab lo roba el conmutador del SO (solo vale Ctrl+Tab).
 import { useEffect } from "react";
 import { matchParentShortcut } from "../lib/iframeMessages";
 import { usePalette } from "../store/palette";
@@ -12,11 +13,16 @@ import { useTabs } from "../store/tabs";
 export function useGlobalKeys() {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      // Composición IME en curso: no interferir (el docset la gestiona).
+      if (e.isComposing || e.key === "Process") return;
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         usePalette.getState().toggle();
         return;
       }
+      // Con la paleta abierta nada actúa por debajo (salvo Ctrl/Cmd+K):
+      // Enter/flechas/Tab/Escape ya los consume ella (defaultPrevented).
+      if (usePalette.getState().open) return;
       if (e.defaultPrevented) return;
       const hit = matchParentShortcut(e);
       if (!hit) return;

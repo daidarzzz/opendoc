@@ -238,7 +238,7 @@ export function Viewer() {
       } else if (type === "opendoc-key") {
         const kp = validateKeyMessage(data, true);
         if (!kp) return;
-        if (kp.key === "k" && !kp.shift) {
+        if (kp.key === "k") {
           usePalette.getState().toggle();
           return;
         }
