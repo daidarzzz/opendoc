@@ -1,5 +1,6 @@
 // Barra lateral: árbol de navegación, carpeta, catálogo, pendientes, estado, tema.
 import { BrowseTree } from "./BrowseTree";
+import { AppLogo } from "./AppLogo";
 import { DocsetIcon } from "./DocsetIcon";
 import { ErrorDetails } from "./ErrorDetails";
 import { useT } from "../hooks/useT";
@@ -67,7 +68,10 @@ export function Sidebar({ style }: { style: CSSProperties }) {
   return (
     <aside style={style} className="flex h-full min-w-0 shrink-0 flex-col border-r border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-950">
       <div className="flex items-center justify-between p-3">
-        <h1 className="text-sm font-semibold">OpenDoc</h1>
+        <h1 className="flex items-center gap-2 text-sm font-semibold">
+          <AppLogo size={18} />
+          OpenDoc
+        </h1>
         <button
           onClick={() => setSettingsOpen(true)}
           title={t("settings.title")}

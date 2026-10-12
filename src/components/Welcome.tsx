@@ -6,6 +6,7 @@ import { useT } from "../hooks/useT";
 import { tn } from "../lib/i18n";
 import { usePalette } from "../store/palette";
 import { useCatalog } from "../store/catalog";
+import { AppLogo } from "./AppLogo";
 
 function Shortcut({ keys, label }: { keys: string; label: string }) {
   return (
@@ -27,7 +28,8 @@ export function Welcome({ docCount }: { docCount: number }) {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center p-8">
-      <h1 className="text-3xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">
+      <h1 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">
+        <AppLogo size={40} />
         OpenDoc
       </h1>
       <div className="mt-6 flex flex-col items-center gap-2">
