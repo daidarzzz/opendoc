@@ -1,0 +1,151 @@
+# mac-dev: compilación rápida SOLO para macOS (Apple Silicon) para probar
+# en hardware real sin crear releases. Flujo completo en docs/mac-testing.md.
+#
+# - Solo se lanza a mano (workflow_dispatch): nunca en push ni tags.
+# - Sin tests, lints ni typecheck: solo compila. El `beforeBuildCommand`
+#   de Tauri se parchea con `-c` a `npx vite build` para saltar `tsc`
+#   (el `npm run build` de producción lo mantiene; aquí prima la velocidad).
+# - `optimized=false` (defecto): build de depuración, enlazado más rápido.
+# - Solo bundle `.app` (`--bundles app`): sin .dmg para ir más rápido.
+# - upload-artifact NO conserva permisos: se sube un zip creado con `ditto`.
+
+name: mac-dev
+
+on:
+  workflow_dispatch:
+    inputs:
+      optimized:
+        description: "true = build de release (lento, rendimiento real); false = debug (rápido)"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+# Una ejecución nueva en la misma rama cancela la anterior en curso.
+concurrency:
+  group: mac-dev-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-mac:
+    # macos-latest = Apple Silicon (ARM64). Versión exacta: docs/mac-testing.md.
+    runs-on: macos-latest
+    steps:
+      - name: Start timer
+        run: echo "MACDEV_T0=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Resolve names
+        run: |
+          echo "MACDEV_SHORT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+          if [ "${{ inputs.optimized }}" = "true" ]; then
+            echo "MACDEV_MODE=optimized" >> "$GITHUB_ENV"
+          else
+            echo "MACDEV_MODE=debug" >> "$GITHUB_ENV"
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          # Clave estable: mismo prefijo en todas las ejecuciones (la acción
+          # lo completa con el hash del toolchain y de Cargo.lock).
+          shared-key: mac-dev
+          # Los builds fallidos también guardan caché: acelera la siguiente
+          # iteración tras un error de compilación.
+          cache-on-failure: true
+
+      - name: Install frontend dependencies
+        run: |
+          npm ci
+          echo "MACDEV_T_DEPS=$(date +%s)" >> "$GITHUB_ENV"
+
+      # Debug (defecto): rápido. Sin símbolos de depuración
+      # (CARGO_PROFILE_DEV_DEBUG=false, variable oficial de Cargo, sin tocar
+      # Cargo.toml) para enlazar antes y ocupar menos.
+      - name: Build app (debug)
+        if: ${{ ! inputs.optimized }}
+        env:
+          CARGO_PROFILE_DEV_DEBUG: "false"
+        run: |
+          npx tauri build --debug --bundles app --target aarch64-apple-darwin --ci \
+            -c '{"build": {"beforeBuildCommand": "npx vite build", "frontendDist": "../dist"}}'
+          echo "MACDEV_T_BUILD=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Build app (optimized)
+        if: ${{ inputs.optimized }}
+        run: |
+          npx tauri build --bundles app --target aarch64-apple-darwin --ci \
+            -c '{"build": {"beforeBuildCommand": "npx vite build", "frontendDist": "../dist"}}'
+          echo "MACDEV_T_BUILD=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Sign and package .app
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          if [ "$MACDEV_MODE" = "debug" ]; then
+            PROFILE_DIR=debug
+          else
+            PROFILE_DIR=release
+          fi
+          BUNDLE_DIR="src-tauri/target/aarch64-apple-darwin/$PROFILE_DIR/bundle/macos"
+          APPS=( "$BUNDLE_DIR"/*.app )
+          if [ "${#APPS[@]}" -ne 1 ]; then
+            echo "::error::Se esperaba exactamente un .app en $BUNDLE_DIR/, encontrados: ${#APPS[@]}"
+            printf '  - %s\n' "${APPS[@]}"
+            exit 1
+          fi
+          APP="${APPS[0]}"
+          echo "APP=$APP" >> "$GITHUB_ENV"
+          # Firma ad-hoc: en Apple Silicon todo ejecutable necesita una firma
+          # válida (la ad-hoc vale) y el empaquetado puede invalidar la que
+          # pone el enlazador. Es idempotente: repetirla no hace daño.
+          codesign --force --deep --sign - "$APP"
+          # ditto conserva bits de ejecución y metadatos macOS que
+          # upload-artifact perdería con el .app tal cual.
+          ditto -c -k --keepParent "$APP" "opendoc-mac-$MACDEV_SHORT_SHA-$MACDEV_MODE.zip"
+          echo "MACDEV_T_PACK=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Upload packaged app
+        uses: actions/upload-artifact@v4
+        with:
+          name: opendoc-mac-${{ env.MACDEV_SHORT_SHA }}-${{ env.MACDEV_MODE }}
+          path: opendoc-mac-*.zip
+          if-no-files-found: error
+          retention-days: 3
+          # El zip de ditto ya va comprimido: nivel 0 evita recomprimir.
+          compression-level: 0
+
+      - name: Summarize timings
+        run: |
+          fmt() {
+            local s=$1
+            printf '%dm %ds' $(( s / 60 )) $(( s % 60 ))
+          }
+          T_DEPS=$(( MACDEV_T_DEPS - MACDEV_T0 ))
+          T_BUILD=$(( MACDEV_T_BUILD - MACDEV_T_DEPS ))
+          T_PACK=$(( MACDEV_T_PACK - MACDEV_T_BUILD ))
+          TOTAL=$(( MACDEV_T_PACK - MACDEV_T0 ))
+          {
+            echo "## mac-dev ($MACDEV_MODE, $MACDEV_SHORT_SHA)"
+            echo ""
+            echo "| Paso | Duración |"
+            echo "| --- | --- |"
+            echo "| Dependencias (npm ci, con caché) | $(fmt "$T_DEPS") |"
+            echo "| Build Tauri (frontend vite sin tsc + Rust + bundle .app) | $(fmt "$T_BUILD") |"
+            echo "| Empaquetado (firma ad-hoc + ditto) | $(fmt "$T_PACK") |"
+            echo "| **Total (sin subida de artefacto)** | **$(fmt "$TOTAL")** |"
+            echo ""
+            echo "Artefacto: \`opendoc-mac-$MACDEV_SHORT_SHA-$MACDEV_MODE\` ($APP empaquetado en zip)."
+          } >> "$GITHUB_STEP_SUMMARY"
