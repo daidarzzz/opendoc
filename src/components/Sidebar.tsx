@@ -31,6 +31,7 @@ export function Sidebar({
   collapsed,
   expandedWidth,
   onCollapse,
+  animate,
 }: {
   style: CSSProperties;
   /** Panel oculto: el aside anima su ancho a 0 y el contenido queda inerte. */
@@ -39,6 +40,8 @@ export function Sidebar({
   expandedWidth: number;
   /** Ocultar el panel (botón junto a Ajustes). */
   onCollapse: () => void;
+  /** Transición de ancho activa (solo al plegar/desplegar, nunca al arrastrar). */
+  animate: boolean;
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [restoreTabs, setRestoreTabsState] = useState(true);
@@ -94,7 +97,7 @@ export function Sidebar({
     <aside
       style={collapsed ? { width: 0, flexBasis: 0 } : style}
       inert={collapsed}
-      className={`flex h-full shrink-0 overflow-hidden border-r transition-[width,flex-basis] duration-200 ease-in-out ${collapsed ? "border-transparent" : "border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-950"}`}
+      className={`flex h-full shrink-0 overflow-hidden border-r ${animate ? "transition-[width,flex-basis] duration-200 ease-in-out" : ""} ${collapsed ? "border-transparent" : "border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-950"}`}
     >
       <div
         style={{ width: expandedWidth }}

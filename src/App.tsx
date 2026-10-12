@@ -1,5 +1,5 @@
 // Layout: sidebar + área central + Command Palette.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CatalogView } from "./components/CatalogView";
 import { CommandPalette } from "./components/CommandPalette";
 import { Sidebar } from "./components/Sidebar";
@@ -47,8 +47,32 @@ export default function App() {
   const view = useCatalog((s) => s.view);
   const [sidebarWidth, setSidebarWidth] = useState(initialSidebarWidth);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(loadSidebarCollapsed);
+  // La transición de ancho solo existe al plegar/desplegar: con ella siempre
+  // puesta, el redimensionar por arrastre iría con retardo elástico.
+  const [sidebarAnimating, setSidebarAnimating] = useState(false);
+  const sidebarAnimTimer = useRef<number | null>(null);
   const { t } = useT();
   useGlobalKeys();
+
+  const toggleSidebar = useCallback((collapsed: boolean) => {
+    setSidebarCollapsed(collapsed);
+    setSidebarAnimating(true);
+    if (sidebarAnimTimer.current !== null) {
+      window.clearTimeout(sidebarAnimTimer.current);
+    }
+    sidebarAnimTimer.current = window.setTimeout(() => {
+      sidebarAnimTimer.current = null;
+      setSidebarAnimating(false);
+    }, 250);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (sidebarAnimTimer.current !== null) {
+        window.clearTimeout(sidebarAnimTimer.current);
+      }
+    };
+  }, []);
 
   const resizeSidebar = useCallback((clientX: number) => {
     const max = Math.max(SIDEBAR_MIN, Math.min(SIDEBAR_MAX, window.innerWidth - 320));
@@ -156,7 +180,8 @@ export default function App() {
         style={{ width: sidebarWidth, flexBasis: sidebarWidth }}
         collapsed={sidebarCollapsed}
         expandedWidth={sidebarWidth}
-        onCollapse={() => setSidebarCollapsed(true)}
+        onCollapse={() => toggleSidebar(true)}
+        animate={sidebarAnimating}
       />
       {!sidebarCollapsed && (
       <div
@@ -199,7 +224,7 @@ export default function App() {
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <TabsBar
           sidebarCollapsed={sidebarCollapsed}
-          onExpandSidebar={() => setSidebarCollapsed(false)}
+          onExpandSidebar={() => toggleSidebar(false)}
         />
         <div
           className={
