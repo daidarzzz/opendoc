@@ -6,7 +6,7 @@
 
 OpenDoc reads the **docset** format (the same one Dash and Zeal use), so you can point it at your docsets folder and start searching.
 
-> **Current version: v0.2.64.** OpenDoc already includes tabs and history, settings, and docset management from a configurable catalog. The project is still under development; see the [roadmap](#roadmap).
+> **Current version: v0.2.65.** OpenDoc already includes tabs and history, settings, and docset management from a configurable catalog. The project is still under development; see the [roadmap](#roadmap).
 
 ## Why it exists
 
