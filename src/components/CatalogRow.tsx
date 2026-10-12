@@ -21,7 +21,7 @@ import type { RowAction } from "../lib/catalogUi";
 const BADGE_CLASSES: Record<string, string> = {
   muted: "bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300",
   ok: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  info: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  info: "bg-accent/15 text-accent-text",
   warn: "bg-yellow-100 text-yellow-900 dark:bg-yellow-900 dark:text-yellow-100",
 };
 
@@ -89,7 +89,7 @@ export const CatalogRow = memo(function CatalogRow({
               disabled={op.busy}
               className={`shrink-0 rounded px-3 py-1 text-xs ${
                 action === "install"
-                  ? "bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                  ? "bg-accent-solid text-on-accent hover:brightness-110 disabled:opacity-50"
                   : "border border-gray-300 hover:bg-gray-200 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
               }`}
             >
@@ -145,7 +145,7 @@ export const CatalogRow = memo(function CatalogRow({
                   aria-valuemax={100}
                 >
                   <div
-                    className="h-full bg-blue-600"
+                    className="h-full bg-accent-text"
                     style={{ width: `${pct}%` }}
                   />
                 </div>

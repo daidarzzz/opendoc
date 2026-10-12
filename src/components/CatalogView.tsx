@@ -138,7 +138,7 @@ export function CatalogView() {
           <button
             onClick={() => void saveRepo(repoInput)}
             disabled={repoBusy}
-            className="shrink-0 rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700 disabled:opacity-50"
+            className="shrink-0 rounded bg-accent-solid px-3 py-1 text-xs text-on-accent hover:brightness-110 disabled:opacity-50"
           >
             {repoBusy ? t("catalog.saving") : t("common.save")}
           </button>

@@ -152,7 +152,7 @@ export default function App() {
         aria-valuemax={SIDEBAR_MAX}
         aria-valuenow={sidebarWidth}
         tabIndex={0}
-        className="group z-10 -ml-[3px] -mr-[2px] flex w-[5px] shrink-0 cursor-col-resize touch-none items-center justify-center outline-none focus-visible:bg-blue-500/30"
+        className="group z-10 -ml-[3px] -mr-[2px] flex w-[5px] shrink-0 cursor-col-resize touch-none items-center justify-center outline-none focus-visible:bg-accent/30"
         onPointerDown={(event) => {
           event.preventDefault();
           event.currentTarget.setPointerCapture(event.pointerId);
@@ -176,7 +176,7 @@ export default function App() {
           }
         }}
       >
-        <span className="h-8 w-px rounded bg-gray-300 transition-colors group-hover:bg-gray-500 group-focus-visible:bg-blue-500 dark:bg-gray-700 dark:group-hover:bg-gray-500" />
+        <span className="h-8 w-px rounded bg-gray-300 transition-colors group-hover:bg-gray-500 group-focus-visible:bg-accent-text dark:bg-gray-700 dark:group-hover:bg-gray-500" />
       </div>
       {/* La cabecera vive fuera del visor para que nunca se desmonte al
           cambiar de página o alternar entre visor y catálogo. */}

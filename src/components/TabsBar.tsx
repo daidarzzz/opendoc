@@ -70,7 +70,7 @@ const TabButton = memo(function TabButton({
       }}
       className={`relative flex max-w-44 select-none touch-none cursor-default items-center gap-1.5 rounded-t border-l-2 px-2 py-1.5 text-xs ${
         selected
-          ? "border-transparent bg-white font-medium dark:bg-gray-900"
+          ? "border-accent-text bg-white font-medium dark:bg-gray-900"
           : "border-transparent text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-800"
       } ${dragging ? "z-10 bg-white shadow-lg dark:bg-gray-800" : ""} ${unavailable ? "opacity-50" : ""}`}
     >

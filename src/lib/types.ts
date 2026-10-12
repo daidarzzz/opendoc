@@ -125,6 +125,9 @@ export type ApiError =
 /** Tema guardado (settings::ThemeMode). */
 export type ThemeMode = "light" | "dark" | "system";
 
+/** Acento de color guardado (settings::Accent). */
+export type Accent = "red" | "blue" | "amber" | "catppuccin";
+
 /** Idioma de la interfaz (settings::Language). */
 export type Language = "en" | "es";
 

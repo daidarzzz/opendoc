@@ -388,7 +388,7 @@ function FolderPrompt({
           </p>
           <button
             onClick={() => void choose()}
-            className="mt-3 rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+            className="mt-3 rounded bg-accent-solid px-4 py-2 text-sm text-on-accent hover:brightness-110"
           >
             {t("viewer.chooseAnother")}
           </button>
@@ -400,7 +400,7 @@ function FolderPrompt({
           </p>
           <button
             onClick={() => void choose()}
-            className="mt-3 rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+            className="mt-3 rounded bg-accent-solid px-4 py-2 text-sm text-on-accent hover:brightness-110"
           >
             {t("viewer.chooseFolder")}
           </button>

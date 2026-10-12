@@ -33,10 +33,10 @@ export function Welcome({ docCount }: { docCount: number }) {
         OpenDoc
       </h1>
       <div className="mt-6 flex flex-col items-center gap-2">
-        <button onClick={() => setOpen(true)} className="text-sm text-gray-500 underline decoration-gray-300 underline-offset-4 hover:text-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-400 dark:decoration-gray-700 dark:hover:text-gray-100">
+        <button onClick={() => setOpen(true)} className="text-sm text-gray-500 underline decoration-gray-300 underline-offset-4 hover:text-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-text dark:text-gray-400 dark:decoration-gray-700 dark:hover:text-gray-100">
           {t("welcome.searchDocs", { mod })}
         </button>
-        <button onClick={openCatalog} className="text-sm text-gray-500 underline decoration-gray-300 underline-offset-4 hover:text-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-400 dark:decoration-gray-700 dark:hover:text-gray-100">
+        <button onClick={openCatalog} className="text-sm text-gray-500 underline decoration-gray-300 underline-offset-4 hover:text-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-text dark:text-gray-400 dark:decoration-gray-700 dark:hover:text-gray-100">
           {t("welcome.searchCatalog")}
         </button>
       </div>
