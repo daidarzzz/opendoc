@@ -988,6 +988,7 @@ pub fn set_theme(
 }
 
 /// Cambia el acento de color y lo persiste (solo si cambió).
+/// También aplica el icono en ejecución (barra de tareas / Dock).
 #[tauri::command]
 pub fn set_accent(
     state: State<'_, AppState>,
@@ -1015,6 +1016,7 @@ pub fn set_accent(
             })?;
         }
     }
+    crate::accent_icon::apply_to_main_window(&app, accent);
     Ok(settings)
 }
 
