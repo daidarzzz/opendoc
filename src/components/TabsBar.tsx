@@ -6,6 +6,7 @@ import { useDocsets } from "../store/docsets";
 import { usePalette } from "../store/palette";
 import { useTabs } from "../store/tabs";
 import { canGoBack, canGoForward, currentEntry } from "../lib/tabHistory";
+import { AppLogo } from "./AppLogo";
 import { DocsetIcon } from "./DocsetIcon";
 
 const TabButton = memo(function TabButton({
@@ -13,6 +14,7 @@ const TabButton = memo(function TabButton({
   title,
   icon,
   docName,
+  isNew,
   selected,
   onActivate,
   onClose,
@@ -25,6 +27,8 @@ const TabButton = memo(function TabButton({
   title: string;
   icon: string | null;
   docName: string;
+  /** Pestaña nueva y vacía: logo de OpenDoc en vez del icono genérico. */
+  isNew: boolean;
   selected: boolean;
   onActivate: () => void;
   onClose: () => void;
@@ -70,7 +74,11 @@ const TabButton = memo(function TabButton({
           : "border-transparent text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-800"
       } ${dragging ? "z-10 bg-white shadow-lg dark:bg-gray-800" : ""} ${unavailable ? "opacity-50" : ""}`}
     >
-      <DocsetIcon icon={icon} name={docName} size={14} />
+      {isNew ? (
+        <AppLogo size={14} />
+      ) : (
+        <DocsetIcon icon={icon} name={docName} size={14} />
+      )}
       <span className="flex-1 truncate">{title}</span>
       <button
         aria-label={closeLabel}
@@ -275,6 +283,7 @@ export function TabsBar() {
               title={tabTitle}
               icon={m?.icon ?? null}
               docName={m?.name ?? t.docsetId}
+              isNew={!hasContent}
               selected={t.id === activeId}
               unavailable={unavailable || pendingInstall}
               closeLabel={tr("tabs.closeTab", { title: tabTitle })}
