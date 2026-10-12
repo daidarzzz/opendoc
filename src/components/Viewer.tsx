@@ -69,7 +69,7 @@ export function Viewer() {
       const index = frontFrameRef.current;
       const frame = index === null ? null : frames.current[index];
       const child = frame?.contentWindow;
-      if (!child || (event.deltaX === 0 && event.deltaY === 0)) return;
+      if (!child || (event.deltaX === 0 && event.deltaY === 0)) { event.preventDefault(); return; }
       event.preventDefault();
       const rect = frame.getBoundingClientRect();
       child.postMessage(
