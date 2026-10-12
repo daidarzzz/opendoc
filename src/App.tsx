@@ -18,6 +18,7 @@ import { useDocsets } from "./store/docsets";
 import { useLang } from "./store/lang";
 import { useTheme } from "./store/theme";
 import { useAccent } from "./store/accent";
+import { loadSidebarCollapsed, saveSidebarCollapsed } from "./lib/sidebar";
 import { useT } from "./hooks/useT";
 import { t as translate } from "./lib/i18n";
 
@@ -45,6 +46,7 @@ export default function App() {
   const langLoaded = useLang((s) => s.loaded);
   const view = useCatalog((s) => s.view);
   const [sidebarWidth, setSidebarWidth] = useState(initialSidebarWidth);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(loadSidebarCollapsed);
   const { t } = useT();
   useGlobalKeys();
 
@@ -142,11 +144,21 @@ export default function App() {
     }
   }, [sidebarWidth]);
 
+  useEffect(() => {
+    saveSidebarCollapsed(sidebarCollapsed);
+  }, [sidebarCollapsed]);
+
   if (!langLoaded) return null;
 
   return (
     <div className="flex h-screen overflow-hidden bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100">
-      <Sidebar style={{ width: sidebarWidth, flexBasis: sidebarWidth }} />
+      <Sidebar
+        style={{ width: sidebarWidth, flexBasis: sidebarWidth }}
+        collapsed={sidebarCollapsed}
+        expandedWidth={sidebarWidth}
+        onCollapse={() => setSidebarCollapsed(true)}
+      />
+      {!sidebarCollapsed && (
       <div
         role="separator"
         aria-label={t("app.resizeSidebar")}
@@ -181,10 +193,14 @@ export default function App() {
       >
         <span className="h-8 w-px rounded bg-gray-300 transition-colors group-hover:bg-gray-500 group-focus-visible:bg-accent-text dark:bg-gray-700 dark:group-hover:bg-gray-500" />
       </div>
+      )}
       {/* La cabecera vive fuera del visor para que nunca se desmonte al
           cambiar de página o alternar entre visor y catálogo. */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <TabsBar />
+        <TabsBar
+          sidebarCollapsed={sidebarCollapsed}
+          onExpandSidebar={() => setSidebarCollapsed(false)}
+        />
         <div
           className={
             view === "catalog"

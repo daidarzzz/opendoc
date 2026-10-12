@@ -3,6 +3,7 @@ import { BrowseTree } from "./BrowseTree";
 import { AppLogo } from "./AppLogo";
 import { DocsetIcon } from "./DocsetIcon";
 import { ErrorDetails } from "./ErrorDetails";
+import { PanelToggleIcon } from "./PanelToggleIcon";
 import { useT } from "../hooks/useT";
 import { LANGUAGE_NAMES, formatCount, type I18nKey } from "../lib/i18n";
 import { ACCENTS, ACCENT_HEX } from "../lib/accent";
@@ -25,7 +26,20 @@ const ACCENT_KEY: Record<Accent, I18nKey> = {
   catppuccin: "settings.accentCatppuccin",
 };
 
-export function Sidebar({ style }: { style: CSSProperties }) {
+export function Sidebar({
+  style,
+  collapsed,
+  expandedWidth,
+  onCollapse,
+}: {
+  style: CSSProperties;
+  /** Panel oculto: el aside anima su ancho a 0 y el contenido queda inerte. */
+  collapsed: boolean;
+  /** Ancho del contenido interno (fijo para que la animación recorte, no aplaste). */
+  expandedWidth: number;
+  /** Ocultar el panel (botón junto a Ajustes). */
+  onCollapse: () => void;
+}) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [restoreTabs, setRestoreTabsState] = useState(true);
   const { t, lang } = useT();
@@ -77,22 +91,40 @@ export function Sidebar({ style }: { style: CSSProperties }) {
   };
 
   return (
-    <aside style={style} className="flex h-full min-w-0 shrink-0 flex-col border-r border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-950">
+    <aside
+      style={collapsed ? { width: 0, flexBasis: 0 } : style}
+      inert={collapsed}
+      className={`flex h-full shrink-0 overflow-hidden border-r transition-[width,flex-basis] duration-200 ease-in-out ${collapsed ? "border-transparent" : "border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-950"}`}
+    >
+      <div
+        style={{ width: expandedWidth }}
+        className="flex h-full min-w-0 shrink-0 flex-col"
+      >
       <div className="flex items-center justify-between p-3">
         <h1 className="flex items-center gap-2 text-sm font-semibold">
           <AppLogo size={18} />
           OpenDoc
         </h1>
-        <button
-          onClick={() => setSettingsOpen(true)}
-          title={t("settings.title")}
-          aria-label={t("settings.title")}
-          className="rounded p-1.5 text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800"
-        >
-          <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
-            <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54A.49.49 0 0 0 13.92 2h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.21.07-.47-.12-.61l-2.03-1.58ZM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6Z" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-0.5">
+          <button
+            onClick={() => setSettingsOpen(true)}
+            title={t("settings.title")}
+            aria-label={t("settings.title")}
+            className="rounded-full p-1.5 text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800"
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+              <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54A.49.49 0 0 0 13.92 2h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.21.07-.47-.12-.61l-2.03-1.58ZM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6Z" />
+            </svg>
+          </button>
+          <button
+            onClick={onCollapse}
+            title={t("settings.collapseSidebar")}
+            aria-label={t("settings.collapseSidebar")}
+            className="rounded-full p-1.5 text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800"
+          >
+            <PanelToggleIcon direction="left" />
+          </button>
+        </div>
       </div>
 
       {settingsOpen && (
@@ -185,6 +217,7 @@ export function Sidebar({ style }: { style: CSSProperties }) {
         )}
         {issues.length > 0 && <p>{formatCount(lang, issues.length)} {t("settings.issuesSuffix")}</p>}
         <ErrorDetails error={error} />
+      </div>
       </div>
     </aside>
   );

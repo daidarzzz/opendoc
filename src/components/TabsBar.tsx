@@ -8,6 +8,7 @@ import { useTabs } from "../store/tabs";
 import { canGoBack, canGoForward, currentEntry } from "../lib/tabHistory";
 import { AppLogo } from "./AppLogo";
 import { DocsetIcon } from "./DocsetIcon";
+import { PanelToggleIcon } from "./PanelToggleIcon";
 
 const TabButton = memo(function TabButton({
   id,
@@ -95,7 +96,15 @@ const TabButton = memo(function TabButton({
   );
 });
 
-export function TabsBar() {
+export function TabsBar({
+  sidebarCollapsed = false,
+  onExpandSidebar,
+}: {
+  /** Panel lateral oculto: se muestra el botón para recuperarlo. */
+  sidebarCollapsed?: boolean;
+  /** Mostrar el panel lateral. */
+  onExpandSidebar?: () => void;
+}) {
   const tabs = useTabs((s) => s.tabs);
   const activeId = useTabs((s) => s.activeId);
   const activateTab = useTabs((s) => s.activateTab);
@@ -246,6 +255,16 @@ export function TabsBar() {
 
   return (
     <div className="flex items-end gap-1 border-b border-gray-200 bg-gray-50 px-2 pt-1 dark:border-gray-800 dark:bg-gray-950">
+      {sidebarCollapsed && (
+        <button
+          aria-label={tr("settings.expandSidebar")}
+          title={tr("settings.expandSidebar")}
+          onClick={() => onExpandSidebar?.()}
+          className="mb-0.5 rounded-full p-1.5 text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800"
+        >
+          <PanelToggleIcon direction="right" />
+        </button>
+      )}
       <button
         aria-label={tr("tabs.back")}
         title={tr("tabs.back")}
