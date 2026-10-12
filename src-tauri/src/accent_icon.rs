@@ -1,12 +1,12 @@
 //! Icono de la app en ejecución según el acento.
 //!
-//! - Los PNG (`src-tauri/gen-icons/accent-*.png`, 512 px, variante "box")
-//!   los genera `scripts/gen-accent-icons.*` desde el SVG original; los del
-//!   bundle (`src-tauri/icons/`) no se tocan y la variante roja coincide con
+//! - Los PNG (`src-tauri/gen-icons/accent-*.png` 512px y `accent-*@2x.png` 1024px,
+//!   variante "box") los genera `scripts/gen-accent-icons.*` desde el SVG original;
+//!   los del bundle (`src-tauri/icons/`) no se tocan y la variante roja coincide con
 //!   ellos (mismo SVG de origen).
 //! - Windows/Linux: `Window::set_icon` (ventana y barra de tareas). macOS:
-//!   esa API no está soportada y el icono va al Dock con
-//!   `NSApplication.setApplicationIconImage` (solo `cfg(target_os = "macos")`).
+//!   esa API no está soportada y el icono va al Dock con un `NSImage` multi-resolución
+//!   construido a partir de los PNG 1x (512px) y 2x (1024px).
 //! - Límite: solo cambia el icono en ejecución. El del ejecutable,
 //!   instalador, `.app` en Finder y accesos directos sigue siendo el rojo
 //!   del bundle. Si el Dock vuelve al original al cerrar, es esperado.
@@ -14,8 +14,8 @@
 
 use crate::settings::Accent;
 
-/// PNG "box" del acento, embebido en el binario.
-pub fn icon_bytes(accent: Accent) -> &'static [u8] {
+/// PNG "box" del acento 1x (512px), embebido en el binario.
+fn icon_bytes_1x(accent: Accent) -> &'static [u8] {
     match accent {
         Accent::Red => include_bytes!("../gen-icons/accent-red.png"),
         Accent::Blue => include_bytes!("../gen-icons/accent-blue.png"),
@@ -24,13 +24,30 @@ pub fn icon_bytes(accent: Accent) -> &'static [u8] {
     }
 }
 
+/// PNG "box" del acento 2x (1024px), embebido en el binario. Solo se usa en macOS.
+#[cfg(target_os = "macos")]
+fn icon_bytes_2x(accent: Accent) -> &'static [u8] {
+    match accent {
+        Accent::Red => include_bytes!("../gen-icons/accent-red@2x.png"),
+        Accent::Blue => include_bytes!("../gen-icons/accent-blue@2x.png"),
+        Accent::Amber => include_bytes!("../gen-icons/accent-amber@2x.png"),
+        Accent::Catppuccin => include_bytes!("../gen-icons/accent-catppuccin@2x.png"),
+    }
+}
+
+/// PNG "box" del acento (512px) para compatibilidad con Windows/Linux.
+pub fn icon_bytes(accent: Accent) -> &'static [u8] {
+    icon_bytes_1x(accent)
+}
+
 /// Aplica el icono a la ventana principal (`"main"`). En macOS solo toca
 /// el Dock (la API de ventana no lo soporta allí).
 pub fn apply_to_main_window(app: &tauri::AppHandle, accent: Accent) {
-    let png = icon_bytes(accent);
+    let png_1x = icon_bytes_1x(accent);
     #[cfg(target_os = "macos")]
     {
-        apply_dock_icon(png);
+        let png_2x = icon_bytes_2x(accent);
+        apply_dock_icon(png_1x, png_2x);
         return;
     }
     #[cfg(not(target_os = "macos"))]
@@ -39,7 +56,7 @@ pub fn apply_to_main_window(app: &tauri::AppHandle, accent: Accent) {
         let Some(window) = app.get_webview_window("main") else {
             return;
         };
-        match tauri::image::Image::from_bytes(png) {
+        match tauri::image::Image::from_bytes(png_1x) {
             Ok(image) => {
                 let _ = window.set_icon(image);
             }
@@ -54,21 +71,36 @@ pub fn apply_to_main_window(app: &tauri::AppHandle, accent: Accent) {
 
 /// Icono del Dock en macOS. Exige el hilo principal (los comandos Tauri
 /// corren en hilos de fondo): fuera de él no se toca nada para no
-/// arriesgar AppKit. Revisado a mano contra objc2-app-kit 0.3; no se ha
-/// podido compilar para macOS en este equipo (ver SPEC).
+/// arriesgar AppKit. Construye un NSImage multi-resolución con
+/// representaciones 1x (512px) y 2x (1024px) para que se vea correctamente
+/// en pantallas Retina y no Retina.
 #[cfg(target_os = "macos")]
-fn apply_dock_icon(png: &[u8]) {
-    use objc2::{AnyThread, MainThreadMarker};
-    use objc2_app_kit::{NSApplication, NSImage};
+fn apply_dock_icon(png_1x: &[u8], png_2x: &[u8]) {
+    use objc2::{MainThreadMarker};
+    use objc2_app_kit::{NSApplication, NSImage, NSBitmapImageRep};
     use objc2_foundation::NSData;
 
     let Some(mtm) = MainThreadMarker::new() else {
         return;
     };
-    let data = NSData::with_bytes(png);
-    let Some(image) = NSImage::initWithData(NSImage::alloc(), &data) else {
-        return;
-    };
+
+    // Crear NSImage vacío
+    let image = NSImage::alloc().init();
+
+    // Agregar representación 1x (512px)
+    let data_1x = NSData::with_bytes(png_1x);
+    if let Some(rep1x) = NSBitmapImageRep::imageRepWithData(&data_1x) {
+        rep1x.setSize(unsafe { objc2_app_kit::NSSize::new(512.0, 512.0) });
+        image.addRepresentation(&rep1x);
+    }
+
+    // Agregar representación 2x (1024px)
+    let data_2x = NSData::with_bytes(png_2x);
+    if let Some(rep2x) = NSBitmapImageRep::imageRepWithData(&data_2x) {
+        rep2x.setSize(unsafe { objc2_app_kit::NSSize::new(512.0, 512.0) });
+        image.addRepresentation(&rep2x);
+    }
+
     let app = NSApplication::sharedApplication(mtm);
     // SAFETY: se pasa `Some` (el aviso de `None` no aplica).
     unsafe { app.setApplicationIconImage(Some(&image)) };
