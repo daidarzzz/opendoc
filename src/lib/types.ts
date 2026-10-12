@@ -157,10 +157,15 @@ export interface TabEntry {
   title: string;
 }
 
+/** Tipo de pestaña: docset normal o catálogo. */
+export type TabType = "docset" | "catalog";
+
 /** Pestaña con su historial propio (store tabs, lógica en tabHistory). */
 export interface Tab {
   id: string;
   docsetId: string;
+  /** Tipo de pestaña: "docset" para docsets normales, "catalog" para el catálogo. */
+  type: TabType;
   /** Historial lineal de la pestaña; la entrada activa es `historyIndex`. */
   history: TabEntry[];
   historyIndex: number;

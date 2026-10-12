@@ -2,6 +2,7 @@
 // chrome de navegador ni menú nativo con estas teclas).
 // - Ctrl/Cmd+K: paleta. Ctrl+W: cerrar pestaña. Ctrl+Tab/Shift: cambiar.
 //   Ctrl/Cmd+1..9: saltar. Alt+←/→: atrás/adelante.
+//   F3: abrir catálogo.
 // El foco dentro del iframe no llega aquí: el script inyectado reenvía
 // esas mismas teclas por postMessage (ver Viewer).
 // Nota macOS: Cmd+Tab lo roba el conmutador del SO (solo vale Ctrl+Tab).
@@ -20,7 +21,13 @@ export function useGlobalKeys() {
         usePalette.getState().toggle();
         return;
       }
-      // Con la paleta abierta nada actúa por debajo (salvo Ctrl/Cmd+K):
+      // F3: abrir catálogo (funciona globalmente, incluso con paleta abierta)
+      if (e.key === "F3") {
+        e.preventDefault();
+        useTabs.getState().openCatalogTab();
+        return;
+      }
+      // Con la paleta abierta nada actúa por debajo (salvo Ctrl/Cmd+K y F3):
       // Enter/flechas/Tab/Escape ya los consume ella (defaultPrevented).
       if (usePalette.getState().open) return;
       if (e.defaultPrevented) return;

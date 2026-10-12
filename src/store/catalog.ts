@@ -1,6 +1,5 @@
-// Slice del catálogo de docsets (F3): vista, datos F1 y operaciones F2.
-// - Los datos viven aquí (zustand), no en componentes: al alternar con el
-//   visor nada se pierde (las pestañas/búsqueda ni se enteran).
+// Slice del catálogo de docsets (F3): datos F1 y operaciones F2.
+// - Los datos viven aquí (zustand), no en componentes.
 // - El éxito de una instalación lo confirma el `await installDocset`
 //   (backend), nunca el evento: ante un error no se muestra éxito.
 // - Doble clic: `busy` se fija síncrono antes del primer `await`; si ya
@@ -32,8 +31,6 @@ import type { CatalogFilter } from "../lib/catalogUi";
 import { pmark, setProfileEnabled } from "../lib/profile";
 import { useDocsets } from "./docsets";
 
-export type CatalogView = "viewer" | "catalog";
-
 /** Estado de una operación por feed (progreso indexado por feed_id). */
 export interface FeedOp {
   busy: boolean;
@@ -53,7 +50,6 @@ export interface RefreshNote {
 const idleOp: FeedOp = { busy: false, progress: null, error: null, errorKind: "", done: false };
 
 interface CatalogState {
-  view: CatalogView;
   status: CatalogStatus | null;
   entries: FeedEntry[];
   installMap: Record<string, InstallStatus>;
@@ -71,8 +67,6 @@ interface CatalogState {
   repoBusy: boolean;
   repoError: unknown;
   ops: Record<string, FeedOp>;
-  open: () => void;
-  showViewer: () => void;
   setQuery: (query: string) => void;
   setFilter: (filter: CatalogFilter) => void;
   setRepoInput: (repoInput: string) => void;
@@ -108,7 +102,6 @@ function opOf(ops: Record<string, FeedOp>, feedId: string): FeedOp {
 }
 
 export const useCatalog = create<CatalogState>()((set, get) => ({
-  view: "viewer",
   status: null,
   entries: [],
   installMap: {},
@@ -124,11 +117,6 @@ export const useCatalog = create<CatalogState>()((set, get) => ({
   repoError: null,
   ops: {},
 
-  open: () => {
-    set({ view: "catalog" });
-    if (get().entries.length === 0 && !get().status) void get().load();
-  },
-  showViewer: () => set({ view: "viewer" }),
   setQuery: (query) => set({ query }),
   setFilter: (filter) => set({ filter }),
   setRepoInput: (repoInput) => set({ repoInput }),

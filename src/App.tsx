@@ -1,6 +1,5 @@
 // Layout: sidebar + área central + Command Palette.
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CatalogView } from "./components/CatalogView";
 import { CommandPalette } from "./components/CommandPalette";
 import { Sidebar } from "./components/Sidebar";
 import { TabsBar } from "./components/TabsBar";
@@ -13,7 +12,6 @@ import {
   hydrateSessionOnce,
   startSessionSync,
 } from "./lib/sessionSync";
-import { useCatalog } from "./store/catalog";
 import { useDocsets } from "./store/docsets";
 import { useLang } from "./store/lang";
 import { useTheme } from "./store/theme";
@@ -44,7 +42,6 @@ export default function App() {
   const initLang = useLang((s) => s.init);
   const initAccent = useAccent((s) => s.init);
   const langLoaded = useLang((s) => s.loaded);
-  const view = useCatalog((s) => s.view);
   const [sidebarWidth, setSidebarWidth] = useState(initialSidebarWidth);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(loadSidebarCollapsed);
   // La transición de ancho solo existe al plegar/desplegar: con ella siempre
@@ -220,26 +217,13 @@ export default function App() {
       </div>
       )}
       {/* La cabecera vive fuera del visor para que nunca se desmonte al
-          cambiar de página o alternar entre visor y catálogo. */}
+          cambiar de página. */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <TabsBar
           sidebarCollapsed={sidebarCollapsed}
           onExpandSidebar={() => toggleSidebar(false)}
         />
-        <div
-          className={
-            view === "catalog"
-              ? "hidden min-h-0 min-w-0 flex-1"
-              : "flex min-h-0 min-w-0 flex-1"
-          }
-        >
-          <Viewer />
-        </div>
-        {view === "catalog" && (
-          <div className="flex min-h-0 min-w-0 flex-1">
-            <CatalogView />
-          </div>
-        )}
+        <Viewer />
       </div>
       <CommandPalette />
     </div>

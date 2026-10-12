@@ -5,7 +5,7 @@ import { platform } from "@tauri-apps/plugin-os";
 import { useT } from "../hooks/useT";
 import { tn } from "../lib/i18n";
 import { usePalette } from "../store/palette";
-import { useCatalog } from "../store/catalog";
+import { useTabs } from "../store/tabs";
 import { AppLogo } from "./AppLogo";
 
 function Shortcut({ keys, label }: { keys: string; label: string }) {
@@ -21,7 +21,7 @@ function Shortcut({ keys, label }: { keys: string; label: string }) {
 
 export function Welcome({ docCount }: { docCount: number }) {
   const setOpen = usePalette((s) => s.setOpen);
-  const openCatalog = useCatalog((s) => s.open);
+  const openCatalogTab = useTabs((s) => s.openCatalogTab);
   const { t, lang } = useT();
   // Símbolo del modificador según plataforma (macOS: ⌘).
   const mod = platform() === "macos" ? "⌘" : "Ctrl";
@@ -36,7 +36,7 @@ export function Welcome({ docCount }: { docCount: number }) {
         <button onClick={() => setOpen(true)} className="text-sm text-gray-500 underline decoration-gray-300 underline-offset-4 hover:text-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-text dark:text-gray-400 dark:decoration-gray-700 dark:hover:text-gray-100">
           {t("welcome.searchDocs", { mod })}
         </button>
-        <button onClick={openCatalog} className="text-sm text-gray-500 underline decoration-gray-300 underline-offset-4 hover:text-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-text dark:text-gray-400 dark:decoration-gray-700 dark:hover:text-gray-100">
+        <button onClick={openCatalogTab} className="text-sm text-gray-500 underline decoration-gray-300 underline-offset-4 hover:text-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-text dark:text-gray-400 dark:decoration-gray-700 dark:hover:text-gray-100">
           {t("welcome.searchCatalog")}
         </button>
       </div>

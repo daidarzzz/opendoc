@@ -76,8 +76,9 @@ pub fn apply_to_main_window(app: &tauri::AppHandle, accent: Accent) {
 /// en pantallas Retina y no Retina.
 #[cfg(target_os = "macos")]
 fn apply_dock_icon(png_1x: &[u8], png_2x: &[u8]) {
-    use objc2::{MainThreadMarker};
-    use objc2_app_kit::{NSApplication, NSImage, NSBitmapImageRep};
+    use objc2::MainThreadMarker;
+    use objc2::AnyThread;
+    use objc2_app_kit::{NSApplication, NSBitmapImageRep, NSImage, NSGeometry::NSSize};
     use objc2_foundation::NSData;
 
     let Some(mtm) = MainThreadMarker::new() else {
@@ -85,25 +86,25 @@ fn apply_dock_icon(png_1x: &[u8], png_2x: &[u8]) {
     };
 
     // Crear NSImage vacío
-    let image = NSImage::alloc().init();
+    let image = NSImage::alloc(mtm).init();
 
     // Agregar representación 1x (512px)
     let data_1x = NSData::with_bytes(png_1x);
     if let Some(rep1x) = NSBitmapImageRep::imageRepWithData(&data_1x) {
-        rep1x.setSize(unsafe { objc2_app_kit::NSSize::new(512.0, 512.0) });
+        rep1x.setSize(unsafe { NSSize::new(512.0, 512.0) });
         image.addRepresentation(&rep1x);
     }
 
     // Agregar representación 2x (1024px)
     let data_2x = NSData::with_bytes(png_2x);
     if let Some(rep2x) = NSBitmapImageRep::imageRepWithData(&data_2x) {
-        rep2x.setSize(unsafe { objc2_app_kit::NSSize::new(512.0, 512.0) });
+        rep2x.setSize(unsafe { NSSize::new(512.0, 512.0) });
         image.addRepresentation(&rep2x);
     }
 
-    let app = NSApplication::sharedApplication(mtm);
+    let _app = NSApplication::sharedApplication(mtm);
     // SAFETY: se pasa `Some` (el aviso de `None` no aplica).
-    unsafe { app.setApplicationIconImage(Some(&image)) };
+    unsafe { _app.setApplicationIconImage(Some(&image)) };
 }
 
 #[cfg(test)]

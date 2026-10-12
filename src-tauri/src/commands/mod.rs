@@ -787,8 +787,8 @@ pub fn list_kinds(
         })
         .and_then(|loaded| service::browse_kinds(&loaded, &docset_id));
     match &res {
-        Ok(kinds) => dlog!("[opendoc] kinds {docset_id} -> {} tipos", kinds.len()),
-        Err(e) => dlog!("[opendoc] kinds {docset_id} -> ERROR {e}"),
+        Ok(_kinds) => dlog!("[opendoc] kinds {docset_id} -> {} tipos", _kinds.len()),
+        Err(_e) => dlog!("[opendoc] kinds {docset_id} -> ERROR {_e}"),
     }
     res
 }
@@ -811,11 +811,11 @@ pub fn list_entries(
         })
         .and_then(|loaded| service::browse_entries(&loaded, &docset_id, &kind, offset, limit));
     match &res {
-        Ok(entries) => dlog!(
+        Ok(_entries) => dlog!(
             "[opendoc] entries {docset_id}/{kind} -> {} entradas",
-            entries.len()
+            _entries.len()
         ),
-        Err(e) => dlog!("[opendoc] entries {docset_id}/{kind} -> ERROR {e}"),
+        Err(_e) => dlog!("[opendoc] entries {docset_id}/{kind} -> ERROR {_e}"),
     }
     res
 }
@@ -831,8 +831,8 @@ pub fn get_docset_home(state: State<'_, AppState>, docset_id: String) -> Result<
         })
         .and_then(|loaded| service::docset_home_url(&loaded.docsets, &docset_id));
     match &res {
-        Ok(url) => dlog!("[opendoc] home {docset_id} -> {url}"),
-        Err(e) => dlog!("[opendoc] home {docset_id} -> ERROR {e}"),
+        Ok(_url) => dlog!("[opendoc] home {docset_id} -> {_url}"),
+        Err(_e) => dlog!("[opendoc] home {docset_id} -> ERROR {_e}"),
     }
     res
 }

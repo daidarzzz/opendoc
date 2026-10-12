@@ -16,15 +16,21 @@ export function emptyTab(): Tab {
   return {
     id: `tab-${nextTabId++}`,
     docsetId: "",
+    type: "docset",
     history: [],
     historyIndex: -1,
     scrolls: {},
   };
 }
 
-/** Pestaña nueva con una entrada inicial. */
+/** Pestaña nueva con una entrada inicial (docset normal). */
 export function tabWithEntry(docsetId: string, entry: TabEntry): Tab {
-  return { ...emptyTab(), docsetId, history: [entry], historyIndex: 0 };
+  return { ...emptyTab(), docsetId, type: "docset", history: [entry], historyIndex: 0 };
+}
+
+/** Pestaña de catálogo (sin historial de navegación). */
+export function catalogTab(): Tab {
+  return { ...emptyTab(), docsetId: "", type: "catalog" };
 }
 
 /** Entrada actual de la pestaña, o null si es una pestaña vacía. */
