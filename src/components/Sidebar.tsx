@@ -4,17 +4,26 @@ import { AppLogo } from "./AppLogo";
 import { DocsetIcon } from "./DocsetIcon";
 import { ErrorDetails } from "./ErrorDetails";
 import { useT } from "../hooks/useT";
-import { LANGUAGE_NAMES, formatCount } from "../lib/i18n";
+import { LANGUAGE_NAMES, formatCount, type I18nKey } from "../lib/i18n";
+import { ACCENTS, ACCENT_HEX } from "../lib/accent";
+import type { Accent } from "../lib/types";
 import { getSettings, setRestoreTabs } from "../lib/commands";
 import { setSessionEnabled } from "../lib/sessionSync";
+import { useAccent } from "../store/accent";
 import { useDocsets } from "../store/docsets";
 import { useLang } from "../store/lang";
 import { useTheme } from "../store/theme";
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { Language } from "../lib/types";
 
 const THEME_VALUES = ["system", "light", "dark"] as const;
 const LANG_VALUES: Language[] = ["en", "es"];
+const ACCENT_KEY: Record<Accent, I18nKey> = {
+  red: "settings.accentRed",
+  blue: "settings.accentBlue",
+  amber: "settings.accentAmber",
+  catppuccin: "settings.accentCatppuccin",
+};
 
 export function Sidebar({ style }: { style: CSSProperties }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -33,6 +42,8 @@ export function Sidebar({ style }: { style: CSSProperties }) {
     extract,
   } = useDocsets();
   const mode = useTheme((s) => s.mode);
+  const accent = useAccent((s) => s.accent);
+  const accentButtons = useRef(new Map<Accent, HTMLButtonElement>());
   const themeLabel = (value: (typeof THEME_VALUES)[number]): string =>
     value === "light"
       ? t("settings.themeLight")
@@ -90,6 +101,35 @@ export function Sidebar({ style }: { style: CSSProperties }) {
             <div className="flex items-center justify-between"><h2 className="text-base font-semibold">{t("settings.title")}</h2><button aria-label={t("settings.close")} onClick={() => setSettingsOpen(false)}>×</button></div>
             <div><p className="mb-2 text-xs text-gray-500">{t("settings.theme")}</p><div className="flex gap-2">{THEME_VALUES.map((value) => <button key={value} aria-pressed={mode === value} onClick={() => void useTheme.getState().setMode(value)} className={`rounded border px-3 py-1 text-sm ${mode === value ? "border-accent-text bg-accent/10" : "border-gray-300 dark:border-gray-700"}`}>{themeLabel(value)}</button>)}</div></div>
             <div><p className="mb-2 text-xs text-gray-500">{t("settings.language")}</p><div className="flex gap-2">{LANG_VALUES.map((value) => <button key={value} aria-pressed={lang === value} onClick={() => void setLang(value)} className={`rounded border px-3 py-1 text-sm ${lang === value ? "border-accent-text bg-accent/10" : "border-gray-300 dark:border-gray-700"}`}>{LANGUAGE_NAMES[value]}</button>)}</div></div>
+            <div>
+              <p id="opendoc-accent-label" className="mb-2 text-xs text-gray-500">{t("settings.accent")}</p>
+              <div role="radiogroup" aria-labelledby="opendoc-accent-label" className="flex items-center gap-2.5" onKeyDown={(e) => {
+                if (e.key !== "ArrowRight" && e.key !== "ArrowLeft" && e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+                e.preventDefault();
+                const dir = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : -1;
+                const next = ACCENTS[(ACCENTS.indexOf(accent) + dir + ACCENTS.length) % ACCENTS.length] ?? "red";
+                void useAccent.getState().setAccent(next);
+                accentButtons.current.get(next)?.focus();
+              }}>
+                {ACCENTS.map((value) => (
+                  <button
+                    key={value}
+                    ref={(el) => {
+                      if (el) accentButtons.current.set(value, el);
+                      else accentButtons.current.delete(value);
+                    }}
+                    role="radio"
+                    aria-checked={accent === value}
+                    aria-label={t(ACCENT_KEY[value])}
+                    title={t(ACCENT_KEY[value])}
+                    onClick={() => void useAccent.getState().setAccent(value)}
+                    style={{ backgroundColor: ACCENT_HEX[value].light.accent }}
+                    className={`h-6 w-6 rounded-full ${accent === value ? "ring-2 ring-accent-text ring-offset-2 ring-offset-white dark:ring-offset-gray-900" : "ring-1 ring-gray-300 hover:ring-gray-400 dark:ring-gray-700"}`}
+                  />
+                ))}
+                <AppLogo size={22} className="ml-1" />
+              </div>
+            </div>
             <div><label className="flex cursor-pointer items-center gap-2 text-sm"><input type="checkbox" checked={restoreTabs} onChange={toggleRestoreTabs} className="accent-accent-solid" />{t("settings.restoreTabs")}</label></div>
             <div><p className="mb-1 text-xs text-gray-500">{t("settings.docsetsFolder")}</p><p className="break-all text-xs text-gray-600 dark:text-gray-300">{savedDir ?? t("settings.notConfigured")}</p><button onClick={() => void choose()} className="mt-2 rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800">{t("settings.chooseFolder")}</button></div>
           </section>

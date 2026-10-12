@@ -147,6 +147,8 @@ export interface Settings {
   restore_tabs: boolean;
   /** Idioma de la interfaz (por defecto "en"). */
   language: Language;
+  /** Acento de color (por defecto "red"). */
+  accent: Accent;
 }
 
 /** Una parada del historial de pestaña (URL canónica opendoc://). */

@@ -1,7 +1,7 @@
 //! Comandos Tauri finos (contrato SPEC §4.4 + ajustes T9 + navegación v0.2 + F2):
 //! `list_docsets`, `set_docsets_dir`, `search`, `list_kinds`,
 //! `list_entries`, `get_docset_home`, `get_settings`, `set_theme`,
-//! `set_language`, `set_restore_tabs`, `get_session`, `save_session`, `extract_tarix`,
+//! `set_accent`, `set_language`, `set_restore_tabs`, `get_session`, `save_session`, `extract_tarix`,
 //! `get_catalog_status`, `set_feed_repo`, `refresh_catalog`,
 //! `list_catalog`, `install_docset`, `get_install_status`,
 //! `uninstall_docset`, `confirm_exit`.
@@ -968,6 +968,37 @@ pub fn set_theme(
         .lock()
         .map(|mut guard| {
             guard.theme = theme;
+            guard.clone()
+        })
+        .map_err(|e| ApiError::LoadFailed {
+            message: e.to_string(),
+        })?;
+    {
+        use tauri::Manager;
+        if let Ok(data_dir) = app.path().app_data_dir() {
+            let path = crate::settings::settings_file(&data_dir);
+            crate::settings::save_if_changed(&path, &settings).map_err(|e| {
+                ApiError::LoadFailed {
+                    message: e.to_string(),
+                }
+            })?;
+        }
+    }
+    Ok(settings)
+}
+
+/// Cambia el acento de color y lo persiste (solo si cambió).
+#[tauri::command]
+pub fn set_accent(
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+    accent: crate::settings::Accent,
+) -> Result<crate::settings::Settings, ApiError> {
+    let settings = state
+        .settings
+        .lock()
+        .map(|mut guard| {
+            guard.accent = accent;
             guard.clone()
         })
         .map_err(|e| ApiError::LoadFailed {

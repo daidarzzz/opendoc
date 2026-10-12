@@ -18,7 +18,7 @@ use tauri::Emitter;
 use commands::{
     confirm_exit, extract_tarix, get_catalog_status, get_docset_home, get_install_status,
     get_session, get_settings, install_docset, list_catalog, list_docsets, list_entries,
-    list_kinds, refresh_catalog, save_session, search, set_docsets_dir, set_feed_repo,
+    list_kinds, refresh_catalog, save_session, search, set_accent, set_docsets_dir, set_feed_repo,
     set_language, set_restore_tabs, set_theme, uninstall_docset, AppState,
 };
 
@@ -105,6 +105,7 @@ pub fn run() {
             get_docset_home,
             get_settings,
             set_theme,
+            set_accent,
             set_language,
             set_restore_tabs,
             get_session,

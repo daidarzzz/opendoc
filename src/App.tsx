@@ -17,6 +17,7 @@ import { useCatalog } from "./store/catalog";
 import { useDocsets } from "./store/docsets";
 import { useLang } from "./store/lang";
 import { useTheme } from "./store/theme";
+import { useAccent } from "./store/accent";
 import { useT } from "./hooks/useT";
 import { t as translate } from "./lib/i18n";
 
@@ -40,6 +41,7 @@ export default function App() {
   const initDocsets = useDocsets((s) => s.init);
   const initTheme = useTheme((s) => s.init);
   const initLang = useLang((s) => s.init);
+  const initAccent = useAccent((s) => s.init);
   const langLoaded = useLang((s) => s.loaded);
   const view = useCatalog((s) => s.view);
   const [sidebarWidth, setSidebarWidth] = useState(initialSidebarWidth);
@@ -59,6 +61,7 @@ export default function App() {
   useEffect(() => {
     void initTheme();
     void initLang();
+    void initAccent();
     let alive = true;
     const stopSync = startSessionSync();
     void (async () => {
