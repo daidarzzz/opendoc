@@ -85,8 +85,9 @@ search	SearchRequest { request_id, query, docset_ids?, limit? } (query admite `a
 list_kinds	docset_id	Vec<KindInfo { kind, label, inferred, count }> (orden fijo de comunes + inferidas + resto A-Z)
 list_entries	docset_id, kind, offset?, limit? (defecto 0/100, tope 500)	Vec<NavEntry { docset_id, name, kind, path, url }> (orden plegado; tipo inexistente → vacío)
 get_docset_home	docset_id	URL opendoc://...
-get_settings	n/a	Settings { version, docsets_dir?, theme, feed_url?, catalog_fetched_at?, fast_mirror?, restore_tabs, language }
+get_settings	n/a	Settings { version, docsets_dir?, theme, accent, feed_url?, catalog_fetched_at?, fast_mirror?, restore_tabs, language }
 set_theme	theme	Settings (persiste solo si cambió)
+set_accent	accent	Settings (acento de color; persiste solo si cambió; aplica el icono en ejecución)
 set_language	language	Settings (idioma de la interfaz en/es; persiste solo si cambió)
 confirm_exit	n/a	n/a (sale con código 0 tras el volcado; flujo ExitRequested de macOS)
 set_restore_tabs	restore	Settings (restaurar pestañas al abrir; con false no se lee ni se escribe session.json)
@@ -108,6 +109,11 @@ Layout: barra lateral (docsets / navegación), área central con el visor, Comma
 Estado: ligero (Zustand o similar). Sin librerías pesadas de componentes.
 Accesibilidad básica: foco, navegación por teclado completa en la paleta.
 Idiomas: inglés por defecto + español (`src/lib/i18n.ts`, diccionarios tipados con paridad comprobada; `document.documentElement.lang` sigue al ajuste; errores del backend por `kind`, nunca texto crudo).
+4.6 Acento de color
+Ajustes ofrece 4 acentos (`red` por defecto, `blue`, `amber`, `catppuccin`): recolorean el logo (componente único `AppLogo` con `var(--accent)`), los resaltados de la UI y el icono de la app en ejecución. Cambio en caliente, sin reiniciar; `accent` persiste en `settings.json` con lectura tolerante (ausente o inválido → `red`).
+Tokens por acento y modo (`[data-accent]` en `<html>`, fuente de verdad en `src/lib/accent.ts`): `--accent` (marca: logo y decoración), `--accent-text` (texto e indicadores funcionales), `--accent-solid` + `--on-accent` (botones primarios). Contraste WCAG verificado con tests: texto y texto-sobre-sólido >= 4.5:1 en los 4 acentos y los 2 modos. La marca se mantiene en logo y decoración; donde no llega (p. ej. ámbar #FBB03B sobre blanco), el uso funcional va oscurecido. Catppuccin usa Latte Mauve #8839EF en claro y Mocha Mauve #CBA6F7 en oscuro (paleta MIT de Catppuccin; solo esos dos valores, con atribución en el código).
+El acento por defecto es rojo y los errores también: los errores usan rojos fijos propios (icono + texto, independientes del acento) y la selección nunca es relleno sólido (tinte ~10-15% + barra de 2 px), así que siempre se distinguen.
+Icono en ejecución: 4 PNG "box" de 512 px generados con `scripts/gen-accent-icons.*` (resvg, sin tocar el bundle) y embebidos con `include_bytes!`; se aplican al arrancar (tras crear la ventana) y en `set_accent`. Windows/Linux: `Window::set_icon` (requiere feature `image-png`). macOS: `Window::set_icon` no está soportado y se usa `NSApplication.setApplicationIconImage` (objc2, solo `cfg(target_os = "macos")`, en el hilo principal; código revisado a mano, sin compilar para macOS en este equipo). Límite: solo cambia el icono en ejecución (barra de tareas y Dock); ejecutable, instalador, `.app` en Finder y accesos directos siguen en rojo. Wayland y la apariencia real en macOS (incluida su máscara de iconos) están sin verificar.
 5. Plataformas
 
 Windows (WebView2), macOS (WebKit) y Linux (WebKitGTK). En Linux WebKitGTK puede dar problemas de rendimiento o compatibilidad: probar pronto con un docset grande y documentar hallazgos.
