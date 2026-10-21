@@ -42,7 +42,7 @@ pub fn icon_bytes(accent: Accent) -> &'static [u8] {
 
 /// Aplica el icono a la ventana principal (`"main"`). En macOS solo toca
 /// el Dock (la API de ventana no lo soporta allí).
-pub fn apply_to_main_window(app: &tauri::AppHandle, accent: Accent) {
+pub fn apply_to_main_window(_app: &tauri::AppHandle, accent: Accent) {
     let png_1x = icon_bytes_1x(accent);
     #[cfg(target_os = "macos")]
     {
@@ -53,7 +53,7 @@ pub fn apply_to_main_window(app: &tauri::AppHandle, accent: Accent) {
     #[cfg(not(target_os = "macos"))]
     {
         use tauri::Manager;
-        let Some(window) = app.get_webview_window("main") else {
+        let Some(window) = _app.get_webview_window("main") else {
             return;
         };
         match tauri::image::Image::from_bytes(png_1x) {
@@ -77,35 +77,34 @@ pub fn apply_to_main_window(app: &tauri::AppHandle, accent: Accent) {
 #[cfg(target_os = "macos")]
 fn apply_dock_icon(png_1x: &[u8], png_2x: &[u8]) {
     use objc2::msg_send;
-    use objc2::AnyThread;
     use objc2::MainThreadMarker;
-    use objc2_app_kit::{NSApplication, NSBitmapImageRep, NSImage, NSSize};
-    use objc2_foundation::NSData;
+    use objc2_app_kit::{NSApplication, NSBitmapImageRep, NSImage};
+    use objc2_foundation::{NSData, NSSize};
 
-    let Some(_mtm) = MainThreadMarker::new() else {
+    let Some(mtm) = MainThreadMarker::new() else {
         return;
     };
 
-    // Crear NSImage vacío (obj2 0.6: alloc() sin args, init via msg_send)
+    // Crear NSImage vacío (objc2: alloc() sin args, init via msg_send)
     let image = unsafe { msg_send![NSImage::alloc(), init] };
 
     // Agregar representación 1x (512px)
     let data_1x = NSData::with_bytes(png_1x);
     if let Some(rep1x) = NSBitmapImageRep::imageRepWithData(&data_1x) {
-        rep1x.setSize(unsafe { NSSize::new(512.0, 512.0) });
+        rep1x.setSize(NSSize::new(512.0, 512.0));
         image.addRepresentation(&rep1x);
     }
 
     // Agregar representación 2x (1024px)
     let data_2x = NSData::with_bytes(png_2x);
     if let Some(rep2x) = NSBitmapImageRep::imageRepWithData(&data_2x) {
-        rep2x.setSize(unsafe { NSSize::new(512.0, 512.0) });
+        rep2x.setSize(NSSize::new(512.0, 512.0));
         image.addRepresentation(&rep2x);
     }
 
-    let _app = NSApplication::sharedApplication();
+    let app = NSApplication::sharedApplication(mtm);
     // SAFETY: se pasa `Some` (el aviso de `None` no aplica).
-    unsafe { _app.setApplicationIconImage(Some(&image)) };
+    unsafe { app.setApplicationIconImage(Some(&image)) };
 }
 
 #[cfg(test)]
