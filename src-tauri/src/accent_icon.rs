@@ -77,6 +77,7 @@ pub fn apply_to_main_window(_app: &tauri::AppHandle, accent: Accent) {
 #[cfg(target_os = "macos")]
 fn apply_dock_icon(png_1x: &[u8], png_2x: &[u8]) {
     use objc2::msg_send;
+    use objc2::AnyThread;
     use objc2::MainThreadMarker;
     use objc2_app_kit::{NSApplication, NSBitmapImageRep, NSImage};
     use objc2_foundation::{NSData, NSSize};
