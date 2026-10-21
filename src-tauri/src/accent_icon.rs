@@ -77,6 +77,7 @@ pub fn apply_to_main_window(_app: &tauri::AppHandle, accent: Accent) {
 #[cfg(target_os = "macos")]
 fn apply_dock_icon(png_1x: &[u8], png_2x: &[u8]) {
     use objc2::msg_send;
+    use objc2::rc::Retained;
     use objc2::AnyThread;
     use objc2::MainThreadMarker;
     use objc2_app_kit::{NSApplication, NSBitmapImageRep, NSImage};
@@ -87,7 +88,7 @@ fn apply_dock_icon(png_1x: &[u8], png_2x: &[u8]) {
     };
 
     // Crear NSImage vacío (objc2: alloc() sin args, init via msg_send)
-    let image = unsafe { msg_send![NSImage::alloc(), init] };
+    let image: Retained<NSImage> = unsafe { msg_send![NSImage::alloc(), init] };
 
     // Agregar representación 1x (512px)
     let data_1x = NSData::with_bytes(png_1x);
@@ -105,7 +106,7 @@ fn apply_dock_icon(png_1x: &[u8], png_2x: &[u8]) {
 
     let app = NSApplication::sharedApplication(mtm);
     // SAFETY: se pasa `Some` (el aviso de `None` no aplica).
-    unsafe { app.setApplicationIconImage(Some(&image)) };
+    unsafe { app.setApplicationIconImage(Some(&*image)) };
 }
 
 #[cfg(test)]
