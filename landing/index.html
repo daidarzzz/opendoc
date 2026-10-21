@@ -1,0 +1,1998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenDoc — Your docs, always within reach</title>
+  <meta name="description" content="A fast, modern offline documentation viewer. Blazing fast fuzzy search, beautiful UI, fully offline. Free and open source.">
+  <meta name="theme-color" content="#0a0a0b">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --accent: #de3830;
+      --accent-light: #ff4f46;
+      --accent-glow: rgba(222, 56, 48, 0.35);
+      --accent-subtle: rgba(222, 56, 48, 0.08);
+      --bg-primary: #0a0a0b;
+      --bg-secondary: #111113;
+      --bg-card: rgba(255, 255, 255, 0.03);
+      --bg-card-hover: rgba(255, 255, 255, 0.06);
+      --border: rgba(255, 255, 255, 0.06);
+      --border-hover: rgba(255, 255, 255, 0.12);
+      --text-primary: #f0f0f2;
+      --text-secondary: #8b8b96;
+      --text-muted: #55555e;
+      --glass-bg: rgba(17, 17, 19, 0.7);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ===== SCROLLBAR ===== */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+
+    /* ===== UTILITIES ===== */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    /* ===== ANIMATIONS ===== */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes subtleFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { filter: drop-shadow(0 0 20px var(--accent-glow)); }
+      50% { filter: drop-shadow(0 0 40px var(--accent-glow)) drop-shadow(0 0 60px rgba(222,56,48,0.15)); }
+    }
+
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    @keyframes particleDrift {
+      0% { transform: translateY(0) translateX(0); opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { transform: translateY(-100vh) translateX(50px); opacity: 0; }
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    @keyframes typeIn {
+      from { width: 0; }
+      to { width: 100%; }
+    }
+
+    @keyframes slideInLeft {
+      from { opacity: 0; transform: translateX(-20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+    .reveal-delay-4 { transition-delay: 0.4s; }
+    .reveal-delay-5 { transition-delay: 0.5s; }
+
+    /* ===== NAV ===== */
+    .nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 16px 0;
+      transition: background 0.3s, backdrop-filter 0.3s, border-color 0.3s;
+      border-bottom: 1px solid transparent;
+    }
+
+    .nav.scrolled {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px) saturate(1.5);
+      -webkit-backdrop-filter: blur(20px) saturate(1.5);
+      border-bottom-color: var(--glass-border);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-brand svg {
+      width: 28px;
+      height: 28px;
+      color: var(--accent);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .nav-links a {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--text-primary); }
+
+    .nav-github {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: all 0.2s;
+    }
+
+    .nav-github:hover {
+      border-color: var(--border-hover);
+      color: var(--text-primary);
+      background: var(--bg-card);
+    }
+
+    .nav-github svg { width: 16px; height: 16px; }
+
+    .nav-mobile-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text-primary);
+      cursor: pointer;
+      padding: 8px;
+    }
+
+    /* ===== HERO ===== */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 120px 24px 80px;
+      overflow: hidden;
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+
+    /* Radial gradient glow */
+    .hero-bg::before {
+      content: '';
+      position: absolute;
+      top: -20%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 900px;
+      height: 900px;
+      background: radial-gradient(circle, rgba(222,56,48,0.12) 0%, rgba(222,56,48,0.03) 40%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* Grid pattern */
+    .hero-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 60px 60px;
+      mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 20%, transparent 70%);
+      -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 20%, transparent 70%);
+    }
+
+    /* Particles */
+    .particles {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .particle {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: var(--accent);
+      border-radius: 50%;
+      opacity: 0;
+      animation: particleDrift linear infinite;
+    }
+
+    .hero-content {
+      position: relative;
+      text-align: center;
+      max-width: 800px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+      animation: fadeIn 0.8s ease-out;
+    }
+
+    .hero-badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+    }
+
+    .hero-logo {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 32px;
+      animation: fadeIn 0.6s ease-out;
+    }
+
+    .hero-logo svg {
+      width: 80px;
+      height: 80px;
+      color: var(--accent);
+      animation: pulseGlow 3s ease-in-out infinite;
+    }
+
+    .hero-title {
+      font-size: clamp(48px, 8vw, 80px);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+      margin-bottom: 20px;
+      animation: fadeInUp 0.8s ease-out;
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-tagline {
+      font-size: clamp(17px, 2.5vw, 20px);
+      font-weight: 400;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      max-width: 600px;
+      margin: 0 auto 40px;
+      animation: fadeInUp 0.8s ease-out 0.15s both;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      animation: fadeInUp 0.8s ease-out 0.3s both;
+    }
+
+    /* ===== BUTTONS ===== */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      white-space: nowrap;
+    }
+
+    .btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 20px var(--accent-glow), 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-light);
+      box-shadow: 0 0 30px var(--accent-glow), 0 8px 24px rgba(0,0,0,0.3);
+      transform: translateY(-2px);
+    }
+
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-hover);
+      transform: translateY(-2px);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+      padding: 12px 16px;
+    }
+
+    .btn-ghost:hover { color: var(--text-primary); }
+
+    .btn-os-highlight {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-os-highlight::after {
+      content: 'Recommended';
+      position: absolute;
+      top: -1px;
+      right: -1px;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 2px 8px;
+      border-radius: 0 var(--radius-sm) 0 var(--radius-sm);
+      background: var(--accent);
+      color: #fff;
+    }
+
+    /* ===== SECTION STYLES ===== */
+    section {
+      padding: 120px 0;
+      position: relative;
+    }
+
+    .section-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+
+    .section-label::before {
+      content: '';
+      width: 20px;
+      height: 1px;
+      background: var(--accent);
+    }
+
+    .section-title {
+      font-size: clamp(32px, 5vw, 48px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+
+    .section-desc {
+      font-size: 17px;
+      color: var(--text-secondary);
+      max-width: 560px;
+      line-height: 1.7;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 64px;
+    }
+
+    .section-header .section-desc {
+      margin: 0 auto;
+    }
+
+    /* Dividers */
+    .section-divider {
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+    }
+
+    /* ===== FEATURES ===== */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .feature-card {
+      position: relative;
+      padding: 32px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow: hidden;
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: var(--radius-lg);
+      background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(222,56,48,0.06) 0%, transparent 60%);
+      opacity: 0;
+      transition: opacity 0.4s;
+      pointer-events: none;
+    }
+
+    .feature-card:hover {
+      border-color: var(--border-hover);
+      background: var(--bg-card-hover);
+      transform: translateY(-4px);
+    }
+
+    .feature-card:hover::before { opacity: 1; }
+
+    .feature-icon {
+      font-size: 28px;
+      margin-bottom: 16px;
+      display: block;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-md);
+      background: var(--accent-subtle);
+    }
+
+    .feature-title {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 8px;
+    }
+
+    .feature-desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.65;
+    }
+
+    /* ===== SHOWCASE ===== */
+    .showcase {
+      padding: 80px 0 120px;
+    }
+
+    .showcase-window {
+      position: relative;
+      max-width: 960px;
+      margin: 0 auto;
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.03),
+        0 20px 60px rgba(0,0,0,0.5),
+        0 0 120px rgba(222,56,48,0.05);
+    }
+
+    /* Titlebar */
+    .window-titlebar {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      background: rgba(0,0,0,0.3);
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+    }
+
+    .window-dots {
+      display: flex;
+      gap: 7px;
+    }
+
+    .window-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .window-dot:nth-child(1) { background: #ff5f57; }
+    .window-dot:nth-child(2) { background: #febc2e; }
+    .window-dot:nth-child(3) { background: #28c840; }
+
+    .window-title {
+      flex: 1;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-right: 56px; /* compensate for dots */
+    }
+
+    .window-tabs {
+      display: flex;
+      gap: 2px;
+      flex: 1;
+    }
+
+    .window-tab {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 14px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: transparent;
+      cursor: default;
+      white-space: nowrap;
+    }
+
+    .window-tab.active {
+      color: var(--text-secondary);
+      background: rgba(255,255,255,0.05);
+    }
+
+    .window-tab-icon {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    /* Window body */
+    .window-body {
+      display: flex;
+      height: 420px;
+    }
+
+    /* Sidebar */
+    .window-sidebar {
+      width: 240px;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      background: rgba(0,0,0,0.15);
+      flex-shrink: 0;
+    }
+
+    .sidebar-search {
+      padding: 12px;
+    }
+
+    .sidebar-search-input {
+      width: 100%;
+      padding: 7px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.3);
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sidebar-search-input .kbd {
+      margin-left: auto;
+      font-size: 10px;
+      padding: 1px 5px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04);
+      color: var(--text-muted);
+      font-family: inherit;
+    }
+
+    .sidebar-section-title {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      padding: 8px 16px 6px;
+    }
+
+    .sidebar-items {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      cursor: default;
+      transition: background 0.15s;
+    }
+
+    .sidebar-item.active {
+      background: rgba(222,56,48,0.1);
+      color: var(--text-primary);
+    }
+
+    .sidebar-item-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .sidebar-item-count {
+      margin-left: auto;
+      font-size: 10px;
+      color: var(--text-muted);
+      background: rgba(255,255,255,0.04);
+      padding: 1px 6px;
+      border-radius: 10px;
+    }
+
+    /* Main content area */
+    .window-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .window-breadcrumb {
+      padding: 8px 20px;
+      font-size: 11px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .breadcrumb-sep { opacity: 0.4; }
+
+    .window-content {
+      flex: 1;
+      padding: 24px 28px;
+      overflow: hidden;
+    }
+
+    .mock-h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+      letter-spacing: -0.02em;
+    }
+
+    .mock-h2 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-top: 20px;
+      margin-bottom: 8px;
+    }
+
+    .mock-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--accent);
+      background: var(--accent-subtle);
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+
+    .mock-text {
+      height: 8px;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.05);
+      margin-bottom: 8px;
+    }
+
+    .mock-text:nth-child(odd) { width: 100%; }
+    .mock-text:nth-child(even) { width: 75%; }
+
+    .mock-code-block {
+      margin-top: 12px;
+      padding: 14px 16px;
+      border-radius: 8px;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--border);
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .mock-code-block .kw { color: #c678dd; }
+    .mock-code-block .fn { color: #61afef; }
+    .mock-code-block .st { color: #98c379; }
+    .mock-code-block .cm { color: #5c6370; font-style: italic; }
+    .mock-code-block .ty { color: #e5c07b; }
+    .mock-code-block .op { color: var(--text-secondary); }
+    .mock-code-block .num { color: #d19a66; }
+
+    /* Command palette overlay */
+    .palette-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 60px;
+    }
+
+    .palette-box {
+      width: 380px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-hover);
+      background: #1a1a1e;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+      overflow: hidden;
+    }
+
+    .palette-input-row {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .palette-search-icon {
+      width: 16px;
+      height: 16px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .palette-input-text {
+      font-size: 13px;
+      color: var(--text-primary);
+      flex: 1;
+    }
+
+    .palette-cursor {
+      display: inline-block;
+      width: 1px;
+      height: 16px;
+      background: var(--accent);
+      animation: blink 1s step-end infinite;
+      vertical-align: middle;
+    }
+
+    .palette-results {
+      padding: 6px;
+    }
+
+    .palette-result {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: default;
+    }
+
+    .palette-result.active {
+      background: rgba(222,56,48,0.12);
+    }
+
+    .palette-result-type {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      padding: 2px 6px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      min-width: 32px;
+      text-align: center;
+    }
+
+    .type-func { background: rgba(97,175,239,0.15); color: #61afef; }
+    .type-class { background: rgba(229,192,123,0.15); color: #e5c07b; }
+    .type-mod { background: rgba(152,195,121,0.15); color: #98c379; }
+    .type-prop { background: rgba(198,120,221,0.15); color: #c678dd; }
+
+    .palette-result-name {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .palette-result-name mark {
+      color: var(--accent);
+      background: none;
+      font-weight: 700;
+    }
+
+    .palette-result-source {
+      margin-left: auto;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .palette-footer {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px;
+      border-top: 1px solid var(--border);
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .palette-footer kbd {
+      font-family: inherit;
+      font-size: 9px;
+      padding: 1px 5px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04);
+    }
+
+    /* ===== HOW IT WORKS ===== */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      position: relative;
+    }
+
+    .steps::before {
+      content: '';
+      position: absolute;
+      top: 40px;
+      left: calc(16.66% + 20px);
+      right: calc(16.66% + 20px);
+      height: 1px;
+      background: linear-gradient(90deg, var(--border), var(--accent), var(--border));
+      opacity: 0.4;
+    }
+
+    .step {
+      text-align: center;
+      position: relative;
+    }
+
+    .step-number {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--accent);
+      background: var(--accent-subtle);
+      border: 1px solid rgba(222,56,48,0.15);
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.01em;
+    }
+
+    .step-desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.65;
+      max-width: 280px;
+      margin: 0 auto;
+    }
+
+    /* ===== OPEN SOURCE ===== */
+    .oss-section {
+      text-align: center;
+    }
+
+    .oss-card {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 48px;
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .oss-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+
+    .oss-icon {
+      font-size: 40px;
+      margin-bottom: 20px;
+    }
+
+    .oss-badges {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 28px;
+    }
+
+    .oss-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: all 0.2s;
+    }
+
+    .oss-badge:hover {
+      border-color: var(--border-hover);
+      color: var(--text-primary);
+    }
+
+    .oss-badge svg { width: 14px; height: 14px; }
+
+    /* ===== DOWNLOAD CTA ===== */
+    .cta-section {
+      text-align: center;
+      position: relative;
+    }
+
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      bottom: 30%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(222,56,48,0.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .cta-title {
+      font-size: clamp(32px, 5vw, 48px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+
+    .cta-desc {
+      font-size: 17px;
+      color: var(--text-secondary);
+      max-width: 500px;
+      margin: 0 auto 36px;
+      line-height: 1.7;
+    }
+
+    .cta-version {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+    }
+
+    .download-platforms {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      max-width: 900px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .download-platform {
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .download-platform:hover {
+      border-color: var(--border-hover);
+      background: var(--bg-card-hover);
+    }
+
+    .download-platform.recommended {
+      border-color: rgba(222,56,48,0.25);
+      box-shadow: 0 0 40px rgba(222,56,48,0.06);
+    }
+
+    .download-platform.recommended .platform-header::after {
+      content: 'Your OS';
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 2px 8px;
+      border-radius: 100px;
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .platform-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 20px 20px 12px;
+    }
+
+    .platform-header svg { width: 24px; height: 24px; opacity: 0.7; flex-shrink: 0; }
+    .platform-header h3 { font-size: 16px; font-weight: 700; flex: 1; text-align: left; }
+
+    .platform-assets {
+      padding: 0 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .asset-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      background: rgba(255,255,255,0.02);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+
+    .asset-btn:hover {
+      background: rgba(255,255,255,0.06);
+      border-color: var(--border);
+    }
+
+    .asset-btn svg {
+      width: 16px;
+      height: 16px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .asset-name { flex: 1; text-align: left; }
+
+    .asset-ext {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--accent);
+      background: var(--accent-subtle);
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .asset-size {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 400;
+      min-width: 48px;
+      text-align: right;
+    }
+
+    .asset-btn.loading .asset-size {
+      background: rgba(255,255,255,0.05);
+      color: transparent;
+      border-radius: 3px;
+      animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { opacity: 0.5; }
+      50% { opacity: 1; }
+      100% { opacity: 0.5; }
+    }
+
+    .platform-note {
+      font-size: 11px;
+      color: var(--text-muted);
+      padding: 0 20px 14px;
+      text-align: left;
+      line-height: 1.5;
+    }
+
+    .download-fallback {
+      margin-top: 24px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .download-fallback a {
+      color: var(--text-secondary);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      transition: color 0.2s;
+    }
+
+    .download-fallback a:hover { color: var(--text-primary); }
+
+    /* ===== FOOTER ===== */
+    .footer {
+      padding: 40px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .footer-brand svg { width: 20px; height: 20px; color: var(--accent); }
+
+    .footer-links {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .footer-links a {
+      font-size: 13px;
+      color: var(--text-muted);
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: var(--text-secondary); }
+
+    .footer-copy {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 900px) {
+      .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .steps {
+        grid-template-columns: 1fr;
+        gap: 40px;
+      }
+      .steps::before { display: none; }
+      .window-body { height: 360px; }
+      .window-sidebar { width: 200px; }
+      .download-platforms {
+        grid-template-columns: 1fr 1fr;
+      }
+      .download-platforms > :last-child {
+        grid-column: 1 / -1;
+        max-width: 50%;
+        justify-self: center;
+      }
+    }
+
+    @media (max-width: 640px) {
+      section { padding: 80px 0; }
+      .nav-links { display: none; }
+      .nav-mobile-toggle { display: block; }
+      .features-grid { grid-template-columns: 1fr; }
+      .hero { padding: 100px 20px 60px; }
+      .hero-logo svg { width: 64px; height: 64px; }
+      .window-sidebar { display: none; }
+      .window-body { height: 300px; }
+      .showcase-window { margin: 0 -12px; border-radius: var(--radius-md); }
+      .oss-card { padding: 32px 24px; }
+      .footer-inner {
+        flex-direction: column;
+        text-align: center;
+      }
+      .palette-box { width: calc(100% - 32px); }
+      .download-platforms {
+        grid-template-columns: 1fr;
+      }
+      .download-platforms > :last-child {
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== NAV ===== -->
+  <nav class="nav" id="nav">
+    <div class="container nav-inner">
+      <a href="#" class="nav-brand">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="116.771 206.771 378.458 378.458">
+          <g>
+            <path d="M305.873 206.899 L306.127 206.899 C410.565 206.899 495.229 291.562 495.229 396 L495.229 396 C495.229 500.438 410.565 585.101 306.127 585.101 L305.873 585.101 C201.435 585.101 116.771 500.438 116.771 396 L116.771 396 C116.771 291.562 201.435 206.899 305.873 206.899 Z" fill="currentColor"/>
+            <path d="M255.244 269.837 C247.691 270.743 179.216 316.964 177.303 338.11 C175.39 359.257 244.676 374.961 243.764 396.717 C242.852 418.473 171.832 451.329 171.832 468.649 C171.832 485.969 234.662 501.852 243.764 500.638 C252.866 499.424 216.069 480.196 226.441 461.365 C236.813 442.535 306.633 409.103 305.996 387.654 C305.358 366.205 231.076 352.309 222.617 332.673 C214.159 313.037 262.796 268.931 255.244 269.837 Z" fill="#ffffff"/>
+            <path d="M309.065 465.568 C292.55 470.42 292.55 489.233 309.065 494.681 C325.579 500.129 391.638 503.109 408.152 498.257 C424.667 493.404 424.667 471.016 408.152 465.568 C391.638 460.12 325.579 460.715 309.065 465.568 Z" fill="#ffffff"/>
+          </g>
+        </svg>
+        OpenDoc
+      </a>
+
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#showcase">Preview</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="#download">Download</a>
+        <a href="https://github.com/daidarzzz/opendoc" target="_blank" rel="noopener" class="nav-github">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          GitHub
+        </a>
+      </div>
+
+      <button class="nav-mobile-toggle" onclick="toggleMobileNav()" aria-label="Toggle menu">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ===== HERO ===== -->
+  <section class="hero" id="hero">
+    <div class="hero-bg">
+      <div class="hero-grid"></div>
+      <div class="particles" id="particles"></div>
+    </div>
+
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="hero-badge-dot"></span>
+        v0.2.67 — Now available
+      </div>
+
+      <div class="hero-logo">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="116.771 206.771 378.458 378.458">
+          <g>
+            <path d="M305.873 206.899 L306.127 206.899 C410.565 206.899 495.229 291.562 495.229 396 L495.229 396 C495.229 500.438 410.565 585.101 306.127 585.101 L305.873 585.101 C201.435 585.101 116.771 500.438 116.771 396 L116.771 396 C116.771 291.562 201.435 206.899 305.873 206.899 Z" fill="currentColor"/>
+            <path d="M255.244 269.837 C247.691 270.743 179.216 316.964 177.303 338.11 C175.39 359.257 244.676 374.961 243.764 396.717 C242.852 418.473 171.832 451.329 171.832 468.649 C171.832 485.969 234.662 501.852 243.764 500.638 C252.866 499.424 216.069 480.196 226.441 461.365 C236.813 442.535 306.633 409.103 305.996 387.654 C305.358 366.205 231.076 352.309 222.617 332.673 C214.159 313.037 262.796 268.931 255.244 269.837 Z" fill="#ffffff"/>
+            <path d="M309.065 465.568 C292.55 470.42 292.55 489.233 309.065 494.681 C325.579 500.129 391.638 503.109 408.152 498.257 C424.667 493.404 424.667 471.016 408.152 465.568 C391.638 460.12 325.579 460.715 309.065 465.568 Z" fill="#ffffff"/>
+          </g>
+        </svg>
+      </div>
+
+      <h1 class="hero-title">OpenDoc</h1>
+      <p class="hero-tagline">Your docs, always within reach.<br>Blazing fast. Beautifully crafted. Completely offline.</p>
+
+      <div class="hero-actions">
+        <a href="https://github.com/daidarzzz/opendoc/releases/latest" class="btn btn-primary" id="hero-download-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span id="hero-download-text">Download</span>
+        </a>
+        <a href="https://github.com/daidarzzz/opendoc" target="_blank" rel="noopener" class="btn btn-secondary">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          View on GitHub
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- ===== FEATURES ===== -->
+  <section id="features">
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-label">Features</div>
+        <h2 class="section-title">Everything you need,<br>nothing you don't</h2>
+        <p class="section-desc">Built with Tauri and Rust for native performance. Designed to get out of your way and let you focus on what matters.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card reveal reveal-delay-1">
+          <span class="feature-icon">⚡</span>
+          <h3 class="feature-title">Lightning Fast</h3>
+          <p class="feature-desc">In-memory fuzzy search returns results in ~37ms across 300,000 entries. Exact match, prefix, and fuzzy ranking — instantly.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-2">
+          <span class="feature-icon">🎨</span>
+          <h3 class="feature-title">Beautiful UI</h3>
+          <p class="feature-desc">Clean, modern interface with dark and light themes, 4 accent colors, and a command palette inspired by VS Code and Obsidian.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-3">
+          <span class="feature-icon">📚</span>
+          <h3 class="feature-title">Docset Compatible</h3>
+          <p class="feature-desc">Works with existing Dash and Zeal docsets. Standard and Core Data indexes, tarix format fully supported.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-1">
+          <span class="feature-icon">🔒</span>
+          <h3 class="feature-title">Fully Offline</h3>
+          <p class="feature-desc">All your documentation lives on your machine. No internet required, no tracking, no telemetry, no ads. Ever.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-2">
+          <span class="feature-icon">🪶</span>
+          <h3 class="feature-title">Lightweight</h3>
+          <p class="feature-desc">~10–15 MB installer, under 80 MB RAM. Built with Tauri + Rust for native performance without the bloat.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-3">
+          <span class="feature-icon">🖥️</span>
+          <h3 class="feature-title">Cross-Platform</h3>
+          <p class="feature-desc">Available for Windows, macOS (Apple Silicon & Intel) and Linux. Same experience everywhere.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- ===== SHOWCASE ===== -->
+  <section class="showcase" id="showcase">
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-label">Preview</div>
+        <h2 class="section-title">See it in action</h2>
+        <p class="section-desc">A polished interface that feels right at home on your desktop. Fast, focused, and distraction-free.</p>
+      </div>
+
+      <div class="showcase-window reveal">
+        <!-- Titlebar -->
+        <div class="window-titlebar">
+          <div class="window-dots">
+            <div class="window-dot"></div>
+            <div class="window-dot"></div>
+            <div class="window-dot"></div>
+          </div>
+          <div class="window-tabs">
+            <div class="window-tab active">
+              <div class="window-tab-icon" style="background: #3776ab;"></div>
+              Python 3.12
+            </div>
+            <div class="window-tab">
+              <div class="window-tab-icon" style="background: #e44d26;"></div>
+              CSS
+            </div>
+            <div class="window-tab">
+              <div class="window-tab-icon" style="background: #f7df1e;"></div>
+              JavaScript
+            </div>
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div class="window-body">
+          <!-- Sidebar -->
+          <div class="window-sidebar">
+            <div class="sidebar-search">
+              <div class="sidebar-search-input">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Search docs…
+                <span class="kbd">⌘K</span>
+              </div>
+            </div>
+            <div class="sidebar-section-title">Browse by Type</div>
+            <div class="sidebar-items">
+              <div class="sidebar-item active">
+                <div class="sidebar-item-icon" style="background: rgba(97,175,239,0.15); color: #61afef;">f</div>
+                Functions
+                <span class="sidebar-item-count">4,218</span>
+              </div>
+              <div class="sidebar-item">
+                <div class="sidebar-item-icon" style="background: rgba(229,192,123,0.15); color: #e5c07b;">C</div>
+                Classes
+                <span class="sidebar-item-count">1,847</span>
+              </div>
+              <div class="sidebar-item">
+                <div class="sidebar-item-icon" style="background: rgba(152,195,121,0.15); color: #98c379;">M</div>
+                Modules
+                <span class="sidebar-item-count">892</span>
+              </div>
+              <div class="sidebar-item">
+                <div class="sidebar-item-icon" style="background: rgba(198,120,221,0.15); color: #c678dd;">A</div>
+                Attributes
+                <span class="sidebar-item-count">3,105</span>
+              </div>
+              <div class="sidebar-item">
+                <div class="sidebar-item-icon" style="background: rgba(209,154,102,0.15); color: #d19a66;">E</div>
+                Exceptions
+                <span class="sidebar-item-count">196</span>
+              </div>
+              <div class="sidebar-item">
+                <div class="sidebar-item-icon" style="background: rgba(86,182,194,0.15); color: #56b6c2;">T</div>
+                Types
+                <span class="sidebar-item-count">341</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main -->
+          <div class="window-main">
+            <div class="window-breadcrumb">
+              <span style="color: var(--accent);">Python 3.12</span>
+              <span class="breadcrumb-sep">›</span>
+              <span>Functions</span>
+              <span class="breadcrumb-sep">›</span>
+              <span style="color: var(--text-secondary);">json.dumps</span>
+            </div>
+            <div class="window-content">
+              <div class="mock-h1">json.dumps</div>
+              <span class="mock-badge">Function</span>
+              <div class="mock-code-block">
+                <span class="kw">def</span> <span class="fn">dumps</span>(<span class="op">obj</span>, <span class="op">*</span>, <span class="op">skipkeys</span>=<span class="num">False</span>,<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="op">ensure_ascii</span>=<span class="num">True</span>,<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="op">indent</span>=<span class="num">None</span>,<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="op">sort_keys</span>=<span class="num">False</span>) -&gt; <span class="ty">str</span>
+              </div>
+              <div class="mock-h2">Description</div>
+              <div class="mock-text" style="width: 100%"></div>
+              <div class="mock-text" style="width: 92%"></div>
+              <div class="mock-text" style="width: 78%"></div>
+              <div class="mock-text" style="width: 85%"></div>
+            </div>
+
+            <!-- Command palette overlay -->
+            <div class="palette-overlay">
+              <div class="palette-box">
+                <div class="palette-input-row">
+                  <svg class="palette-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <span class="palette-input-text">json.du<span class="palette-cursor"></span></span>
+                </div>
+                <div class="palette-results">
+                  <div class="palette-result active">
+                    <span class="palette-result-type type-func">func</span>
+                    <span class="palette-result-name">json.<mark>du</mark>mps</span>
+                    <span class="palette-result-source">Python</span>
+                  </div>
+                  <div class="palette-result">
+                    <span class="palette-result-type type-func">func</span>
+                    <span class="palette-result-name">json.<mark>du</mark>mp</span>
+                    <span class="palette-result-source">Python</span>
+                  </div>
+                  <div class="palette-result">
+                    <span class="palette-result-type type-class">class</span>
+                    <span class="palette-result-name">JSON<mark>Du</mark>pDecodeStrategy</span>
+                    <span class="palette-result-source">Python</span>
+                  </div>
+                  <div class="palette-result">
+                    <span class="palette-result-type type-mod">mod</span>
+                    <span class="palette-result-name">jsonschema.Draft<mark>Du</mark>plicateError</span>
+                    <span class="palette-result-source">Python</span>
+                  </div>
+                </div>
+                <div class="palette-footer">
+                  <span><kbd>↑</kbd> <kbd>↓</kbd> navigate</span>
+                  <span><kbd>↵</kbd> open</span>
+                  <span><kbd>esc</kbd> close</span>
+                  <span style="margin-left: auto; color: rgba(255,255,255,0.2);">37ms</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- ===== HOW IT WORKS ===== -->
+  <section id="how-it-works">
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-label">Getting Started</div>
+        <h2 class="section-title">Up and running in seconds</h2>
+        <p class="section-desc">No accounts, no configuration files, no fuss. Just download and start searching.</p>
+      </div>
+
+      <div class="steps">
+        <div class="step reveal reveal-delay-1">
+          <div class="step-number">1</div>
+          <h3 class="step-title">Download & Install</h3>
+          <p class="step-desc">Get the installer for your platform. It's under 15 MB — seriously.</p>
+        </div>
+        <div class="step reveal reveal-delay-2">
+          <div class="step-number">2</div>
+          <h3 class="step-title">Add Your Docsets</h3>
+          <p class="step-desc">Point to your existing docsets folder or install from the built-in catalog.</p>
+        </div>
+        <div class="step reveal reveal-delay-3">
+          <div class="step-number">3</div>
+          <h3 class="step-title">Search & Browse</h3>
+          <p class="step-desc">Hit <kbd style="padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-card); font-size: 12px; font-family: inherit;">Ctrl+K</kbd> and find anything in milliseconds.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- ===== OPEN SOURCE ===== -->
+  <section class="oss-section" id="open-source">
+    <div class="container">
+      <div class="oss-card reveal">
+        <div class="oss-icon">💛</div>
+        <h2 class="section-title" style="text-align:center;">Free &amp; Open Source</h2>
+        <p class="section-desc" style="margin: 16px auto 0; text-align: center;">OpenDoc is licensed under GPL-3.0. Free forever, community-driven, no strings attached. Contributions are welcome — every issue, PR, and idea makes it better.</p>
+
+        <div class="oss-badges">
+          <a href="https://github.com/daidarzzz/opendoc" target="_blank" rel="noopener" class="oss-badge">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+            Star on GitHub
+          </a>
+          <span class="oss-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            GPL-3.0-or-later
+          </span>
+          <span class="oss-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            <span id="oss-version">v0.2.67</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- ===== DOWNLOAD CTA ===== -->
+  <section class="cta-section" id="download">
+    <div class="container">
+      <div class="reveal">
+        <div class="section-label" style="justify-content: center;">Download</div>
+        <h2 class="cta-title">Ready to dive in?</h2>
+        <p class="cta-desc">Download OpenDoc for your platform and start browsing your documentation offline in seconds.</p>
+        <div class="cta-version" id="release-version">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          <span id="release-tag">Fetching latest release…</span>
+        </div>
+      </div>
+
+      <div class="download-platforms reveal reveal-delay-2">
+        <!-- Windows -->
+        <div class="download-platform" data-platform="windows">
+          <div class="platform-header">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
+            <h3>Windows</h3>
+          </div>
+          <div class="platform-assets" id="assets-windows">
+            <a href="https://github.com/daidarzzz/opendoc/releases/latest" class="asset-btn loading" data-kind="exe">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span class="asset-name">Setup installer</span>
+              <span class="asset-ext">.exe</span>
+              <span class="asset-size">—</span>
+            </a>
+            <a href="https://github.com/daidarzzz/opendoc/releases/latest" class="asset-btn loading" data-kind="msi">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span class="asset-name">MSI package</span>
+              <span class="asset-ext">.msi</span>
+              <span class="asset-size">—</span>
+            </a>
+          </div>
+          <div class="platform-note">64-bit · Windows 10 & 11</div>
+        </div>
+
+        <!-- macOS -->
+        <div class="download-platform" data-platform="macos">
+          <div class="platform-header">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+            <h3>macOS</h3>
+          </div>
+          <div class="platform-assets" id="assets-macos">
+            <a href="https://github.com/daidarzzz/opendoc/releases/latest" class="asset-btn loading" data-kind="dmg-arm">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span class="asset-name">Apple Silicon (M1/M2/M3)</span>
+              <span class="asset-ext">.dmg</span>
+              <span class="asset-size">—</span>
+            </a>
+            <a href="https://github.com/daidarzzz/opendoc/releases/latest" class="asset-btn loading" data-kind="dmg-intel">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span class="asset-name">Intel (x86_64)</span>
+              <span class="asset-ext">.dmg</span>
+              <span class="asset-size">—</span>
+            </a>
+          </div>
+          <div class="platform-note">macOS 10.15+</div>
+        </div>
+
+        <!-- Linux -->
+        <div class="download-platform" data-platform="linux">
+          <div class="platform-header">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.832-.41 1.684-.287 2.489a.424.424 0 00-.11.135c-.26.268-.45.6-.663.839-.199.199-.485.267-.797.4-.313.136-.658.269-.864.68-.09.189-.136.394-.132.602 0 .199.027.4.055.536.058.399.116.728.04.97-.249.68-.28 1.145-.106 1.484.174.334.535.47.94.601.81.2 1.91.135 2.774.6.926.466 1.866.67 2.616.47.526-.116.97-.464 1.208-.946.587-.003 1.23-.269 2.26-.334.699-.058 1.574.267 2.577.2.025.134.063.198.114.333l.003.003c.391.778 1.113 1.368 1.884 1.43.868.07 1.723-.26 2.461-.805.249-.185.378-.14.449-.326.106-.239.054-.537.008-.745a11.75 11.75 0 01-.06-.497c-.04-.38.023-.657.2-.867.177-.189.39-.336.639-.465.249-.13.535-.2.791-.393.242-.202.465-.465.438-.934-.027-.466-.314-.848-.588-1.115-.136-.133-.317-.196-.46-.26a3.83 3.83 0 01-.36-.183c-.175-.113-.39-.267-.455-.6-.06-.4.03-.715.16-.97.185-.354.39-.636.504-.926.07-.173.14-.392.123-.6-.019-.382-.218-.733-.485-.985-.267-.251-.583-.409-.856-.51-.33-.126-.66-.21-.723-.455-.067-.268.088-.547.217-.757.24-.392.47-.642.494-1.017a.872.872 0 00-.333-.698c-.2-.167-.45-.266-.715-.312a2.6 2.6 0 00-.267-.04c.091-.137.165-.278.2-.472.047-.327-.054-.668-.248-.943-.203-.28-.518-.476-.86-.558a3.24 3.24 0 00-.264-.054c.071-.208.099-.432.069-.663-.037-.29-.159-.543-.328-.75a1.58 1.58 0 00-.6-.44c-.197-.098-.4-.151-.6-.174a4.9 4.9 0 00-.265-.018c.016-.123.013-.25-.012-.376-.07-.334-.261-.622-.517-.84-.262-.218-.582-.36-.93-.416a5.79 5.79 0 00-.267-.026Z"/></svg>
+            <h3>Linux</h3>
+          </div>
+          <div class="platform-assets" id="assets-linux">
+            <a href="https://github.com/daidarzzz/opendoc/releases/latest" class="asset-btn loading" data-kind="appimage">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span class="asset-name">Universal AppImage</span>
+              <span class="asset-ext">.AppImage</span>
+              <span class="asset-size">—</span>
+            </a>
+            <a href="https://github.com/daidarzzz/opendoc/releases/latest" class="asset-btn loading" data-kind="deb">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span class="asset-name">Debian / Ubuntu</span>
+              <span class="asset-ext">.deb</span>
+              <span class="asset-size">—</span>
+            </a>
+            <a href="https://github.com/daidarzzz/opendoc/releases/latest" class="asset-btn loading" data-kind="rpm">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span class="asset-name">Fedora / RHEL</span>
+              <span class="asset-ext">.rpm</span>
+              <span class="asset-size">—</span>
+            </a>
+          </div>
+          <div class="platform-note">x86_64</div>
+        </div>
+      </div>
+
+      <div class="download-fallback reveal reveal-delay-3">
+        Or browse all releases on <a href="https://github.com/daidarzzz/opendoc/releases" target="_blank" rel="noopener">GitHub Releases</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="116.771 206.771 378.458 378.458">
+          <g>
+            <path d="M305.873 206.899 L306.127 206.899 C410.565 206.899 495.229 291.562 495.229 396 L495.229 396 C495.229 500.438 410.565 585.101 306.127 585.101 L305.873 585.101 C201.435 585.101 116.771 500.438 116.771 396 L116.771 396 C116.771 291.562 201.435 206.899 305.873 206.899 Z" fill="currentColor"/>
+            <path d="M255.244 269.837 C247.691 270.743 179.216 316.964 177.303 338.11 C175.39 359.257 244.676 374.961 243.764 396.717 C242.852 418.473 171.832 451.329 171.832 468.649 C171.832 485.969 234.662 501.852 243.764 500.638 C252.866 499.424 216.069 480.196 226.441 461.365 C236.813 442.535 306.633 409.103 305.996 387.654 C305.358 366.205 231.076 352.309 222.617 332.673 C214.159 313.037 262.796 268.931 255.244 269.837 Z" fill="#ffffff"/>
+            <path d="M309.065 465.568 C292.55 470.42 292.55 489.233 309.065 494.681 C325.579 500.129 391.638 503.109 408.152 498.257 C424.667 493.404 424.667 471.016 408.152 465.568 C391.638 460.12 325.579 460.715 309.065 465.568 Z" fill="#ffffff"/>
+          </g>
+        </svg>
+        Made with ❤️ by <a href="https://github.com/daidarzzz" target="_blank" rel="noopener" style="color: var(--text-primary); font-weight: 500;">daidarzzz</a>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/daidarzzz/opendoc" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/daidarzzz/opendoc/releases/latest" target="_blank" rel="noopener">Releases</a>
+        <a href="https://github.com/daidarzzz/opendoc/blob/main/LICENSE" target="_blank" rel="noopener">GPL-3.0-or-later</a>
+      </div>
+      <div class="footer-copy">© 2026 OpenDoc</div>
+    </div>
+  </footer>
+
+  <script>
+    // ===== PARTICLES =====
+    (function initParticles() {
+      const container = document.getElementById('particles');
+      if (!container) return;
+      const count = window.innerWidth < 640 ? 15 : 30;
+      for (let i = 0; i < count; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.style.left = Math.random() * 100 + '%';
+        p.style.top = (60 + Math.random() * 40) + '%';
+        p.style.animationDuration = (12 + Math.random() * 20) + 's';
+        p.style.animationDelay = (Math.random() * 15) + 's';
+        p.style.width = (1 + Math.random() * 2) + 'px';
+        p.style.height = p.style.width;
+        p.style.opacity = 0;
+        container.appendChild(p);
+      }
+    })();
+
+    // ===== NAV SCROLL =====
+    (function initNavScroll() {
+      const nav = document.getElementById('nav');
+      let ticking = false;
+      window.addEventListener('scroll', () => {
+        if (!ticking) {
+          requestAnimationFrame(() => {
+            nav.classList.toggle('scrolled', window.scrollY > 50);
+            ticking = false;
+          });
+          ticking = true;
+        }
+      });
+    })();
+
+    // ===== REVEAL ON SCROLL =====
+    (function initReveal() {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+          }
+        });
+      }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+      document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+    })();
+
+    // ===== FEATURE CARD MOUSE GLOW =====
+    (function initCardGlow() {
+      document.querySelectorAll('.feature-card').forEach(card => {
+        card.addEventListener('mousemove', (e) => {
+          const rect = card.getBoundingClientRect();
+          const x = ((e.clientX - rect.left) / rect.width) * 100;
+          const y = ((e.clientY - rect.top) / rect.height) * 100;
+          card.style.setProperty('--mx', x + '%');
+          card.style.setProperty('--my', y + '%');
+        });
+      });
+    })();
+
+    // ===== OS DETECTION & DIRECT DOWNLOADS =====
+    (async function initDirectDownloads() {
+      const ua = navigator.userAgent || '';
+      const platform = navigator.platform || '';
+      let os = 'windows';
+
+      if (/Mac|iPhone|iPad|iPod/i.test(ua) || /Mac/i.test(platform)) {
+        os = 'macos';
+      } else if (/Linux/i.test(ua) && !/Android/i.test(ua)) {
+        os = 'linux';
+      }
+
+      // Highlight recommended platform card
+      document.querySelectorAll('.download-platform[data-platform]').forEach(card => {
+        if (card.dataset.platform === os) {
+          card.classList.add('recommended');
+        }
+      });
+
+      const heroBtn = document.getElementById('hero-download-btn');
+      const heroText = document.getElementById('hero-download-text');
+      const releaseTag = document.getElementById('release-tag');
+      const heroBadge = document.querySelector('.hero-badge');
+      const ossVersion = document.getElementById('oss-version');
+
+      function formatSize(bytes) {
+        if (!bytes || isNaN(bytes)) return '';
+        const mb = bytes / (1024 * 1024);
+        return mb.toFixed(1) + ' MB';
+      }
+
+      // Default labels by OS
+      const osLabels = {
+        windows: 'Download for Windows (.exe)',
+        macos: 'Download for macOS (.dmg)',
+        linux: 'Download for Linux (.AppImage)'
+      };
+      if (heroText) heroText.textContent = osLabels[os] || 'Download OpenDoc';
+
+      try {
+        const res = await fetch('https://api.github.com/repos/daidarzzz/opendoc/releases/latest');
+        if (!res.ok) throw new Error('API status ' + res.status);
+        const data = await res.json();
+        const tag = data.tag_name || 'Latest';
+        const assets = data.assets || [];
+
+        if (releaseTag) releaseTag.textContent = tag + ' — Latest Release';
+        if (heroBadge) {
+          heroBadge.innerHTML = `<span class="hero-badge-dot"></span> ${tag} — Available now`;
+        }
+        if (ossVersion) {
+          ossVersion.textContent = tag;
+        }
+
+        // Map assets
+        const mapped = {};
+        for (const asset of assets) {
+          const name = asset.name || '';
+          const lower = name.toLowerCase();
+          const url = asset.browser_download_url;
+          const size = asset.size;
+
+          if (lower.endsWith('.exe')) {
+            mapped['exe'] = { url, size, name };
+          } else if (lower.endsWith('.msi')) {
+            mapped['msi'] = { url, size, name };
+          } else if (lower.endsWith('.dmg')) {
+            if (lower.includes('aarch64') || lower.includes('arm64')) {
+              mapped['dmg-arm'] = { url, size, name };
+            } else {
+              mapped['dmg-intel'] = { url, size, name };
+            }
+          } else if (lower.endsWith('.appimage')) {
+            mapped['appimage'] = { url, size, name };
+          } else if (lower.endsWith('.deb')) {
+            mapped['deb'] = { url, size, name };
+          } else if (lower.endsWith('.rpm')) {
+            mapped['rpm'] = { url, size, name };
+          }
+        }
+
+        // Apply direct download links to buttons
+        document.querySelectorAll('.asset-btn[data-kind]').forEach(btn => {
+          const kind = btn.dataset.kind;
+          const info = mapped[kind];
+          btn.classList.remove('loading');
+
+          if (info && info.url) {
+            btn.href = info.url;
+            btn.setAttribute('download', info.name);
+            const sizeEl = btn.querySelector('.asset-size');
+            if (sizeEl) sizeEl.textContent = formatSize(info.size);
+          } else {
+            // fallback link for missing asset in release
+            btn.href = `https://github.com/daidarzzz/opendoc/releases/latest`;
+            const sizeEl = btn.querySelector('.asset-size');
+            if (sizeEl) sizeEl.textContent = 'View';
+          }
+        });
+
+        // Set Hero direct download URL for user's OS
+        let primaryUrl = null;
+        let primaryName = null;
+        if (os === 'windows') {
+          const p = mapped['exe'] || mapped['msi'];
+          if (p) { primaryUrl = p.url; primaryName = p.name; }
+        } else if (os === 'macos') {
+          // Check Apple Silicon hint if available
+          const isArm = /Mac/i.test(platform) && (navigator.maxTouchPoints > 0 || (navigator.userAgentData && navigator.userAgentData.architecture === 'arm'));
+          const p = isArm ? (mapped['dmg-arm'] || mapped['dmg-intel']) : (mapped['dmg-intel'] || mapped['dmg-arm']);
+          if (p) { primaryUrl = p.url; primaryName = p.name; }
+        } else if (os === 'linux') {
+          const p = mapped['appimage'] || mapped['deb'] || mapped['rpm'];
+          if (p) { primaryUrl = p.url; primaryName = p.name; }
+        }
+
+        if (primaryUrl && heroBtn) {
+          heroBtn.href = primaryUrl;
+          if (primaryName) heroBtn.setAttribute('download', primaryName);
+          const sizeInfo = (os === 'windows' && mapped['exe']) ? ` (${formatSize(mapped['exe'].size)})` : '';
+          if (heroText) heroText.textContent = (osLabels[os] || 'Download OpenDoc') + sizeInfo;
+        }
+
+      } catch (err) {
+        console.warn('Could not load latest release assets directly:', err);
+        if (releaseTag) releaseTag.textContent = 'v0.2.65 — Latest Release';
+        document.querySelectorAll('.asset-btn.loading').forEach(btn => {
+          btn.classList.remove('loading');
+          const sizeEl = btn.querySelector('.asset-size');
+          if (sizeEl) sizeEl.textContent = 'Direct';
+        });
+      }
+    })();
+
+    // ===== SMOOTH SCROLL NAV =====
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', (e) => {
+        const target = document.querySelector(anchor.getAttribute('href'));
+        if (target) {
+          e.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+
+    // ===== MOBILE NAV (simple toggle) =====
+    function toggleMobileNav() {
+      const links = document.querySelector('.nav-links');
+      if (!links) return;
+      const isVisible = links.style.display === 'flex';
+      links.style.display = isVisible ? 'none' : 'flex';
+      if (!isVisible) {
+        links.style.position = 'fixed';
+        links.style.top = '64px';
+        links.style.left = '0';
+        links.style.right = '0';
+        links.style.background = 'rgba(10,10,11,0.95)';
+        links.style.backdropFilter = 'blur(20px)';
+        links.style.flexDirection = 'column';
+        links.style.padding = '24px';
+        links.style.gap = '16px';
+        links.style.borderBottom = '1px solid var(--border)';
+        links.style.zIndex = '99';
+      } else {
+        links.removeAttribute('style');
+      }
+    }
+  </script>
+</body>
+</html>
