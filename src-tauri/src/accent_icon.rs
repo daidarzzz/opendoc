@@ -76,17 +76,18 @@ pub fn apply_to_main_window(app: &tauri::AppHandle, accent: Accent) {
 /// en pantallas Retina y no Retina.
 #[cfg(target_os = "macos")]
 fn apply_dock_icon(png_1x: &[u8], png_2x: &[u8]) {
-    use objc2::MainThreadMarker;
+    use objc2::msg_send;
     use objc2::AnyThread;
-    use objc2_app_kit::{NSApplication, NSBitmapImageRep, NSImage, NSGeometry::NSSize};
+    use objc2::MainThreadMarker;
+    use objc2_app_kit::{NSApplication, NSBitmapImageRep, NSImage, NSSize};
     use objc2_foundation::NSData;
 
-    let Some(mtm) = MainThreadMarker::new() else {
+    let Some(_mtm) = MainThreadMarker::new() else {
         return;
     };
 
-    // Crear NSImage vacío
-    let image = NSImage::alloc(mtm).init();
+    // Crear NSImage vacío (obj2 0.6: alloc() sin args, init via msg_send)
+    let image = unsafe { msg_send![NSImage::alloc(), init] };
 
     // Agregar representación 1x (512px)
     let data_1x = NSData::with_bytes(png_1x);
@@ -102,7 +103,7 @@ fn apply_dock_icon(png_1x: &[u8], png_2x: &[u8]) {
         image.addRepresentation(&rep2x);
     }
 
-    let _app = NSApplication::sharedApplication(mtm);
+    let _app = NSApplication::sharedApplication();
     // SAFETY: se pasa `Some` (el aviso de `None` no aplica).
     unsafe { _app.setApplicationIconImage(Some(&image)) };
 }
