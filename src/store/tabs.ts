@@ -111,7 +111,7 @@ export const useTabs = create<TabsState>()((set, get) => {
           }
           const tab = s.tabs.find((t) => t.id === s.activeId);
           if (!tab) return s;
-          const next = { ...navigateTab(tab, item), docsetId };
+          const next = { ...navigateTab(tab, item), docsetId, type: "docset" as const };
           return {
             tabs: s.tabs.map((t) => (t.id === tab.id ? next : t)),
             error: null,
@@ -137,7 +137,7 @@ export const useTabs = create<TabsState>()((set, get) => {
           }
           const tab = s.tabs.find((t) => t.id === s.activeId);
           if (!tab) return s;
-          const next = { ...navigateTab(tab, item), docsetId };
+          const next = { ...navigateTab(tab, item), docsetId, type: "docset" as const };
           return {
             tabs: s.tabs.map((t) => (t.id === tab.id ? next : t)),
             error: null,

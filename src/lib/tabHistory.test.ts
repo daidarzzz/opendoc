@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   appendTab,
+  catalogTab,
   closeTab,
   canGoBack,
   canGoForward,
@@ -70,6 +71,14 @@ describe("navigateTab", () => {
     }
     expect(t.history.length).toBe(MAX_HISTORY);
     expect(t.historyIndex).toBe(MAX_HISTORY - 1);
+  });
+
+  it("navegar desde una pestaña de catálogo la convierte en pestaña de docset", () => {
+    const cat = catalogTab();
+    expect(cat.type).toBe("catalog");
+    const docTab = navigateTab(cat, a);
+    expect(docTab.type).toBe("docset");
+    expect(currentEntry(docTab)?.url).toBe(a.url);
   });
 });
 

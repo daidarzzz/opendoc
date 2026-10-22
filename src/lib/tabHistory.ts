@@ -64,12 +64,12 @@ export function navigateTab(tab: Tab, entry: TabEntry): Tab {
   if (current && entry.url === current.url) {
     const history = [...tab.history];
     history[tab.historyIndex] = entry;
-    return { ...tab, history };
+    return { ...tab, type: "docset", history };
   }
   if (current && sameDocument(current.url, entry.url)) {
     const history = tab.history.slice(0, tab.historyIndex + 1);
     history[tab.historyIndex] = entry;
-    return { ...tab, history };
+    return { ...tab, type: "docset", history };
   }
   let history = [...tab.history.slice(0, tab.historyIndex + 1), entry];
   let historyIndex = history.length - 1;
@@ -78,7 +78,7 @@ export function navigateTab(tab: Tab, entry: TabEntry): Tab {
     history = history.slice(dropped);
     historyIndex -= dropped;
   }
-  return { ...tab, history, historyIndex };
+  return { ...tab, type: "docset", history, historyIndex };
 }
 
 /** Atrás: mueve el cursor una posición. Sin página anterior → igual. */
