@@ -1,5 +1,9 @@
 // Genera los 4 PNG "box" del icono de app (uno por acento) desde el SVG
 // original `src/assets/opendoc-logo-box.svg` (que NO se modifica).
+// - Cuadrícula estándar de iconos de macOS (Apple HIG): el squircle ocupa
+//   ~824x824 en un lienzo de 1024x1024 (~100px de padding transparente por
+//   cada lado). Esto evita que en el Dock de macOS aparezca desmesuradamente
+//   grande ("el doble") respecto a las apps del sistema.
 // - Salida: `src-tauri/gen-icons/accent-{red,blue,amber,catppuccin}.png` (512px)
 //   y `src-tauri/gen-icons/accent-{red,blue,amber,catppuccin}@2x.png` (1024px)
 //   (alfa intacto: las esquinas fuera del box siguen transparentes,
@@ -10,9 +14,6 @@
 // - Catppuccin usa Latte #8839EF: el icono vive sobre fondos variables
 //   (taskbar/Dock) y el tono oscuro se lee mejor en ambos.
 // - Uso: `node scripts/gen-accent-icons.mjs` (o los wrappers .ps1/.sh).
-//   La variante roja debe coincidir con el bundle (`src-tauri/icons/`):
-//   mismo SVG de origen; se verifica visualmente al arrancar con el
-//   acento por defecto (el icono no debe cambiar).
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -34,8 +35,17 @@ if (!/#de3830/i.test(svg)) {
 }
 mkdirSync(join(root, "src-tauri", "gen-icons"), { recursive: true });
 
+// Cuadrícula oficial de iconos de macOS: expande el viewBox original
+// (116.771 206.771 378.458 378.458) proporcionalmente para que el logo
+// ocupe exactamente 824px dentro de 1024px (100px de margen seguro en los 4 bordes).
+const PADDED_VIEWBOX = 'viewBox="70.842 160.842 470.317 470.317"';
+const paddedSvg = svg.replace(/viewBox="116\.771 206\.771 378\.458 378\.458"/, PADDED_VIEWBOX);
+if (paddedSvg === svg) {
+  throw new Error(`no se pudo aplicar el viewBox con padding: ${svgPath}`);
+}
+
 for (const [name, hex] of Object.entries(ACCENTS)) {
-  const colored = svg.replace(/#de3830/gi, hex);
+  const colored = paddedSvg.replace(/#de3830/gi, hex);
   for (const SIZE of SIZES) {
     const png = new Resvg(colored, { fitTo: { mode: "width", value: SIZE } })
       .render()
