@@ -2,10 +2,10 @@
 import { BrowseTree } from "./BrowseTree";
 import { AppLogo } from "./AppLogo";
 import { DocsetIcon } from "./DocsetIcon";
-import { ErrorDetails } from "./ErrorDetails";
+
 import { PanelToggleIcon } from "./PanelToggleIcon";
 import { useT } from "../hooks/useT";
-import { LANGUAGE_NAMES, formatCount, type I18nKey } from "../lib/i18n";
+import { LANGUAGE_NAMES, type I18nKey } from "../lib/i18n";
 import { ACCENTS, ACCENT_HEX } from "../lib/accent";
 import type { Accent } from "../lib/types";
 import { getSettings, setRestoreTabs } from "../lib/commands";
@@ -13,6 +13,7 @@ import { setSessionEnabled } from "../lib/sessionSync";
 import { useAccent } from "../store/accent";
 import { useDocsets } from "../store/docsets";
 import { useLang } from "../store/lang";
+import { version } from "../../package.json";
 import { useTheme } from "../store/theme";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { Language } from "../lib/types";
@@ -50,10 +51,6 @@ export function Sidebar({
   const {
     pending,
     extractingIds,
-    issues,
-    status,
-    error,
-    dirMissing,
     savedDir,
     choose,
     extract,
@@ -206,20 +203,7 @@ export function Sidebar({
       </nav>
 
       <div className="border-t border-gray-200 p-3 text-xs text-gray-500 dark:border-gray-800">
-        <p>{t(status.key, status.vars)}</p>
-        {dirMissing && (
-          <div className="mt-1 rounded bg-yellow-100 p-2 text-yellow-900 dark:bg-yellow-900 dark:text-yellow-100">
-            <p>{t("settings.dirUnavailable")}{savedDir ? `: ${savedDir}` : ""} {t("settings.diskHint")}</p>
-            <button
-              onClick={() => void choose()}
-              className="mt-1 underline"
-            >
-              {t("settings.chooseAnother")}
-            </button>
-          </div>
-        )}
-        {issues.length > 0 && <p>{formatCount(lang, issues.length)} {t("settings.issuesSuffix")}</p>}
-        <ErrorDetails error={error} />
+        <p>v{version}</p>
       </div>
       </div>
     </aside>
