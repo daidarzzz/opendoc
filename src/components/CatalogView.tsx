@@ -43,7 +43,6 @@ export function CatalogView() {
   const repoBusy = useCatalog((s) => s.repoBusy);
   const repoError = useCatalog((s) => s.repoError);
   const ops = useCatalog((s) => s.ops);
-  const showViewer = useCatalog((s) => s.showViewer);
   const load = useCatalog((s) => s.load);
   const saveRepo = useCatalog((s) => s.saveRepo);
   const refresh = useCatalog((s) => s.refresh);
@@ -83,17 +82,10 @@ export function CatalogView() {
 
   return (
     <main
-      className="flex min-w-0 flex-1 flex-col"
+      className="flex min-h-0 min-w-0 flex-1 flex-col"
       aria-label={t("catalog.main")}
     >
       <div className="flex items-center gap-2 border-b border-gray-200 p-3 dark:border-gray-800">
-        <button
-          onClick={showViewer}
-          title={t("catalog.backToViewer")}
-          className="rounded px-2 py-1 text-xs text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800"
-        >
-          ← {t("catalog.viewer")}
-        </button>
         <h2 className="text-sm font-semibold">{t("catalog.title")}</h2>
         {status && status.count > 0 && (
           <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -138,7 +130,7 @@ export function CatalogView() {
           <button
             onClick={() => void saveRepo(repoInput)}
             disabled={repoBusy}
-            className="shrink-0 rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700 disabled:opacity-50"
+            className="shrink-0 rounded bg-accent-solid px-3 py-1 text-xs text-on-accent hover:brightness-110 disabled:opacity-50"
           >
             {repoBusy ? t("catalog.saving") : t("common.save")}
           </button>

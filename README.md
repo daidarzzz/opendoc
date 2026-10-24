@@ -29,6 +29,7 @@ Zeal is an excellent tool, but its interface (C++/Qt) feels dated and is hard to
   - `Info.plist` reading.
   - **tarix** docsets: extracted once into their own cache, with security validation and without touching your docsets folder.
 - **Light / dark / system theme** for the app, with persistent settings. Docsets always render with their original light style: dark mode for content is disabled (it will return with per-docset themes).
+- **Accent color** (Settings): Red, Blue, Amber or Catppuccin. It recolors the logo, the UI highlights and the running app icon (taskbar / Dock). Errors keep their own fixed red, independent of the accent.
 - **Persistent settings** for the theme, the docsets folder and the catalog repository.
 - **Interface in English (default) and Spanish**, switchable live from Settings.
 - **External links** opened in the system browser, not inside the viewer.
@@ -109,6 +110,17 @@ npx tsc --noEmit                                           # frontend typecheck
 
 Tests that use real docsets (`CSS.docset`, `Python_3.docset`, `C++.docset`) look for the files in `src-tauri/tests/fixtures/` and **are skipped with a warning** if they're missing, so `cargo test` passes on a clean clone. How to get them: see `src-tauri/tests/fixtures/README.md`.
 
+### Developing against a local `opendoc-core`
+
+By default the app depends on [`opendoc-core`](https://github.com/daidarzzz/opendoc-core) **by Git tag** (see `src-tauri/Cargo.toml`), so the app and the CLI share the exact same published version. To work on both repositories at once without publishing a tag, uncomment the `[patch]` block at the end of `src-tauri/Cargo.toml` and point it at your local clone (the path is relative to `src-tauri/`):
+
+```toml
+[patch."https://github.com/daidarzzz/opendoc-core"]
+opendoc-core = { path = "../../opendoc-core" }
+```
+
+Comment it back before committing: while the patch is active, `Cargo.lock` resolves to the local path instead of the tag, and releases must build against the versioned tag.
+
 ### Structure
 
 ```
@@ -145,6 +157,7 @@ Full detail is in [`SPEC.md`](./SPEC.md).
 - Only tested on **Windows**. macOS and Linux are lightly tested; on Linux, WebKitGTK may behave differently.
 - Executables are unsigned (SmartScreen / Gatekeeper warnings).
 - Docsets always render with their light style; content dark mode is disabled.
+- The accent only changes the running icon (taskbar / Dock): the executable, installer and Finder icon stay red.
 - *tarix* docsets use plenty of disk once extracted (tens or hundreds of MB each).
 
 ## License
@@ -160,4 +173,5 @@ The source code of each released version is published in this repository, which 
 ## Thanks
 
 - [Zeal](https://zealdocs.org/) and [Dash](https://kapeli.com/dash) for popularizing the docset format and the offline documentation browser idea. OpenDoc is an independent project and is not affiliated with either.
+- [Catppuccin](https://catppuccin.com/) for two palette colors used by the accent theme (Latte/Mocha Mauve, MIT).
 - The documentation you load belongs to its authors and keeps their own licenses.

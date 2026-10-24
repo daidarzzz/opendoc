@@ -6,6 +6,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open } from "@tauri-apps/plugin-dialog";
 import type {
+  Accent,
   CatalogStatus,
   CatalogSummary,
   Docset,
@@ -73,6 +74,11 @@ export async function getSettings(): Promise<Settings> {
 /** Cambia el tema (persiste solo si cambió). */
 export async function setTheme(theme: ThemeMode): Promise<Settings> {
   return invoke<Settings>("set_theme", { theme });
+}
+
+/** Cambia el acento de color (persiste solo si cambió). */
+export async function setAccent(accent: Accent): Promise<Settings> {
+  return invoke<Settings>("set_accent", { accent });
 }
 
 /** Cambia el idioma de la interfaz (en/es; persiste solo si cambió). */

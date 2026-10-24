@@ -26,6 +26,7 @@ import { toBackendUrl } from "../lib/iframeMessages";
 import { toViewerUrl } from "../lib/opendocUrl";
 import { currentEntry } from "../lib/tabHistory";
 import { findLoadedFrame, isPendingFrameLoad } from "../lib/viewerFrames";
+import { CatalogView } from "./CatalogView";
 
 export function Viewer() {
   const tabs = useTabs((s) => s.tabs);
@@ -69,7 +70,7 @@ export function Viewer() {
       const index = frontFrameRef.current;
       const frame = index === null ? null : frames.current[index];
       const child = frame?.contentWindow;
-      if (!child || (event.deltaX === 0 && event.deltaY === 0)) return;
+      if (!child || (event.deltaX === 0 && event.deltaY === 0)) { event.preventDefault(); return; }
       event.preventDefault();
       const rect = frame.getBoundingClientRect();
       child.postMessage(
@@ -93,9 +94,11 @@ export function Viewer() {
   const activeEntry = active ? currentEntry(active) : null;
   const activeTitle = activeEntry?.title ?? "";
   const backendUrl = activeEntry?.url ?? null;
+  /** Es la pestaña de catálogo (sin iframe). */
+  const isCatalogTab = active?.type === "catalog";
   /** Estado del docset de la pestaña activa: cargado, tarix sin instalar
    *  o ausente (la pestaña se conserva atenuada en ambos casos). */
-  const docsetState: "ok" | "pending" | "missing" = !activeEntry || !active
+  const docsetState: "ok" | "pending" | "missing" = isCatalogTab || !activeEntry || !active
     ? "ok"
     : docsets.some((d) => d.id === active.docsetId)
       ? "ok"
@@ -311,6 +314,16 @@ export function Viewer() {
     );
   }
 
+  // Pestaña de catálogo: renderiza el catálogo directamente (sin iframe)
+  // No usamos attachWheel porque el catálogo usa scroll nativo del navegador
+  if (isCatalogTab) {
+    return (
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col" role="tabpanel" id="viewer-panel" aria-label={t("catalog.title")}>
+        <CatalogView />
+      </main>
+    );
+  }
+
   return (
     <main ref={attachWheel} className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" role="tabpanel" id="viewer-panel" aria-label={t("viewer.viewer")}>
       {!activeEntry || docsetState !== "ok" ? (
@@ -388,7 +401,7 @@ function FolderPrompt({
           </p>
           <button
             onClick={() => void choose()}
-            className="mt-3 rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+            className="mt-3 rounded bg-accent-solid px-4 py-2 text-sm text-on-accent hover:brightness-110"
           >
             {t("viewer.chooseAnother")}
           </button>
@@ -400,7 +413,7 @@ function FolderPrompt({
           </p>
           <button
             onClick={() => void choose()}
-            className="mt-3 rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+            className="mt-3 rounded bg-accent-solid px-4 py-2 text-sm text-on-accent hover:brightness-110"
           >
             {t("viewer.chooseFolder")}
           </button>

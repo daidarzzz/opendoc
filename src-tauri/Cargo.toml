@@ -1,6 +1,6 @@
 [package]
 name = "opendoc"
-version = "0.2.65"
+version = "0.2.69"
 description = "A Tauri App"
 authors = ["you"]
 license = "GPL-3.0-or-later"
@@ -19,29 +19,38 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+# `image-png`: `Image::from_bytes` con los PNG del icono por acento.
+tauri = { version = "2", features = ["image-png"] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
-plist = "1"
-rusqlite = { version = "0.40.2", features = ["bundled"] }
-nucleo-matcher = "0.3.1"
+# Núcleo compartido (escaneo, índices, tarix, búsqueda y resolución de
+# rutas). Se consume por etiqueta para que app y CLI compartan versión.
+opendoc-core = { git = "https://github.com/daidarzzz/opendoc-core", tag = "v0.1.1" }
 # Data-URL de iconos (PNG de pocos KB): crate mínima y estándar.
 base64 = "0.22"
 tauri-plugin-os = "2"
 tauri-plugin-dialog = "2"
-# Extracción tarix en producción (v0.2 adelantado a T10).
-flate2 = "1"
-tar = "0.4"
 # Gestor de docsets (F1): HTTP bloqueante (en spawn_blocking, sin runtime
 # propio) con raíces webpki (sin depender del almacén del SO) y parse XML
 # de feeds estilo Kapeli. Justificación AGENTS.md: cliente estándar.
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls-webpki-roots"] }
 quick-xml = { version = "0.37", features = ["serialize"] }
 
+# Icono del Dock por acento en macOS (`Window::set_icon` no existe allí):
+# bindings oficiales del ecosistema (los usa Tauri por dentro).
+# Justificación AGENTS.md: única vía soportada para el icono en ejecución.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-app-kit = "0.3"
+objc2-foundation = { version = "0.3", features = ["NSData", "NSGeometry"] }
+
 [dev-dependencies]
 tempfile = "3"
+rusqlite = { version = "0.40.2", features = ["bundled"] }
+flate2 = "1"
+tar = "0.4"
 
 
 # Búsqueda en `tauri dev` (debug) sin el lastre de dependencias sin
@@ -58,3 +67,17 @@ lto = true
 opt-level = 3
 panic = "abort"
 strip = true
+
+# --- Desarrollo local de `opendoc-core` -----------------------------------
+# La app consume el núcleo por etiqueta de Git (ver `opendoc-core` arriba):
+# así app y CLI comparten exactamente la misma versión publicada.
+#
+# Para trabajar a la vez en la app y en el núcleo, sin publicar un tag,
+# descomenta este `[patch]` y ajusta la ruta a tu clon de `opendoc-core`
+# (relativa a este `Cargo.toml`, es decir a `src-tauri/`):
+#
+#   [patch."https://github.com/daidarzzz/opendoc-core"]
+#   opendoc-core = { path = "../../opendoc-core" }
+#
+# Vuelve a comentarlo antes de commitear: con el patch activo, `Cargo.lock`
+# apunta a la ruta local y la release debe compilar contra el tag versionado.

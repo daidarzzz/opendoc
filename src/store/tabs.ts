@@ -13,6 +13,7 @@ import type { IframeKey } from "../lib/iframeMessages";
 import { OPEN_TAB_RATE_MAX, OPEN_TAB_RATE_WINDOW_MS, rateAllow } from "../lib/iframeMessages";
 import {
   appendTab,
+  catalogTab,
   closeTab as closeTabPure,
   currentEntry,
   emptyTab,
@@ -24,6 +25,7 @@ import {
   tabWithEntry,
 } from "../lib/tabHistory";
 import type { Tab } from "../lib/types";
+import { useCatalog } from "./catalog";
 
 export interface OpenOpts {
   /** Abrir en pestaña nueva en vez de la activa. */
@@ -53,6 +55,8 @@ interface TabsState {
   closeTab: (id: string) => void;
   /** Pestaña vacía nueva (bienvenida) y la activa. */
   newTab: () => void;
+  /** Abre (o activa si ya existe) la pestaña de catálogo. */
+  openCatalogTab: () => void;
   moveTab: (id: string, to: number) => void;
   goBack: () => void;
   goForward: () => void;
@@ -107,7 +111,7 @@ export const useTabs = create<TabsState>()((set, get) => {
           }
           const tab = s.tabs.find((t) => t.id === s.activeId);
           if (!tab) return s;
-          const next = { ...navigateTab(tab, item), docsetId };
+          const next = { ...navigateTab(tab, item), docsetId, type: "docset" as const };
           return {
             tabs: s.tabs.map((t) => (t.id === tab.id ? next : t)),
             error: null,
@@ -133,7 +137,7 @@ export const useTabs = create<TabsState>()((set, get) => {
           }
           const tab = s.tabs.find((t) => t.id === s.activeId);
           if (!tab) return s;
-          const next = { ...navigateTab(tab, item), docsetId };
+          const next = { ...navigateTab(tab, item), docsetId, type: "docset" as const };
           return {
             tabs: s.tabs.map((t) => (t.id === tab.id ? next : t)),
             error: null,
@@ -165,6 +169,27 @@ export const useTabs = create<TabsState>()((set, get) => {
       set({ tabs: r.tabs, activeId: r.activeId, error: null });
     },
 
+    /** Abre (o activa si ya existe) la pestaña de catálogo. */
+    openCatalogTab: () => {
+      const s = get();
+      // Buscar si ya hay una pestaña de catálogo
+      const existingCatalog = s.tabs.find((t) => t.type === "catalog");
+      if (existingCatalog) {
+        set({ activeId: existingCatalog.id, error: null });
+        // Cargar datos del catálogo (incluye repo guardado) si no están cargados
+        const catalogState = useCatalog.getState();
+        if (!catalogState.status || catalogState.entries.length === 0) {
+          void catalogState.load();
+        }
+        return;
+      }
+      // Crear nueva pestaña de catálogo
+      const r = appendTab(s.tabs, s.activeId, catalogTab());
+      set({ tabs: r.tabs, activeId: r.activeId, error: null });
+      // Cargar datos del catálogo (incluye repo guardado)
+      void useCatalog.getState().load();
+    },
+
     moveTab: (id: string, to: number) => {
       set((s) => ({ tabs: moveTabPure(s.tabs, id, to) }));
     },
@@ -172,7 +197,7 @@ export const useTabs = create<TabsState>()((set, get) => {
     goBack: () => {
       set((s) => {
         const tab = s.tabs.find((t) => t.id === s.activeId);
-        if (!tab) return s;
+        if (!tab || tab.type === "catalog") return s;
         const next = goBackPure(tab);
         if (next === tab) return s;
         return {
@@ -186,7 +211,7 @@ export const useTabs = create<TabsState>()((set, get) => {
     goForward: () => {
       set((s) => {
         const tab = s.tabs.find((t) => t.id === s.activeId);
-        if (!tab) return s;
+        if (!tab || tab.type === "catalog") return s;
         const next = goForwardPure(tab);
         if (next === tab) return s;
         return {
@@ -201,7 +226,7 @@ export const useTabs = create<TabsState>()((set, get) => {
       set((s) => {
         const tab = s.tabs.find((t) => t.id === s.activeId);
         const current = tab ? currentEntry(tab) : null;
-        if (!tab || !current) return s;
+        if (!tab || !current || tab.type === "catalog") return s;
         const item = { url, title: title ?? current.title };
         const next = { ...navigateTab(tab, item), docsetId: docsetOf(url) };
         return { tabs: s.tabs.map((t) => (t.id === tab.id ? next : t)) };
@@ -213,7 +238,7 @@ export const useTabs = create<TabsState>()((set, get) => {
         const tab = s.tabs.find((t) => t.id === s.activeId);
         // Cualquier URL del historial (no solo la actual): el volcado final
         // en pagehide llega con la URL de la página que se abandona.
-        if (!tab || !tab.history.some((e) => e.url === url)) return s;
+        if (!tab || tab.type === "catalog" || !tab.history.some((e) => e.url === url)) return s;
         const next = noteScroll(tab, url, y);
         return { tabs: s.tabs.map((t) => (t.id === tab.id ? next : t)) };
       });

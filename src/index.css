@@ -60,3 +60,64 @@ html.dark *::-webkit-scrollbar-thumb {
 html.dark *::-webkit-scrollbar-thumb:hover {
   background: #71717a;
 }
+
+/* Acento de color: canales RGB por acento y modo (ver `src/lib/accent.ts`,
+   única fuente de verdad de los tonos). El rojo es el defecto (sin
+   `data-accent` también vale). `tailwind.config.js` los mapea a
+   `accent`, `accent-text`, `accent-solid` y `on-accent` con opacidad. */
+:root,
+:root[data-accent="red"] {
+  --accent-ch: 222 56 48;
+  --accent-text-ch: 198 40 40;
+  --accent-solid-ch: 198 40 40;
+  --on-accent-ch: 255 255 255;
+}
+
+:root[data-accent="blue"] {
+  --accent-ch: 0 113 188;
+  --accent-text-ch: 0 113 188;
+  --accent-solid-ch: 0 113 188;
+  --on-accent-ch: 255 255 255;
+}
+
+:root[data-accent="amber"] {
+  --accent-ch: 251 176 59;
+  --accent-text-ch: 180 83 9;
+  --accent-solid-ch: 251 176 59;
+  --on-accent-ch: 31 41 55;
+}
+
+:root[data-accent="catppuccin"] {
+  --accent-ch: 136 57 239;
+  --accent-text-ch: 136 57 239;
+  --accent-solid-ch: 136 57 239;
+  --on-accent-ch: 255 255 255;
+}
+
+html.dark:root[data-accent="red"] {
+  --accent-ch: 222 56 48;
+  --accent-text-ch: 255 138 128;
+  --accent-solid-ch: 198 40 40;
+  --on-accent-ch: 255 255 255;
+}
+
+html.dark:root[data-accent="blue"] {
+  --accent-ch: 0 113 188;
+  --accent-text-ch: 79 163 227;
+  --accent-solid-ch: 0 113 188;
+  --on-accent-ch: 255 255 255;
+}
+
+html.dark:root[data-accent="amber"] {
+  --accent-ch: 251 176 59;
+  --accent-text-ch: 251 176 59;
+  --accent-solid-ch: 251 176 59;
+  --on-accent-ch: 31 41 55;
+}
+
+html.dark:root[data-accent="catppuccin"] {
+  --accent-ch: 203 166 247;
+  --accent-text-ch: 203 166 247;
+  --accent-solid-ch: 203 166 247;
+  --on-accent-ch: 17 24 39;
+}

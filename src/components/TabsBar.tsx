@@ -8,6 +8,8 @@ import { useTabs } from "../store/tabs";
 import { canGoBack, canGoForward, currentEntry } from "../lib/tabHistory";
 import { AppLogo } from "./AppLogo";
 import { DocsetIcon } from "./DocsetIcon";
+import { PanelToggleIcon } from "./PanelToggleIcon";
+import { CatalogIcon } from "./CatalogIcon";
 
 const TabButton = memo(function TabButton({
   id,
@@ -15,6 +17,7 @@ const TabButton = memo(function TabButton({
   icon,
   docName,
   isNew,
+  isCatalog,
   selected,
   onActivate,
   onClose,
@@ -29,6 +32,8 @@ const TabButton = memo(function TabButton({
   docName: string;
   /** Pestaña nueva y vacía: logo de OpenDoc en vez del icono genérico. */
   isNew: boolean;
+  /** Es la pestaña de catálogo. */
+  isCatalog: boolean;
   selected: boolean;
   onActivate: () => void;
   onClose: () => void;
@@ -70,12 +75,14 @@ const TabButton = memo(function TabButton({
       }}
       className={`relative flex max-w-44 select-none touch-none cursor-default items-center gap-1.5 rounded-t border-l-2 px-2 py-1.5 text-xs ${
         selected
-          ? "border-transparent bg-white font-medium dark:bg-gray-900"
+          ? "border-accent-text bg-white font-medium dark:bg-gray-900"
           : "border-transparent text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-800"
       } ${dragging ? "z-10 bg-white shadow-lg dark:bg-gray-800" : ""} ${unavailable ? "opacity-50" : ""}`}
     >
       {isNew ? (
         <AppLogo size={14} />
+      ) : isCatalog ? (
+        <CatalogIcon size={14} />
       ) : (
         <DocsetIcon icon={icon} name={docName} size={14} />
       )}
@@ -95,7 +102,15 @@ const TabButton = memo(function TabButton({
   );
 });
 
-export function TabsBar() {
+export function TabsBar({
+  sidebarCollapsed = false,
+  onExpandSidebar,
+}: {
+  /** Panel lateral oculto: se muestra el botón para recuperarlo. */
+  sidebarCollapsed?: boolean;
+  /** Mostrar el panel lateral. */
+  onExpandSidebar?: () => void;
+}) {
   const tabs = useTabs((s) => s.tabs);
   const activeId = useTabs((s) => s.activeId);
   const activateTab = useTabs((s) => s.activateTab);
@@ -229,8 +244,10 @@ export function TabsBar() {
   }, [docsets]);
 
   const active = tabs.find((t) => t.id === activeId);
-  const canBack = active ? canGoBack(active) : false;
-  const canForward = active ? canGoForward(active) : false;
+  // Deshabilitar atrás/adelante para pestañas de catálogo
+  const isCatalog = active?.type === "catalog";
+  const canBack = active && !isCatalog ? canGoBack(active) : false;
+  const canForward = active && !isCatalog ? canGoForward(active) : false;
   const { t: tr } = useT();
 
   const onListKeyDown = (e: React.KeyboardEvent): void => {
@@ -246,6 +263,16 @@ export function TabsBar() {
 
   return (
     <div className="flex items-end gap-1 border-b border-gray-200 bg-gray-50 px-2 pt-1 dark:border-gray-800 dark:bg-gray-950">
+      {sidebarCollapsed && (
+        <button
+          aria-label={tr("settings.expandSidebar")}
+          title={tr("settings.expandSidebar")}
+          onClick={() => onExpandSidebar?.()}
+          className="mb-0.5 rounded-full p-1.5 text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800"
+        >
+          <PanelToggleIcon direction="right" />
+        </button>
+      )}
       <button
         aria-label={tr("tabs.back")}
         title={tr("tabs.back")}
@@ -266,24 +293,27 @@ export function TabsBar() {
       </button>
       <div role="tablist" aria-label={tr("tabs.list")} onKeyDown={onListKeyDown} className="flex flex-1 items-end gap-0.5 overflow-x-auto">
         {tabs.map((t) => {
+          const isCatalogTab = t.type === "catalog";
           const m = meta.get(t.docsetId);
           const hasContent = currentEntry(t) !== null;
           const unavailable =
+            !isCatalogTab &&
             hasContent &&
             t.docsetId !== "" &&
             !meta.has(t.docsetId) &&
             !pending.some((p) => p.id === t.docsetId);
           const pendingInstall =
-            hasContent && t.docsetId !== "" && pending.some((p) => p.id === t.docsetId);
-          const tabTitle = currentEntry(t)?.title ?? tr("tabs.newTab");
+            !isCatalogTab && hasContent && t.docsetId !== "" && pending.some((p) => p.id === t.docsetId);
+          const tabTitle = isCatalogTab ? tr("catalog.title") : (currentEntry(t)?.title ?? tr("tabs.newTab"));
           return (
             <TabButton
               key={t.id}
               id={t.id}
               title={tabTitle}
-              icon={m?.icon ?? null}
-              docName={m?.name ?? t.docsetId}
-              isNew={!hasContent}
+              icon={isCatalogTab ? null : m?.icon ?? null}
+              docName={isCatalogTab ? tr("catalog.title") : (m?.name ?? t.docsetId)}
+              isNew={!hasContent && !isCatalogTab}
+              isCatalog={isCatalogTab}
               selected={t.id === activeId}
               unavailable={unavailable || pendingInstall}
               closeLabel={tr("tabs.closeTab", { title: tabTitle })}

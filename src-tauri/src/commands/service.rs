@@ -14,8 +14,7 @@ use crate::catalog::{catalog_file, load_catalog, now_epoch, save_catalog, Catalo
 use crate::docset::devicon::icon_for_folder;
 use crate::docset::folder_stem;
 use crate::docset::{
-    apply_to_docset, match_feed, read_index, read_info_plist, scan_dir, update_available, Docset,
-    Entry, FeedMatch, IssueKind, PendingTarix, ScanIssue, ScanReport, TarixLimits,
+    match_feed, update_available, Docset, FeedMatch, IssueKind, PendingTarix, ScanIssue, ScanReport,
 };
 use crate::search::{parse_query, search as search_index, SearchIndex, SearchResult};
 
@@ -85,110 +84,32 @@ pub struct LoadOptions {
 pub fn load_docsets_dir(dir: &Path, opts: &LoadOptions) -> Result<Loaded, ApiError> {
     // FASE 0: solo medida (escaneo + índices + índice en memoria).
     let t_load = std::time::Instant::now();
-    if !dir.is_dir() {
-        return Err(ApiError::InvalidDir {
-            path: dir.display().to_string(),
-        });
-    }
-    let report = scan_dir(dir).map_err(|e| ApiError::InvalidDir {
-        path: format!("{}: {e}", dir.display()),
-    })?;
+    let core_opts = opendoc_core::library::LoadOptions {
+        tarix_cache: opts.cache_base.clone(),
+        extract_missing: opts.extract_missing,
+    };
+    let library =
+        opendoc_core::library::load_with_options(dir, &core_opts).map_err(|e| match e {
+            opendoc_core::library::LoadError::InvalidDir { path } => ApiError::InvalidDir {
+                path: path.display().to_string(),
+            },
+            opendoc_core::library::LoadError::Scan(scan) => ApiError::InvalidDir {
+                path: format!("{}: {scan}", dir.display()),
+            },
+        })?;
     // FASE 0: solo medida (escaneo de carpetas, sin índices aún).
     crate::profile::mark(
         "load",
         format_args!(
             "scan dir={} docsets={} pending={} issues={} ms={}",
             dir.display(),
-            report.docsets.len(),
-            report.pending_tarix.len(),
-            report.issues.len(),
+            library.docsets.len(),
+            library.pending.len(),
+            library.issues.len(),
             crate::profile::ms_since(t_load)
         ),
     );
-    let mut entries: Vec<Entry> = Vec::new();
-    let mut issues = report.issues;
-    let mut docsets = report.docsets;
-    // Entradas que el escáner ya leyó (fallback de home, F1): se
-    // reutilizan sin reabrir esos índices.
-    let mut scanned: std::collections::HashMap<String, Vec<Entry>> =
-        std::collections::HashMap::new();
-    for entry in report.index_entries {
-        scanned
-            .entry(entry.docset_id.clone())
-            .or_default()
-            .push(entry);
-    }
-    let mut pending = Vec::new();
-    for tarix in &report.pending_tarix {
-        if opts.extract_missing {
-            match install_pending(&opts.cache_base, tarix) {
-                Ok(installed) => {
-                    entries.extend(installed.entries);
-                    docsets.push(installed.docset);
-                }
-                Err(e) => {
-                    if cfg!(debug_assertions) {
-                        eprintln!("[opendoc] tarix {}: {e}", tarix.id);
-                    }
-                    issues.push(ScanIssue {
-                        path: tarix.root_path.clone(),
-                        kind: IssueKind::TarixFailed,
-                    });
-                    pending.push(tarix.clone());
-                }
-            }
-        } else {
-            pending.push(tarix.clone());
-        }
-    }
-    // C7: las cachés que nadie referencia (docset borrado o convertido
-    // a clásico) se barren; las pendientes e instaladas se conservan.
-    {
-        let mut referenced: std::collections::HashSet<String> =
-            pending.iter().map(|p| p.id.clone()).collect();
-        for docset in &docsets {
-            if let Ok(rel) = docset.contents_path.strip_prefix(&opts.cache_base) {
-                if let Some(id) = rel.components().next() {
-                    referenced.insert(id.as_os_str().to_string_lossy().into_owned());
-                }
-            }
-        }
-        crate::docset::tarix::sweep_unreferenced_caches(&opts.cache_base, &referenced);
-    }
-    docsets.sort_by(|a, b| {
-        a.name
-            .to_lowercase()
-            .cmp(&b.name.to_lowercase())
-            .then_with(|| a.name.cmp(&b.name))
-    });
-    for docset in &docsets {
-        if docset.contents_path.starts_with(&opts.cache_base) {
-            continue; // Tarix ya integrado arriba con sus entradas.
-        }
-        // F1: el escáner ya abrió este índice para el home → se reutiliza
-        // sin releer. Si el escáner lo intentó y falló, el issue ya está
-        // registrado y no se reintenta. Solo se abre aquí si el escáner
-        // no lo necesitó (home conocido por plist/index.html).
-        if let Some(known) = scanned.remove(&docset.id) {
-            entries.extend(known);
-            continue;
-        }
-        if has_issue(&issues, &docset.root_path, &IssueKind::InvalidIndex) {
-            continue;
-        }
-        let dsidx = docset.contents_path.join("Resources/docSet.dsidx");
-        match read_index(&dsidx, &docset.id) {
-            Ok(data) => entries.extend(data.entries),
-            Err(_) => {
-                if !has_issue(&issues, &docset.root_path, &IssueKind::InvalidIndex) {
-                    issues.push(ScanIssue {
-                        path: docset.root_path.clone(),
-                        kind: IssueKind::InvalidIndex,
-                    });
-                }
-            }
-        }
-    }
+    let mut docsets = library.docsets;
     // Fallback Devicon (solo lectura de caché local, sin red): los
     // docsets sin icono propio resuelven por nombre de carpeta.
     apply_devicon_fallback(&mut docsets, &opts.devicon_base);
@@ -199,17 +120,17 @@ pub fn load_docsets_dir(dir: &Path, opts: &LoadOptions) -> Result<Loaded, ApiErr
             "dir={} docsets={} pending={} issues={} ms={}",
             dir.display(),
             docsets.len(),
-            pending.len(),
-            issues.len(),
+            library.pending.len(),
+            library.issues.len(),
             crate::profile::ms_since(t_load)
         ),
     );
     Ok(Loaded {
-        source_dir: dir.to_path_buf(),
+        source_dir: library.source_dir,
         docsets,
-        pending,
-        issues,
-        index: SearchIndex::build(entries),
+        pending: library.pending,
+        issues: library.issues,
+        index: SearchIndex::build(library.entries),
     })
 }
 
@@ -228,53 +149,17 @@ pub fn apply_devicon_fallback(docsets: &mut [Docset], devicon_base: &Path) {
     }
 }
 
-/// Un tarix instalado: `Docset` apuntando a la caché + sus entradas.
-pub struct InstalledTarix {
-    /// Docset con `contents_path` en la caché extraída.
-    pub docset: Docset,
-    /// Entradas leídas del `.dsidx` original.
-    pub entries: Vec<Entry>,
-}
+// Un tarix instalado (docset en caché + entradas) lo define el núcleo:
+// el CLI y la app comparten exactamente el mismo tipo.
+pub use opendoc_core::library::InstalledTarix;
 
 /// Instala un tarix pendiente: asegura la caché y construye su `Docset`
-/// (metadatos del original, `Documents/` de la caché).
+/// (metadatos del original, `Documents/` de la caché). Delega en el núcleo.
 pub fn install_pending(
     cache_base: &Path,
     pending: &PendingTarix,
 ) -> Result<InstalledTarix, crate::docset::TarixError> {
-    use crate::docset::TarixError;
-    let resources = pending.root_path.join("Contents/Resources");
-    let tgz = resources.join("tarix.tgz");
-    crate::docset::ensure_extracted(cache_base, &pending.id, &tgz, TarixLimits::default())?;
-    let extracted_contents =
-        crate::docset::tarix::cache_dir_for(cache_base, &pending.id).join("Contents");
-    let mut docset = Docset {
-        id: pending.id.clone(),
-        name: pending.name.clone(),
-        platform: None,
-        version: None,
-        bundle_id: None,
-        home_path: None,
-        icon: pending.icon.clone(),
-        root_path: pending.root_path.clone(),
-        contents_path: extracted_contents,
-    };
-    let orig_contents = pending.root_path.join("Contents");
-    if let Ok(Some(info)) = read_info_plist(&orig_contents) {
-        apply_to_docset(&mut docset, &info);
-    }
-    let orig_dsidx = resources.join("docSet.dsidx");
-    let data = read_index(&orig_dsidx, &pending.id)
-        .map_err(|e| TarixError::Corrupt(format!("index: {e}")))?;
-    if docset.home_path.is_none() {
-        if let Some(first) = data.entries.first() {
-            docset.home_path = Some(first.path.clone());
-        }
-    }
-    Ok(InstalledTarix {
-        docset,
-        entries: data.entries,
-    })
+    opendoc_core::library::install_pending(cache_base, pending)
 }
 
 /// Error al instalar un pendiente concreto: el id no está en pendientes.
@@ -771,6 +656,7 @@ fn fixtures_dir() -> std::path::PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::docset::Entry;
     use std::path::PathBuf;
 
     /// Opciones de carga en tests: caché en Temp, sin extraer (rápido).
@@ -1044,8 +930,17 @@ mod tests {
 
     #[test]
     fn prefix_filter_costs_like_plain_search() {
-        use crate::search::index::entry;
         use crate::search::SearchIndex;
+
+        /// Entrada de prueba local (el núcleo ya no expone su helper de test).
+        fn entry(id: &str, name: &str, kind: &str) -> Entry {
+            Entry {
+                docset_id: id.to_string(),
+                name: name.to_string(),
+                kind: kind.to_string(),
+                path: format!("{name}.html"),
+            }
+        }
         use std::time::Instant;
         // 4 docsets x 25k entradas con familias f1..f4.
         let mut docsets = Vec::new();

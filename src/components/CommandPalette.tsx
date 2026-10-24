@@ -34,7 +34,7 @@ const PaletteRow = memo(function PaletteRow({
       role="option"
       aria-selected={active}
       className={`cursor-pointer px-4 py-1.5 text-sm ${
-        active ? "bg-blue-100 dark:bg-blue-900" : ""
+        active ? "bg-accent/10 shadow-[inset_2px_0_0_rgb(var(--accent-text-ch))]" : ""
       }`}
       onMouseEnter={() => onHover(index)}
       onClick={() => onChoose()}
@@ -175,7 +175,7 @@ export function CommandPalette() {
                   onClick={() => removeFilter(f.token)}
                   aria-label={t("palette.removeFilter", { name })}
                   title={t("palette.removeFilterTitle", { name })}
-                  className="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-900 dark:bg-blue-900 dark:text-blue-100"
+                  className="flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-xs text-accent-text"
                 >
                   <DocsetIcon icon={meta?.icon ?? null} name={name} size={12} />
                   <span>{name}</span>
@@ -224,7 +224,7 @@ export function CommandPalette() {
             }
             role="combobox"
             aria-autocomplete="list"
-            className="absolute inset-0 w-full bg-transparent px-4 py-3 text-sm text-transparent outline-none caret-gray-900 selection:bg-blue-300/60 dark:caret-gray-100 dark:selection:bg-blue-500/50"
+            className="absolute inset-0 w-full bg-transparent px-4 py-3 text-sm text-transparent outline-none caret-gray-900 selection:bg-accent/30 dark:caret-gray-100"
           />
         </div>
         {query.trim() === "" ? (

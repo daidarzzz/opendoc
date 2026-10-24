@@ -1,6 +1,5 @@
 // Layout: sidebar + área central + Command Palette.
-import { useCallback, useEffect, useState } from "react";
-import { CatalogView } from "./components/CatalogView";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CommandPalette } from "./components/CommandPalette";
 import { Sidebar } from "./components/Sidebar";
 import { TabsBar } from "./components/TabsBar";
@@ -13,10 +12,11 @@ import {
   hydrateSessionOnce,
   startSessionSync,
 } from "./lib/sessionSync";
-import { useCatalog } from "./store/catalog";
 import { useDocsets } from "./store/docsets";
 import { useLang } from "./store/lang";
 import { useTheme } from "./store/theme";
+import { useAccent } from "./store/accent";
+import { loadSidebarCollapsed, saveSidebarCollapsed } from "./lib/sidebar";
 import { useT } from "./hooks/useT";
 import { t as translate } from "./lib/i18n";
 
@@ -40,11 +40,36 @@ export default function App() {
   const initDocsets = useDocsets((s) => s.init);
   const initTheme = useTheme((s) => s.init);
   const initLang = useLang((s) => s.init);
+  const initAccent = useAccent((s) => s.init);
   const langLoaded = useLang((s) => s.loaded);
-  const view = useCatalog((s) => s.view);
   const [sidebarWidth, setSidebarWidth] = useState(initialSidebarWidth);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(loadSidebarCollapsed);
+  // La transición de ancho solo existe al plegar/desplegar: con ella siempre
+  // puesta, el redimensionar por arrastre iría con retardo elástico.
+  const [sidebarAnimating, setSidebarAnimating] = useState(false);
+  const sidebarAnimTimer = useRef<number | null>(null);
   const { t } = useT();
   useGlobalKeys();
+
+  const toggleSidebar = useCallback((collapsed: boolean) => {
+    setSidebarCollapsed(collapsed);
+    setSidebarAnimating(true);
+    if (sidebarAnimTimer.current !== null) {
+      window.clearTimeout(sidebarAnimTimer.current);
+    }
+    sidebarAnimTimer.current = window.setTimeout(() => {
+      sidebarAnimTimer.current = null;
+      setSidebarAnimating(false);
+    }, 250);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (sidebarAnimTimer.current !== null) {
+        window.clearTimeout(sidebarAnimTimer.current);
+      }
+    };
+  }, []);
 
   const resizeSidebar = useCallback((clientX: number) => {
     const max = Math.max(SIDEBAR_MIN, Math.min(SIDEBAR_MAX, window.innerWidth - 320));
@@ -59,6 +84,7 @@ export default function App() {
   useEffect(() => {
     void initTheme();
     void initLang();
+    void initAccent();
     let alive = true;
     const stopSync = startSessionSync();
     void (async () => {
@@ -139,11 +165,22 @@ export default function App() {
     }
   }, [sidebarWidth]);
 
+  useEffect(() => {
+    saveSidebarCollapsed(sidebarCollapsed);
+  }, [sidebarCollapsed]);
+
   if (!langLoaded) return null;
 
   return (
     <div className="flex h-screen overflow-hidden bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100">
-      <Sidebar style={{ width: sidebarWidth, flexBasis: sidebarWidth }} />
+      <Sidebar
+        style={{ width: sidebarWidth, flexBasis: sidebarWidth }}
+        collapsed={sidebarCollapsed}
+        expandedWidth={sidebarWidth}
+        onCollapse={() => toggleSidebar(true)}
+        animate={sidebarAnimating}
+      />
+      {!sidebarCollapsed && (
       <div
         role="separator"
         aria-label={t("app.resizeSidebar")}
@@ -152,7 +189,7 @@ export default function App() {
         aria-valuemax={SIDEBAR_MAX}
         aria-valuenow={sidebarWidth}
         tabIndex={0}
-        className="group z-10 -ml-[3px] -mr-[2px] flex w-[5px] shrink-0 cursor-col-resize touch-none items-center justify-center outline-none focus-visible:bg-blue-500/30"
+        className="group z-10 -ml-[3px] -mr-[2px] flex w-[5px] shrink-0 cursor-col-resize touch-none items-center justify-center outline-none focus-visible:bg-accent/30"
         onPointerDown={(event) => {
           event.preventDefault();
           event.currentTarget.setPointerCapture(event.pointerId);
@@ -176,26 +213,17 @@ export default function App() {
           }
         }}
       >
-        <span className="h-8 w-px rounded bg-gray-300 transition-colors group-hover:bg-gray-500 group-focus-visible:bg-blue-500 dark:bg-gray-700 dark:group-hover:bg-gray-500" />
+        <span className="h-8 w-px rounded bg-gray-300 transition-colors group-hover:bg-gray-500 group-focus-visible:bg-accent-text dark:bg-gray-700 dark:group-hover:bg-gray-500" />
       </div>
+      )}
       {/* La cabecera vive fuera del visor para que nunca se desmonte al
-          cambiar de página o alternar entre visor y catálogo. */}
+          cambiar de página. */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <TabsBar />
-        <div
-          className={
-            view === "catalog"
-              ? "hidden min-h-0 min-w-0 flex-1"
-              : "flex min-h-0 min-w-0 flex-1"
-          }
-        >
-          <Viewer />
-        </div>
-        {view === "catalog" && (
-          <div className="flex min-h-0 min-w-0 flex-1">
-            <CatalogView />
-          </div>
-        )}
+        <TabsBar
+          sidebarCollapsed={sidebarCollapsed}
+          onExpandSidebar={() => toggleSidebar(false)}
+        />
+        <Viewer />
       </div>
       <CommandPalette />
     </div>

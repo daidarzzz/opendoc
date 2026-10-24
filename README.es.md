@@ -29,6 +29,7 @@ Zeal es una herramienta excelente, pero su interfaz (C++/Qt) se siente anticuada
   - Lectura de `Info.plist`.
   - Docsets **tarix**: se extraen una sola vez a una caché propia, con validación de seguridad y sin tocar tu carpeta de docsets.
 - **Tema claro / oscuro / sistema** para la aplicación, con ajustes persistentes. Los docsets se muestran siempre con su estilo claro original: el modo oscuro del contenido está desactivado (se retomará con temas por docset).
+- **Color de acento** (Ajustes): Rojo, Azul, Ámbar o Catppuccin. Recolorea el logo, los resaltados y el icono de la app en ejecución (barra de tareas / Dock). Los errores conservan su rojo fijo, independiente del acento.
 - **Ajustes persistentes** para el tema, la carpeta de docsets y el repositorio del catálogo.
 - **Enlaces externos** abiertos en el navegador del sistema, no dentro del visor.
 - **Robusto:** un docset corrupto o raro se registra como incidencia y no tumba el resto.
@@ -108,6 +109,17 @@ npx tsc --noEmit                                           # typecheck del front
 
 Los tests que usan docsets reales (`CSS.docset`, `Python_3.docset`, `C++.docset`) buscan los archivos en `src-tauri/tests/fixtures/` y **se omiten con un aviso** si no están, así que `cargo test` pasa en un clon limpio. Cómo conseguirlos: ver `src-tauri/tests/fixtures/README.md`.
 
+### Desarrollar contra un `opendoc-core` local
+
+Por defecto la app depende de [`opendoc-core`](https://github.com/daidarzzz/opendoc-core) **por etiqueta de Git** (ver `src-tauri/Cargo.toml`), para que app y CLI compartan exactamente la misma versión publicada. Para trabajar a la vez en los dos repositorios sin publicar un tag, descomenta el bloque `[patch]` al final de `src-tauri/Cargo.toml` y apunta a tu clon local (la ruta es relativa a `src-tauri/`):
+
+```toml
+[patch."https://github.com/daidarzzz/opendoc-core"]
+opendoc-core = { path = "../../opendoc-core" }
+```
+
+Vuelve a comentarlo antes de commitear: mientras el patch esté activo, `Cargo.lock` resuelve a la ruta local en vez de al tag, y las releases deben compilar contra el tag versionado.
+
 ### Estructura
 
 ```
@@ -144,6 +156,7 @@ El detalle completo está en [`SPEC.md`](./SPEC.md).
 - Solo probado en **Windows**. macOS y Linux están poco probados; en Linux, WebKitGTK puede comportarse distinto.
 - Los ejecutables no están firmados (avisos de SmartScreen / Gatekeeper).
 - Los docsets se ven siempre con su estilo claro; el modo oscuro del contenido está desactivado.
+- El acento solo cambia el icono en ejecución (barra de tareas / Dock): el del ejecutable, instalador y Finder sigue rojo.
 - Los docsets *tarix* ocupan bastante en disco una vez extraídos (decenas o cientos de MB cada uno).
 
 ## Licencia
@@ -159,4 +172,5 @@ El código fuente de cada versión publicada está en este repositorio, que es l
 ## Agradecimientos
 
 - [Zeal](https://zealdocs.org/) y [Dash](https://kapeli.com/dash) por popularizar el formato docset y la idea del navegador de documentación offline. OpenDoc es un proyecto independiente y no está afiliado a ninguno de los dos.
+- [Catppuccin](https://catppuccin.com/) por dos colores de su paleta usados en el tema de acento (Mauve Latte/Mocha, MIT).
 - Las documentaciones que cargues pertenecen a sus autores y mantienen sus propias licencias.

@@ -16,15 +16,21 @@ export function emptyTab(): Tab {
   return {
     id: `tab-${nextTabId++}`,
     docsetId: "",
+    type: "docset",
     history: [],
     historyIndex: -1,
     scrolls: {},
   };
 }
 
-/** Pestaña nueva con una entrada inicial. */
+/** Pestaña nueva con una entrada inicial (docset normal). */
 export function tabWithEntry(docsetId: string, entry: TabEntry): Tab {
-  return { ...emptyTab(), docsetId, history: [entry], historyIndex: 0 };
+  return { ...emptyTab(), docsetId, type: "docset", history: [entry], historyIndex: 0 };
+}
+
+/** Pestaña de catálogo (sin historial de navegación). */
+export function catalogTab(): Tab {
+  return { ...emptyTab(), docsetId: "", type: "catalog" };
 }
 
 /** Entrada actual de la pestaña, o null si es una pestaña vacía. */
@@ -58,12 +64,12 @@ export function navigateTab(tab: Tab, entry: TabEntry): Tab {
   if (current && entry.url === current.url) {
     const history = [...tab.history];
     history[tab.historyIndex] = entry;
-    return { ...tab, history };
+    return { ...tab, type: "docset", history };
   }
   if (current && sameDocument(current.url, entry.url)) {
     const history = tab.history.slice(0, tab.historyIndex + 1);
     history[tab.historyIndex] = entry;
-    return { ...tab, history };
+    return { ...tab, type: "docset", history };
   }
   let history = [...tab.history.slice(0, tab.historyIndex + 1), entry];
   let historyIndex = history.length - 1;
@@ -72,7 +78,7 @@ export function navigateTab(tab: Tab, entry: TabEntry): Tab {
     history = history.slice(dropped);
     historyIndex -= dropped;
   }
-  return { ...tab, history, historyIndex };
+  return { ...tab, type: "docset", history, historyIndex };
 }
 
 /** Atrás: mueve el cursor una posición. Sin página anterior → igual. */

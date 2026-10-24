@@ -1,6 +1,7 @@
 // Módulos de lógica de OpenDoc (independientes de Tauri y testeables).
 // F2: `catalog` + `docset::install` (gestor de docsets); quedan
 // pestañas/favoritos (v0.2, frontend).
+pub mod accent_icon;
 pub mod browse;
 pub mod catalog;
 pub mod commands;
@@ -18,7 +19,7 @@ use tauri::Emitter;
 use commands::{
     confirm_exit, extract_tarix, get_catalog_status, get_docset_home, get_install_status,
     get_session, get_settings, install_docset, list_catalog, list_docsets, list_entries,
-    list_kinds, refresh_catalog, save_session, search, set_docsets_dir, set_feed_repo,
+    list_kinds, refresh_catalog, save_session, search, set_accent, set_docsets_dir, set_feed_repo,
     set_language, set_restore_tabs, set_theme, uninstall_docset, AppState,
 };
 
@@ -93,6 +94,15 @@ pub fn run() {
                 }
             })
             .build()?;
+            // Icono en ejecución según el acento guardado (barra de tareas
+            // o Dock; en macOS el `setup` corre en el hilo principal). Es lo
+            // primero tras crear la ventana; si falla, queda el rojo del bundle.
+            use tauri::Manager;
+            if let Some(state) = app.try_state::<AppState>() {
+                if let Ok(accent) = state.settings.lock().map(|guard| guard.accent) {
+                    crate::accent_icon::apply_to_main_window(app.handle(), accent);
+                }
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -105,6 +115,7 @@ pub fn run() {
             get_docset_home,
             get_settings,
             set_theme,
+            set_accent,
             set_language,
             set_restore_tabs,
             get_session,

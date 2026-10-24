@@ -1,7 +1,7 @@
 //! Comandos Tauri finos (contrato SPEC §4.4 + ajustes T9 + navegación v0.2 + F2):
 //! `list_docsets`, `set_docsets_dir`, `search`, `list_kinds`,
 //! `list_entries`, `get_docset_home`, `get_settings`, `set_theme`,
-//! `set_language`, `set_restore_tabs`, `get_session`, `save_session`, `extract_tarix`,
+//! `set_accent`, `set_language`, `set_restore_tabs`, `get_session`, `save_session`, `extract_tarix`,
 //! `get_catalog_status`, `set_feed_repo`, `refresh_catalog`,
 //! `list_catalog`, `install_docset`, `get_install_status`,
 //! `uninstall_docset`, `confirm_exit`.
@@ -787,8 +787,8 @@ pub fn list_kinds(
         })
         .and_then(|loaded| service::browse_kinds(&loaded, &docset_id));
     match &res {
-        Ok(kinds) => dlog!("[opendoc] kinds {docset_id} -> {} tipos", kinds.len()),
-        Err(e) => dlog!("[opendoc] kinds {docset_id} -> ERROR {e}"),
+        Ok(_kinds) => dlog!("[opendoc] kinds {docset_id} -> {} tipos", _kinds.len()),
+        Err(_e) => dlog!("[opendoc] kinds {docset_id} -> ERROR {_e}"),
     }
     res
 }
@@ -811,11 +811,11 @@ pub fn list_entries(
         })
         .and_then(|loaded| service::browse_entries(&loaded, &docset_id, &kind, offset, limit));
     match &res {
-        Ok(entries) => dlog!(
+        Ok(_entries) => dlog!(
             "[opendoc] entries {docset_id}/{kind} -> {} entradas",
-            entries.len()
+            _entries.len()
         ),
-        Err(e) => dlog!("[opendoc] entries {docset_id}/{kind} -> ERROR {e}"),
+        Err(_e) => dlog!("[opendoc] entries {docset_id}/{kind} -> ERROR {_e}"),
     }
     res
 }
@@ -831,8 +831,8 @@ pub fn get_docset_home(state: State<'_, AppState>, docset_id: String) -> Result<
         })
         .and_then(|loaded| service::docset_home_url(&loaded.docsets, &docset_id));
     match &res {
-        Ok(url) => dlog!("[opendoc] home {docset_id} -> {url}"),
-        Err(e) => dlog!("[opendoc] home {docset_id} -> ERROR {e}"),
+        Ok(_url) => dlog!("[opendoc] home {docset_id} -> {_url}"),
+        Err(_e) => dlog!("[opendoc] home {docset_id} -> ERROR {_e}"),
     }
     res
 }
@@ -984,6 +984,39 @@ pub fn set_theme(
             })?;
         }
     }
+    Ok(settings)
+}
+
+/// Cambia el acento de color y lo persiste (solo si cambió).
+/// También aplica el icono en ejecución (barra de tareas / Dock).
+#[tauri::command]
+pub fn set_accent(
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+    accent: crate::settings::Accent,
+) -> Result<crate::settings::Settings, ApiError> {
+    let settings = state
+        .settings
+        .lock()
+        .map(|mut guard| {
+            guard.accent = accent;
+            guard.clone()
+        })
+        .map_err(|e| ApiError::LoadFailed {
+            message: e.to_string(),
+        })?;
+    {
+        use tauri::Manager;
+        if let Ok(data_dir) = app.path().app_data_dir() {
+            let path = crate::settings::settings_file(&data_dir);
+            crate::settings::save_if_changed(&path, &settings).map_err(|e| {
+                ApiError::LoadFailed {
+                    message: e.to_string(),
+                }
+            })?;
+        }
+    }
+    crate::accent_icon::apply_to_main_window(&app, accent);
     Ok(settings)
 }
 
