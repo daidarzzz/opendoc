@@ -7,9 +7,10 @@
 //!
 //! Handler síncrono: son ficheros locales pequeños; el `async` no aporta.
 
-pub mod resolve;
-
-pub use resolve::{content_type_for, resolve_request, ResolveError, ResolvedFile};
+// La resolución segura de rutas vive en el núcleo compartido
+// (`opendoc_core::resolve`) para que el CLI use exactamente las mismas
+// reglas.
+pub use opendoc_core::resolve::{content_type_for, resolve_request, ResolveError, ResolvedFile};
 
 use tauri::{Manager, Runtime, UriSchemeContext};
 

@@ -2557,11 +2557,10 @@ version = "0.2.69"
 dependencies = [
  "base64 0.22.1",
  "flate2",
- "nucleo-matcher",
  "objc2",
  "objc2-app-kit",
  "objc2-foundation",
- "plist",
+ "opendoc-core",
  "quick-xml 0.37.5",
  "reqwest 0.12.28",
  "rusqlite",
@@ -2574,6 +2573,22 @@ dependencies = [
  "tauri-plugin-opener",
  "tauri-plugin-os",
  "tempfile",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "opendoc-core"
+version = "0.1.1"
+source = "git+https://github.com/daidarzzz/opendoc-core?tag=v0.1.1#09aa7f2942c65291ed56ad5c4a26c916238fba07"
+dependencies = [
+ "base64 0.22.1",
+ "flate2",
+ "nucleo-matcher",
+ "plist",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tar",
  "thiserror 2.0.21",
 ]
 
