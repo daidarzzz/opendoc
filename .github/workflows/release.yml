@@ -1,12 +1,12 @@
 name: Release
 
-# - `check` corre en cada push a master y en lanzamientos manuales, pero
-#   se salta en tags (el release va directo al build tras `verify-version`).
-#   `verify-version` corre siempre.
+# - `check` corre en cada push a master, en cada PR hacia master y en
+#   lanzamientos manuales, pero se salta en tags (el release va directo al
+#   build tras `verify-version`). `verify-version` corre siempre.
 # - Los instaladores solo se construyen en tags `v*` (se suben a un
 #   borrador de GitHub Release creado una sola vez por `create-release`)
 #   o manualmente desde la pestaña Actions (se suben como artefactos del
-#   workflow, sin crear ni tocar ningún release).
+#   workflow, sin crear ni tocar ningún release). En PRs solo corre `check`.
 # - `paths-ignore` solo afecta a pushes de ramas: GitHub no evalúa
 #   filtros de rutas en pushes de tags, así que un tag `v*` siempre
 #   dispara el workflow aunque el commit solo toque .md/docs.
@@ -15,6 +15,13 @@ on:
   push:
     branches: [master]
     tags: ["v*"]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "landing/**"
+      - "LICENSE"
+  pull_request:
+    branches: [master]
     paths-ignore:
       - "**/*.md"
       - "docs/**"
