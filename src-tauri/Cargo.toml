@@ -67,3 +67,17 @@ lto = true
 opt-level = 3
 panic = "abort"
 strip = true
+
+# --- Desarrollo local de `opendoc-core` -----------------------------------
+# La app consume el núcleo por etiqueta de Git (ver `opendoc-core` arriba):
+# así app y CLI comparten exactamente la misma versión publicada.
+#
+# Para trabajar a la vez en la app y en el núcleo, sin publicar un tag,
+# descomenta este `[patch]` y ajusta la ruta a tu clon de `opendoc-core`
+# (relativa a este `Cargo.toml`, es decir a `src-tauri/`):
+#
+#   [patch."https://github.com/daidarzzz/opendoc-core"]
+#   opendoc-core = { path = "../../opendoc-core" }
+#
+# Vuelve a comentarlo antes de commitear: con el patch activo, `Cargo.lock`
+# apunta a la ruta local y la release debe compilar contra el tag versionado.

@@ -109,6 +109,17 @@ npx tsc --noEmit                                           # typecheck del front
 
 Los tests que usan docsets reales (`CSS.docset`, `Python_3.docset`, `C++.docset`) buscan los archivos en `src-tauri/tests/fixtures/` y **se omiten con un aviso** si no están, así que `cargo test` pasa en un clon limpio. Cómo conseguirlos: ver `src-tauri/tests/fixtures/README.md`.
 
+### Desarrollar contra un `opendoc-core` local
+
+Por defecto la app depende de [`opendoc-core`](https://github.com/daidarzzz/opendoc-core) **por etiqueta de Git** (ver `src-tauri/Cargo.toml`), para que app y CLI compartan exactamente la misma versión publicada. Para trabajar a la vez en los dos repositorios sin publicar un tag, descomenta el bloque `[patch]` al final de `src-tauri/Cargo.toml` y apunta a tu clon local (la ruta es relativa a `src-tauri/`):
+
+```toml
+[patch."https://github.com/daidarzzz/opendoc-core"]
+opendoc-core = { path = "../../opendoc-core" }
+```
+
+Vuelve a comentarlo antes de commitear: mientras el patch esté activo, `Cargo.lock` resuelve a la ruta local en vez de al tag, y las releases deben compilar contra el tag versionado.
+
 ### Estructura
 
 ```
