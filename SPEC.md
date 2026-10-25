@@ -1,158 +1,266 @@
-OpenDoc: Especificación técnica
+# OpenDoc: Especificación Técnica
 
-Visor moderno de documentación offline, compatible con docsets de Dash/Zeal.
+Documento de referencia técnica y arquitectura de **OpenDoc** (`v0.2.x`). Define la organización por capas, el flujo de datos, el aislamiento de procesos, el protocolo personalizado y los contratos vigentes entre el frontend y el backend.
 
-1. Visión
+---
 
-Problema. Zeal es excelente pero su interfaz (C++/Qt) se ve anticuada, consume más de lo necesario y es poco personalizable.
+## 1. Visión y Objetivos
 
-Solución. Una app de escritorio nueva (no un fork de Zeal), compatible con el ecosistema de docsets, con:
+### 1.1 Problema
+Los desarrolladores necesitan consultar documentación de referencia sin depender de conexión a Internet. Las alternativas clásicas de escritorio en C++/Qt (como Zeal) presentan interfaces desactualizadas, tiempos de arranque perceptibles, consumo elevado de memoria y escasas opciones de personalización moderna (modos claro/oscuro, paletas dinámicas, navegación fluida por teclado).
 
-Arranque instantáneo y RAM mínima.
-Diseño pulido (referencia: Obsidian / VS Code), modo oscuro y claro.
-Búsqueda global tipo Command Palette (Ctrl+K / Cmd+K), difusa y en milisegundos.
-Navegación fluida y atajos de teclado.
+### 1.2 Solución
+OpenDoc es un visor y buscador de documentación offline rápido y moderno, escrito desde cero (no es un fork) y compatible con el ecosistema de docsets de **Dash y Zeal**.
 
-Nombre: OpenDoc.
+Pilares de diseño:
+1. **Velocidad nativa**: arranque en milisegundos, consumo de RAM contenido (<80 MB en reposo) y búsqueda difusa en memoria interactiva (<50 ms en colecciones de más de 300.000 entradas).
+2. **Experiencia de usuario cuidada**: interfaz estilo VS Code / Obsidian con tema oscuro, claro y del sistema, 4 colores de acento dinámicos, navegación por pestañas con persistencia de sesión e historial, y Command Palette (`Ctrl+K` / `Cmd+K`).
+3. **Compatibilidad amplia**: soporte para docsets clásicos con índices estándar SQLite (`searchIndex`), esquema Core Data (`ZTOKEN...`), lectura de `Info.plist`, extracción segura de docsets tarix y catálogo integrado configurable.
+4. **Seguridad rigurosa**: visualización en `<iframe>` aislado (`sandbox="allow-scripts"`), protocolo propio `opendoc://` con mitigación de path traversal y validación estricta de cualquier evento emitido por contenido externo.
 
-2. Stack (definitivo)
-Capa	Tecnología	Responsabilidad
-Frontend	React + TypeScript + Tailwind CSS (Vite)	UI, Command Palette, ajustes, temas, pestañas
-Backend	Rust	Escaneo de docsets, lectura de índices, búsqueda, servir contenido, descargas
-Puente	Tauri v2	Comandos tipados (#[tauri::command]), protocolo personalizado, empaquetado
+---
 
-Crates previstos: rusqlite, plist, nucleo (o fuzzy-matcher), serde, thiserror, walkdir. Para descargas (fase posterior): reqwest, flate2, tar, zip.
+## 2. Arquitectura General y Ecosistema
 
-3. Compatibilidad con docsets
-3.1 Estructura
-Nombre.docset/
-└── Contents/
-    ├── Info.plist
-    └── Resources/
-        ├── docSet.dsidx        # SQLite con el índice
-        └── Documents/          # HTML, CSS, JS, imágenes
-3.2 Info.plist
+El ecosistema OpenDoc se estructura en tres componentes desacoplados:
 
-Se parsea siempre. Campos relevantes: CFBundleName, CFBundleIdentifier, DocSetPlatformFamily, dashIndexFilePath (página de inicio), isDashDocset, DashDocSetFamily, DashDocSetFallbackURL (docsets "online redirect"; ignorar en MVP).
+```mermaid
+graph TD
+    subgraph Ecosistema OpenDoc
+        CORE["opendoc-core<br/>(Crate Rust compartido: escaneo, índices, búsqueda, tarix, resolve)"]
+        CLI["opendoc-cli / odc<br/>(CLI terminal: búsqueda y apertura en navegador)"]
+        APP["OpenDoc Desktop<br/>(Tauri v2 + React 19 + TypeScript + Tailwind)"]
+    end
 
-3.3 Índice SQLite: dos esquemas
-Esquema estándar: tabla searchIndex(id, name, type, path).
-Esquema Core Data: tablas ZTOKEN, ZTOKENTYPE, ZFILEPATH, ZTOKENMETAINFORMATION (unir para obtener name, type y path; el path puede incluir ancla #).
+    CORE -->|Git tag v0.1.1| CLI
+    CORE -->|Git tag v0.1.1| APP
 
-Ambos esquemas deben normalizarse a una misma estructura interna:
+    subgraph Arquitectura de OpenDoc Desktop
+        FE["Frontend React 19<br/>(Zustand Stores, Components, Hooks, Typed Wrappers)"]
+        TAURI_IPC["Puente IPC Tauri v2<br/>(invoke tipado, eventos unidireccionales)"]
+        BE_CMD["src-tauri Commands & Service<br/>(mod.rs, service.rs, state.rs)"]
+        BE_SRV["Servicios Backend<br/>(Catalog, Protocol, Navigation, Session, Settings, AccentIcon)"]
 
-rust
-struct Entry { docset_id: u32, name: String, kind: String, path: String }
+        FE <--> TAURI_IPC
+        TAURI_IPC <--> BE_CMD
+        BE_CMD <--> BE_SRV
+        BE_SRV <--> CORE
+    end
+```
 
-La detección del esquema se hace comprobando qué tablas existen (sqlite_master).
+### 2.1 Capas y Responsabilidades
 
-3.4 Fuera de alcance del MVP
-Docsets en formato tarix: v0.2 (extracción en caché; ver §6).
-Docsets "online redirect".
-Docsets de usuario/cheatsheets de Dash (formatos propietarios).
-4. Arquitectura
-4.1 Backend (Rust)
+| Capa | Tecnologías | Responsabilidad |
+|---|---|---|
+| **Frontend** | React 19, TypeScript, Tailwind CSS v3, Vite, Zustand | Interfaz gráfica, pestañas, árbol de navegación, Command Palette, atajos globales, i18n, diálogo de ajustes y puente de comunicación con el iframe. |
+| **Puente IPC** | Tauri v2 (`core`, `dialog`, `opener`, `os`) | Serialización/deserialización de comandos tipados, emisión de eventos en tiempo real (`docset-progress`, `opendoc-exit-requested`), gestión de ventanas y menú contextual nativo. |
+| **Backend de la App** | Rust (`src-tauri/src/`) | Gestión de estado (`AppState`), ciclo de vida, protocolo URI `opendoc://`, persistencia (`settings.json`, `session.json`), catálogo de feeds HTTP (`reqwest::blocking`, `quick-xml`) e iconos dinámicos (`accent_icon`). |
+| **Núcleo Compartido** | Rust (`opendoc-core`) | Lógica pura sin red ni Tauri: escáner de docsets, lectura de `Info.plist`, unificación de esquemas SQLite (`searchIndex` / Core Data), índice en memoria (`nucleo-matcher`), extracción tarix y resolución de rutas en disco. |
 
-Módulos sugeridos en src-tauri/src/:
+---
 
-docset/: escaneo, Info.plist, lectura de índices (ambos esquemas), modelo Docset y Entry.
-search/: índice en memoria y matcher fuzzy.
-protocol/: manejador del esquema opendoc://.
-commands/: comandos Tauri finos que delegan en los módulos anteriores.
-settings/: configuración persistente (ruta de docsets, tema, etc.).
-download/: catálogo y descargas (fase posterior).
+## 3. Módulos del Sistema
 
-Principio: la lógica vive en módulos testeables sin Tauri; los comandos solo conectan.
+### 3.1 Backend (`src-tauri/src/`)
 
-4.2 Búsqueda
-Al arrancar (o al activar un docset) se cargan todos los Entry en memoria.
-La búsqueda usa matching difuso (nucleo) con ranking: coincidencia exacta > prefijo > difusa; priorizar tipos como Class/Function/Method sobre Section/Guide.
-No usar LIKE '%x%' en SQL para la búsqueda interactiva.
-Objetivo: resultados en menos de 50 ms con docsets grandes cargados.
-Filtros: por docset activo y por prefijo (ej. py: format).
-4.3 Visor de documentación
-No se inyecta el HTML del docset en React.
-Se sirve con un protocolo personalizado de Tauri (register_uri_scheme_protocol): opendoc://<docset-id>/<ruta-relativa>.
-Nota: en Windows/Android Tauri expone estos esquemas como http://opendoc.localhost/...; encapsularlo en una función de utilidad en el frontend.
-El contenido se muestra en un <iframe>, de modo que CSS, JS e imágenes relativas funcionan y quedan aislados de la UI.
-El protocolo debe: resolver rutas dentro de Documents/ sin permitir path traversal (..), devolver el Content-Type correcto y manejar anclas.
-Inyección opcional de CSS en el iframe para tema oscuro (fase posterior).
-4.4 Comandos Tauri (contrato inicial)
-Comando	Entrada	Salida
-list_docsets	n/a	Vec<Docset>
-set_docsets_dir	path	ScanReport (docsets + pending_tarix + issues)
-search	SearchRequest { request_id, query, docset_ids?, limit? } (query admite `a,b:texto`)	SearchResponse { request_id (eco), results, applied [{ token, docset_id, installed }], unknown [claves sin docset] }
-list_kinds	docset_id	Vec<KindInfo { kind, label, inferred, count }> (orden fijo de comunes + inferidas + resto A-Z)
-list_entries	docset_id, kind, offset?, limit? (defecto 0/100, tope 500)	Vec<NavEntry { docset_id, name, kind, path, url }> (orden plegado; tipo inexistente → vacío)
-get_docset_home	docset_id	URL opendoc://...
-get_settings	n/a	Settings { version, docsets_dir?, theme, accent, feed_url?, catalog_fetched_at?, fast_mirror?, restore_tabs, language }
-set_theme	theme	Settings (persiste solo si cambió)
-set_accent	accent	Settings (acento de color; persiste solo si cambió; aplica el icono en ejecución)
-set_language	language	Settings (idioma de la interfaz en/es; persiste solo si cambió)
-confirm_exit	n/a	n/a (sale con código 0 tras el volcado; flujo ExitRequested de macOS)
-set_restore_tabs	restore	Settings (restaurar pestañas al abrir; con false no se lee ni se escribe session.json)
-get_session	n/a	Session { version, tabs: Vec<SavedTab { docset_id, docset_name?, bundle_id?, history: Vec<{ path, title }>, history_index, scroll? }>, active } (vacía si no hay nada; nunca falla)
-save_session	Session	bool (escribe si cambió; con restore_tabs=false no toca el disco)
-extract_tarix	docset_id	ScanReport (async; ExtractionInProgress si hay otra en curso)
-get_catalog_status	n/a	CatalogStatus { repo?, fetched_at?, count, profile_enabled } (caché local, sin red; profile_enabled = OPENDOC_PROFILE=1 al arrancar)
-set_feed_repo	repo	Settings (valida owner/repo o URL y persiste)
- refresh_catalog	n/a	CatalogSummary { repo, count, skipped, fetched_at } (async; NoFeedRepo sin repo)
- list_catalog	query?	Vec<FeedEntry { id, name, version, urls }> (caché, offline)
- install_docset	{ feed_id, force? }	InstallSummary { feed_id, docset_id, name, version?, entries, reinstalled } (async; progreso por evento `docset-progress`; sin force: AlreadyInstalled si ya instalado, AmbiguousMatch si varias carpetas coinciden; InstallInProgress si ya hay una en curso)
- get_install_status	feed_id?	Vec<InstallStatus { feed_id, name, installed, docset_id?, installed_version?, available_version, update_available (true/false/null), ambiguous, ambiguous_ids }> (caché + instalados, offline; UnknownFeed si el id no existe)
- uninstall_docset	feed_id	String (id eliminado; requiere coincidencia única dentro de la carpeta configurada; UnknownFeed, UnknownDocset, AmbiguousMatch o InstallFailed)
+- **`commands/`**:
+  - `mod.rs`: define los manejadores `#[tauri::command]` expuestos a Tauri. Valida argumentos y gestiona la concurrencia de instalaciones.
+  - `service.rs`: lógica de negocio pura y testeable sin dependencias directas de Tauri runtime.
+  - `state.rs`: estructura `AppState` que aloja `Loaded` (docsets cargados, índice `SearchIndex`, historial de incidencias), `settings`, guards de extracción e instalación en curso.
+  - `error.rs`: enumerador `ApiError` tipado que mapea fallos de disco, red, formato o lógica hacia el frontend con identificador `kind`.
+- **`docset/`**:
+  - `install.rs`: cliente de instalación de paquetes `.tgz` desde feeds. Descarga a temporal `.part`, descomprime y valida estructura clásica (`Contents/Resources/`), reemplaza de forma atómica y conserva copias de seguridad `.old` ante fallos.
+  - `devicon.rs`: resolución y almacenamiento en caché de iconos de lenguajes procedentes de la CDN oficial de Devicon.
+- **`catalog/`**:
+  - `feed.rs`: parseo de repositorios de feeds en GitHub y feeds XML compatibles con el formato estándar de Kapeli/Zeal. Normalización de URLs y ordenamiento de mirrors.
+  - `mod.rs`: serialización y persistencia atómica de la caché `catalog.json`.
+- **`protocol/`**:
+  - Manejador del esquema `opendoc://` (en Windows expuesto como `http://opendoc.localhost`).
+  - Resolución segura de ficheros dentro de `Documents/`.
+  - Inyección en respuestas HTML del estilo forzado claro (`THEME_STYLE`), script de comunicación y atajos (`THEME_SCRIPT`), y normalizador de eventos de rueda/trackpad (`THEME_WHEEL_SCRIPT`).
+- **`navigation.rs`**:
+  - Función pura `nav_decision` que autoriza URLs internas (`opendoc`, `localhost`, esquemas de Tauri) y reenvía enlaces externos (`http`, `https`, `mailto`) al navegador del sistema a través de `tauri-plugin-opener`.
+- **`session/`**:
+  - Estructuras `Session`, `SavedTab` y `SavedEntry`. Carga tolerante y guardado atómico en `session.json` con rotación de respaldos `.bak`.
+- **`settings/`**:
+  - Configuración persistente en `settings.json`: directorio de docsets, tema, acento, idioma, repo de feeds, mirror preferido y preferencia de restauración de pestañas.
+- **`accent_icon.rs`**:
+  - Embebe mediante `include_bytes!` los PNG generados para los 4 colores de acento y los aplica en caliente a la ventana y al Dock (`NSApplication.setApplicationIconImage` en macOS, `Window::set_icon` en Windows/Linux).
+- **`browse.rs`**:
+  - Conteo y listado paginado por tipos de símbolos (funciones, clases, constantes, módulos).
 
-Los tipos se comparten con el frontend (generar bindings, por ejemplo con specta/tauri-specta o ts-rs, o mantenerlos a mano y sincronizados).
+### 3.2 Frontend (`src/`)
 
-4.5 Frontend
-Layout: barra lateral (docsets / navegación), área central con el visor, Command Palette modal.
-Estado: ligero (Zustand o similar). Sin librerías pesadas de componentes.
-Accesibilidad básica: foco, navegación por teclado completa en la paleta.
-Idiomas: inglés por defecto + español (`src/lib/i18n.ts`, diccionarios tipados con paridad comprobada; `document.documentElement.lang` sigue al ajuste; errores del backend por `kind`, nunca texto crudo).
-4.6 Acento de color
-Ajustes ofrece 4 acentos (`red` por defecto, `blue`, `amber`, `catppuccin`): recolorean el logo (componente único `AppLogo` con `var(--accent)`), los resaltados de la UI y el icono de la app en ejecución. Cambio en caliente, sin reiniciar; `accent` persiste en `settings.json` con lectura tolerante (ausente o inválido → `red`).
-Tokens por acento y modo (`[data-accent]` en `<html>`, fuente de verdad en `src/lib/accent.ts`): `--accent` (marca: logo y decoración), `--accent-text` (texto e indicadores funcionales), `--accent-solid` + `--on-accent` (botones primarios). Contraste WCAG verificado con tests: texto y texto-sobre-sólido >= 4.5:1 en los 4 acentos y los 2 modos. La marca se mantiene en logo y decoración; donde no llega (p. ej. ámbar #FBB03B sobre blanco), el uso funcional va oscurecido. Catppuccin usa Latte Mauve #8839EF en claro y Mocha Mauve #CBA6F7 en oscuro (paleta MIT de Catppuccin; solo esos dos valores, con atribución en el código).
-El acento por defecto es rojo y los errores también: los errores usan rojos fijos propios (icono + texto, independientes del acento) y la selección nunca es relleno sólido (tinte ~10-15% + barra de 2 px), así que siempre se distinguen.
-Icono en ejecución: 4 PNG "box" de 512 px generados con `scripts/gen-accent-icons.*` (resvg, sin tocar el bundle) y embebidos con `include_bytes!`; se aplican al arrancar (tras crear la ventana) y en `set_accent`. Windows/Linux: `Window::set_icon` (requiere feature `image-png`). macOS: `Window::set_icon` no está soportado y se usa `NSApplication.setApplicationIconImage` (objc2, solo `cfg(target_os = "macos")`, en el hilo principal; código revisado a mano, sin compilar para macOS en este equipo). Límite: solo cambia el icono en ejecución (barra de tareas y Dock); ejecutable, instalador, `.app` en Finder y accesos directos siguen en rojo. Wayland y la apariencia real en macOS (incluida su máscara de iconos) están sin verificar.
-5. Plataformas
+- **`components/`**:
+  - `Viewer.tsx`: contenedor de doble iframe para transiciones suaves sin parpadeo blanco, validación de mensajes postMessage y reenrutamiento de scroll.
+  - `Sidebar.tsx`: lista de docsets cargados, árbol de navegación por tipo (`BrowseTree`), acceso al catálogo, enlaces a ajustes y sección de incidencias.
+  - `CommandPalette.tsx`: modal flotante de búsqueda rápida con atajos de teclado (`↑`/`↓`, `Enter`, `Esc`), badges por tipo y filtrado por docset.
+  - `TabsBar.tsx`: pestañas reordenables por arrastre, botón de nueva pestaña, cierre y estado visual (activo, pendiente tarix o docset ausente).
+  - `CatalogView.tsx`: interfaz del gestor de docsets (búsqueda de paquetes, estado de instalación, actualización y progreso de descarga).
+  - `Welcome.tsx`: pantalla inicial con accesos directos de búsqueda y selección de carpeta cuando no hay pestañas abiertas.
+  - `ErrorDetails.tsx`: desglose de incidencias detectadas durante el escaneo.
+- **`store/`**:
+  - Stores de Zustand: `docsets`, `tabs`, `palette`, `catalog`, `browse`, `theme`, `accent` y `lang`.
+- **`lib/`**:
+  - `commands.ts`: funciones envolventes tipadas sobre `invoke()`, `listen()` y diálogos nativos.
+  - `types.ts`: tipos TypeScript espejo de los modelos de Rust.
+  - `i18n.ts`: diccionarios bilingües inglés/español con claves fuertemente tipadas.
+  - `sessionSync.ts`: sincronización reactiva de estado con debounce hacia el backend y vuelco final en cierre.
+  - `iframeMessages.ts`: validadores exhaustivos de los mensajes recibidos desde los iframes.
+  - `accent.ts`: tokens CSS para los 4 acentos de color con contraste WCAG garantizado.
 
-Windows (WebView2), macOS (WebKit) y Linux (WebKitGTK). En Linux WebKitGTK puede dar problemas de rendimiento o compatibilidad: probar pronto con un docset grande y documentar hallazgos.
+---
 
-6. Versiones y objetivo final
-v0.1: MVP (primer objetivo)
- Proyecto Tauri v2 + React + TS + Tailwind funcionando.
- Configurar carpeta de docsets y escanear .docset.
- Parsear Info.plist y leer índice (esquema estándar y Core Data).
- Índice en memoria + búsqueda fuzzy.
- Command Palette (Ctrl+K) con resultados en vivo.
- Visor con protocolo opendoc:// + iframe.
- Tema oscuro/claro.
- Tests de Rust para escaneo, lectura de índices y búsqueda.
-v0.2: Uso diario
-Pestañas e historial (atrás/adelante).
-Persistencia de pestañas entre sesiones (hecho): `session.json` en datos de la app (`"version": 1`, escritura atómica, `.bak` rotativo máx. 3, tolerancia por campo). Guarda por pestaña docset_id, historial en forma neutra (ruta relativa con ancla, sin esquema), título, índice actual, scroll de la entrada actual y pistas de reencuentro (nombre de carpeta + bundle_id); tope 30 pestañas y 50 entradas (ventana centrada en la actual). Guardado con debounce (~500 ms) + vuelco al cerrar (el frontend, con tope ~1 s; un fallo al cerrar no bloquea el cierre). Restaura tras el escaneo (solo la activa monta iframe); docset ausente → pestaña atenuada conservada (tarix pendiente → aviso propio); reencuentro por id exacto, bundle_id único o nombre único (ambiguo → no disponible sin reescribir). Ajuste `restore_tabs` (por defecto true, interruptor en Ajustes).
-Siguiente (tras V2-3): ejecutar Vitest en el job check del CI.
-Favoritos y recientes.
-Tabla de contenidos de la página actual.
-Filtro por docset y por prefijo de búsqueda.
-Ajustes persistentes (tema, fuente, atajos; sustituyen la autocarga TEMP y el localStorage interino de T7) (hecho en v0.1).
-Soporte de docsets tarix con extracción completa en caché (hecho en v0.1): descargar el .tgz, extraer Documents/ + metadatos y reutilizar el escáner/lector actuales (más limpieza de <dash_entry_*>, ya hecha en T7b). La extracción bajo demanda por rangos (tarindex) queda como optimización posterior.
-Seguridad en la extracción: validar que ninguna entrada del tgz salga de la carpeta destino (.., rutas absolutas, symlinks) y limitar el tamaño total extraído.
-Sin cancelar extracción en v0.2: no hay cancelación (un fallo o cierre nunca deja caché a medias como válida: se extrae a temporal y se renombra al final).
-v0.3: Gestión de docsets
-Gestión de docsets: por decidir (aplazado). No hay arquitectura aprobada (ni catálogo central, ni P2P, ni proveedores concretos): se discutirá antes de escribir código. Lo único decidido:
-Nada de OpenDoc debe depender de los servidores o del catálogo de Kapeli (feeds de Dash) ni redistribuir sus docsets: su licencia prohíbe usarlos en aplicaciones de terceros sin permiso, y no se va a pedir.
-Zeal es GPL-3.0-or-later y OpenDoc también (GPL-3.0-or-later, ver LICENSE): la licencia ya es compatible, pero SIGUE prohibido copiar o traducir código de Zeal o de cualquier otro proyecto sin avisar antes; si alguna vez se adapta código ajeno, hay que conservar sus avisos de copyright, atribuirlo en el propio archivo y listarlo en un NOTICE. Mientras tanto, solo estudiar comportamiento.
-v1.0: Objetivo final
-Temas personalizables y CSS inyectado para modo oscuro en la documentación (el modo oscuro del visor quedó DESACTIVADO: la inversión por filtro se ve bugueada; el mecanismo de inyección permanece para retomarlo con temas por docset).
-Resaltado de sintaxis refinado.
-Instaladores para Windows, macOS y Linux (objetivo: ~10-15 MB, RAM en reposo < 50-80 MB) (hecho el CI: builds multiplataforma y release como borrador en tags v*).
-Rendimiento verificado con 20+ docsets cargados.
-Documentación de usuario y CI con builds multiplataforma.
-7. Criterios de calidad
-Búsqueda < 50 ms; arranque en pocos cientos de ms.
-Sin unwrap() en código de producción; errores tipados con thiserror.
-Los docsets son entrada no confiable: validar rutas, tolerar índices corruptos sin caerse.
-Al extraer un tgz, ninguna entrada puede salir de la carpeta destino (.., rutas absolutas, symlinks) y el total extraído está topado.
-Cada módulo de Rust con tests; los de docsets usan fixtures reales en tests/fixtures/.
-Dos instancias simultáneas de la app: último en cerrar gana (`session.json` last-writer-wins, sin bloqueo). Mejora futura: plugin single-instance de Tauri.
+## 4. Flujos Clave del Sistema
+
+### 4.1 Carga de Docsets e Indexación
+
+1. **Configuración inicial**: al arrancar, el frontend ejecuta `set_docsets_dir`. Si no existe carpeta configurada, el backend crea y asigna la carpeta por defecto `<app_data>/docsets`.
+2. **Escaneo del sistema de archivos**: `opendoc-core::scanner` inspecciona cada elemento `*.docset`:
+   - Lee `Contents/Info.plist` para extraer `CFBundleName`, identificadores, familia de plataforma y `dashIndexFilePath`.
+   - Comprueba la existencia de la base de datos SQLite `Contents/Resources/docSet.dsidx`.
+   - Identifica el esquema del índice:
+     - **Estándar**: tabla `searchIndex(id, name, type, path)`.
+     - **Core Data**: tablas `ZTOKEN`, `ZTOKENTYPE`, `ZFILEPATH`, `ZTOKENMETAINFORMATION`.
+   - Si no existe `Documents/` pero contiene `tarix.tgz`, se clasifica como `PendingTarix` ("Por instalar"). Si ya existía caché en `tarix-cache/<id>/`, se integra automáticamente.
+   - Si el docset está corrupto o incompleto, no detiene la ejecución: se añade una entrada a `ScanReport.issues`.
+3. **Construcción del índice en memoria**: las entradas (`Entry`) de todos los docsets válidos se agregan a `SearchIndex`. Los identificadores de docset y tipos de símbolo se almacenan como cadenas compartidas (`Arc<str>`).
+
+### 4.2 Estrategia de Búsqueda y Ranking
+
+- La búsqueda interactiva se ejecuta íntegramente en memoria mediante `nucleo-matcher`, descartando consultas SQL `LIKE` en tiempo de escritura.
+- **Jerarquía de puntuación**:
+  1. *Coincidencia exacta* del término de búsqueda.
+  2. *Coincidencia por prefijo*.
+  3. *Coincidencia difusa (fuzzy)* ponderada.
+  4. *Coincidencia en el último segmento* de rutas o nombres calificados (p. ej. `dumps` en `json.dumps`).
+  5. *Prioridad por tipo de símbolo*: `Class`, `Function`, `Method` y `Struct` tienen prioridad sobre `Guide`, `Section` o `Element`.
+- **Filtro de prefijo**: permite restringir la búsqueda a docsets concretos mediante sintaxis `slug:consulta` (p. ej. `py:dumps` o `cpp,rust:vector`). Los prefijos se resuelven contra los docsets cargados.
+
+### 4.3 Entrega de Contenido y Protocolo `opendoc://`
+
+- El contenido de la documentación se sirve a través del protocolo registrado en Tauri:
+  - macOS y Linux: `opendoc://<docset_id>/<ruta_relativa>`
+  - Windows: `http://opendoc.localhost/<docset_id>/<ruta_relativa>`
+- **Seguridad en la resolución**:
+  - `opendoc-core::resolve::resolve_request` resuelve la ruta respecto a `Documents/`.
+  - Se rechazan terminantemente intentos de navegación hacia directorios superiores (`..`), rutas absolutas, unidades de disco de Windows, symlinks fuera del árbol y secuencias con doble codificación percent.
+- **Inyección en documentos HTML**:
+  - Se añade un bloque `<style>` para forzar esquema claro en los controles nativos.
+  - Se inyecta un `<script>` que:
+    - Escucha navegaciones y cambios de ancla (`hashchange`) para notificar al visor principal.
+    - Captura el scroll con limitación temporal (debounce a 250 ms) y lo reporta a la ventana principal.
+    - Captura y reenvía atajos de teclado esenciales (`Ctrl/Cmd+K`, `Ctrl/Cmd+W`, `Ctrl/Cmd+T`, `Ctrl/Cmd+Tab`, `Alt+←/→`).
+    - Captura clics con rueda central o `Ctrl/Cmd+clic` en enlaces internos y solicita apertura en nueva pestaña (`opendoc-open-tab`).
+    - Recibe eventos de scroll de trackpad desde el contenedor cuando WebKit los intercepta en el padre.
+- **Enlaces externos**:
+  - Los clics en enlaces con esquemas `http://` o `https://` fuera del dominio local son interceptados por `navigation::nav_decision` en el manejador `on_navigation` de la ventana y abiertos en el navegador predeterminado del sistema operativo, impidiendo la navegación del visor hacia sitios externos.
+
+### 4.4 Gestión de Pestañas e Historial
+
+- Cada pestaña mantiene su propio historial de navegación independiente (`history: TabEntry[]`, `historyIndex: number`) y un mapa de posiciones de scroll guardadas por URL.
+- **Persistencia de sesión**:
+  - Se guarda periódicamente (con debounce de 500 ms) en `session.json` dentro del directorio de datos de la app.
+  - Estructura: versión de esquema, lista de pestañas guardadas (`SavedTab`) con rutas relativas a `Documents/` sin esquema (para independizarlo de la plataforma), índice activo y scroll.
+  - Al cerrar la app, el frontend interrumpe el cierre de la ventana, vuelca la sesión de inmediato con un timeout de seguridad (~1 s) y confirma la salida con `confirm_exit` o `destroyWindow`.
+  - Al reabrir, se restauran las pestañas anteriores. Si un docset no está disponible, la pestaña se conserva en estado atenuado sin perder su historial.
+  - El ajuste `restore_tabs` permite desactivar por completo la lectura y escritura de sesiones.
+
+### 4.5 Catálogo y Gestor de Docsets
+
+- **Feeds configurables**: el usuario puede especificar un repositorio de GitHub (p. ej. `zealdocs/feeds`) o una URL compatible.
+- **Caché sin conexión**: `catalog.json` almacena las entradas tras refrescar el catálogo; la búsqueda y filtrado de feeds funciona completamente offline.
+- **Instalación segura**:
+  1. Concurrencia limitada: máximo de 2 instalaciones simultáneas en segundo plano.
+  2. Descarga del paquete `.tgz` a un archivo `.part` con soporte para selección de mirrors alternativos y registro del mirror más rápido (`fast_mirror`).
+  3. Extracción en carpeta temporal `.tmp-install-*` validando que cada archivo pertenezca a la raíz del docset y no exceda límites de tamaño.
+  4. Verificación de que el contenido extraído constituye un docset clásico válido con `Contents/Info.plist` e índice SQLite accesible.
+  5. Reemplazo atómico: si existía una versión anterior, se mueve temporalmente a `.old`; si la nueva versión es validada con éxito, se borra el `.old`; si ocurre un error, se restaura la versión anterior intacta.
+- **Detección de actualizaciones**: comparación estricta de versiones numéricas punteadas (`x.y.z`). Si el feed presenta un esquema de versionado no comparable con seguridad, el indicador permanece en estado neutro (`null`).
+
+---
+
+## 5. Contrato de Comandos Tauri
+
+Todos los comandos se invocan mediante el protocolo IPC de Tauri. La siguiente tabla refleja fielmente las implementaciones reales en `src-tauri/src/commands/mod.rs` y los tipos de `src/lib/types.ts`:
+
+| Comando | Argumentos | Retorno | Descripción |
+|---|---|---|---|
+| `list_docsets` | *(ninguno)* | `Vec<Docset>` | Lista de docsets cargados en memoria. |
+| `set_docsets_dir` | `path: String` | `Result<ScanReport, ApiError>` | Escanea e indexa la carpeta indicada; guarda en ajustes. |
+| `search` | `request: SearchRequest` | `Result<SearchResponse, ApiError>` | Búsqueda difusa interactiva con eco de `request_id`. |
+| `list_kinds` | `docset_id: String` | `Result<Vec<KindInfo>, ApiError>` | Tipos de símbolo y conteos disponibles en un docset. |
+| `list_entries` | `docset_id: String, kind: String, offset?: usize, limit?: usize` | `Result<Vec<NavEntry>, ApiError>` | Lista paginada de símbolos de un tipo específico. |
+| `get_docset_home` | `docset_id: String` | `Result<String, ApiError>` | Obtiene la URL canónica `opendoc://` de inicio del docset. |
+| `get_settings` | *(ninguno)* | `Settings` | Lee los ajustes persistentes actuales. |
+| `set_theme` | `theme: ThemeMode` | `Result<Settings, ApiError>` | Cambia el modo de tema (`light`, `dark`, `system`). |
+| `set_accent` | `accent: Accent` | `Result<Settings, ApiError>` | Cambia el acento (`red`, `blue`, `amber`, `catppuccin`) y actualiza el icono. |
+| `set_language` | `language: Language` | `Result<Settings, ApiError>` | Cambia el idioma de la interfaz (`en`, `es`). |
+| `set_restore_tabs` | `restore: bool` | `Result<Settings, ApiError>` | Habilita o deshabilita la persistencia de pestañas entre sesiones. |
+| `get_session` | *(ninguno)* | `Session` | Obtiene la sesión de pestañas guardada (nunca falla). |
+| `save_session` | `session: Session` | `Result<bool, ApiError>` | Guarda la sesión si ha cambiado; devuelve si hubo escritura en disco. |
+| `extract_tarix` | `docset_id: String` | `Result<ScanReport, ApiError>` | Extrae un docset tarix pendiente a `tarix-cache/`. |
+| `get_catalog_status` | *(ninguno)* | `Result<CatalogStatus, ApiError>` | Consulta el estado local del catálogo (offline). |
+| `set_feed_repo` | `repo: String` | `Result<Settings, ApiError>` | Configura y valida el repositorio de feeds en ajustes. |
+| `refresh_catalog` | *(ninguno)* | `Result<CatalogSummary, ApiError>` | Descarga y parsea la lista de feeds del repositorio configurado. |
+| `list_catalog` | `query?: String` | `Result<Vec<FeedEntry>, ApiError>` | Consulta las entradas en la caché local del catálogo. |
+| `install_docset` | `feed_id: String, force?: bool` | `Result<InstallSummary, ApiError>` | Descarga e instala un docset emitiendo eventos `docset-progress`. |
+| `get_install_status` | `feed_id?: String` | `Result<Vec<InstallStatus>, ApiError>` | Compara feeds contra docsets instalados para detectar actualizaciones. |
+| `uninstall_docset` | `feed_id: String` | `Result<String, ApiError>` | Desinstala de forma segura la carpeta `.docset` correspondiente al feed. |
+| `confirm_exit` | *(ninguno)* | `()` | Confirma el cierre del proceso tras completar el volcado de sesión. |
+
+### 5.1 Eventos Tauri
+
+- **`docset-progress`**: emitido durante la instalación de docsets. Payload:
+  ```json
+  {
+    "feed_id": "CSS",
+    "docset_id": "css",
+    "stage": "downloading" | "extracting" | "verifying" | "done" | "error",
+    "received_bytes": 1048576,
+    "total_bytes": 5242880,
+    "files": 120,
+    "message": null
+  }
+  ```
+- **`opendoc-exit-requested`**: emitido por el backend cuando el sistema operativo solicita el cierre de la app (p. ej. `Cmd+Q` en macOS) para que el frontend ejecute el guardado final antes de salir.
+
+---
+
+## 6. Aseguramiento de Calidad y CI/CD
+
+El repositorio implementa una batería integral de pruebas en frontend y backend:
+
+1. **Rust**:
+   - `cargo test --manifest-path src-tauri/Cargo.toml` (83 tests unitarios y de integración).
+   - `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings` (cero advertencias permitidas).
+   - `cargo fmt --manifest-path src-tauri/Cargo.toml -- --check` (formato estricto según `rustfmt`).
+2. **Frontend**:
+   - `npm test` (105 tests ejecutados con Vitest: pruebas de historial, validación de mensajes postMessage, i18n, contraste de acentos, stores y serialización de sesión).
+   - `npx tsc --noEmit` (comprobación estricta de tipos de TypeScript).
+3. **Flujo de Integración Continua (`.github/workflows/release.yml`)**:
+   - El trabajo `check` corre en cada push y pull request hacia `master`, validando `npm ci`, `cargo test`, `cargo clippy`, `cargo fmt`, `npx tsc --noEmit` y `npm test`.
+   - El trabajo `verify-version` comprueba la coherencia exacta entre la versión de `package.json`, `src-tauri/Cargo.toml` y `src-tauri/tauri.conf.json`.
+   - La compilación de artefactos para Windows (.exe, .msi), macOS (.dmg ARM64 e Intel) y Linux (.deb, .AppImage, .rpm) se ejecuta automáticamente ante tags de versión (`v*`).
+
+---
+
+## 7. Decisiones Técnicas y Limitaciones Conocidas
+
+### 7.1 Decisiones Técnicas Consolidadas
+- **Modo oscuro en docsets desactivado**: el tema oscuro de la aplicación aplica exclusivamente a la interfaz nativa (chrome, barra lateral, pestañas, modales). Los documentos HTML de los docsets se muestran con su presentación clara original. La inversión mediante filtros CSS globales producía artefactos visuales inaceptables en diagramas, tablas y bloques de código; el mecanismo de inyección permanece reservado para soporte de temas CSS específicos por docset en versiones posteriores.
+- **Iconos de acento en tiempo de ejecución**: el acento de color afecta al logo y a los elementos interactivos de la interfaz, así como al icono de la app en ejecución en la barra de tareas y el Dock. El icono empaquetado en el ejecutable, instalador y Finder permanece en el rojo de marca para mantener la identidad visual del archivo.
+- **Independencia de Kapeli**: OpenDoc no depende de servicios propietarios ni redistribuye documentación ajena; los feeds se consultan desde repositorios comunitarios abiertos.
+- **Límite de concurrencia en instalaciones**: máximo 2 instalaciones simultáneas para proteger el ancho de banda y evitar contención en disco.
+
+### 7.2 Limitaciones Conocidas
+- **Firma de código**: los instaladores distribuidos en GitHub Releases no cuentan con certificados comerciales de firma de código; Windows SmartScreen y macOS Gatekeeper mostrarán advertencias estándar durante la primera instalación.
+- **WebKitGTK en Linux**: el comportamiento del renderizado de WebKit en distribuciones Linux puede diferir ligeramente respecto a WebView2 (Windows) y WebKit (macOS).
+- **Extracción de paquetes tarix pesados**: docsets voluminosos pueden requerir varios cientos de megabytes de espacio en la caché de la aplicación una vez extraídos.
+- **Cancelación de extracciones**: una vez iniciada la extracción de un docset o paquete tarix, la operación se ejecuta hasta su conclusión o fallo (no existe botón interactivo de cancelación a mitad de proceso). Un fallo nunca corrompe la caché anterior.
+
+### 7.3 Funcionalidades Futuras (Hoja de Ruta)
+- Marcadores de favoritos y elementos recientes.
+- Índice de contenido (TOC) contextual de la página visualizada.
+- Temas visuales personalizados inyectados por lenguaje o familia de docset.
+- Instancia única garantizada a nivel de sistema operativo (single-instance plugin).

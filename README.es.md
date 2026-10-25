@@ -2,56 +2,81 @@
 
 > Lee esto en [English](./README.md).
 
-**Un visor de documentación offline, rápido y moderno.** Busca en milisegundos entre miles de funciones, clases y guías, sin conexión y con una interfaz cuidada.
+**Un visor de documentación offline, rápido y moderno.** Busca en milisegundos entre miles de funciones, clases y guías, sin necesidad de conexión a Internet y con una interfaz de escritorio cuidada.
 
-OpenDoc lee el formato **docset** (el mismo que usan Dash y Zeal), así que puedes apuntarlo a tu carpeta de docsets y empezar a buscar.
+OpenDoc lee el formato estándar **docset** (el mismo creado por Dash y utilizado por Zeal), por lo que puedes configurarlo con tu carpeta de docsets existente y empezar a consultar documentación de inmediato.
 
-> **Versión actual: v0.2.65.** OpenDoc ya incluye pestañas e historial, ajustes y gestión de docsets desde un catálogo configurable. El proyecto sigue en desarrollo; consulta la [hoja de ruta](#hoja-de-ruta).
+> **Versión actual: v0.2.70.** OpenDoc incluye navegación por pestañas con persistencia de sesiones, motor de búsqueda difusa en memoria, navegación de símbolos por tipo, acentos de color personalizables y gestión completa de docsets desde feeds configurables.
 
-## Por qué existe
+---
 
-Zeal es una herramienta excelente, pero su interfaz (C++/Qt) se siente anticuada y es poco personalizable. OpenDoc nace como un cliente nuevo, escrito desde cero (no es un fork), con tres ideas:
+## ¿Por qué OpenDoc?
 
-- **Rápido de verdad:** arranque casi instantáneo, búsqueda en memoria y poco consumo de RAM.
-- **Cuidado en lo visual:** tema claro/oscuro, paleta de comandos y teclado primero, al estilo de Obsidian o VS Code.
-- **Compatible:** lee los docsets que ya tengas, incluidos los de formato *tarix*.
+Aunque Zeal es una herramienta consolidada en la comunidad, su interfaz en C++/Qt se siente desfasada y ofrece pocas opciones de personalización moderna. OpenDoc nace desde cero como una alternativa moderna construida sobre cuatro principios:
 
-## Funciones actuales
+- **Búsqueda instantánea y bajo consumo:** Arranca en milisegundos, mantiene los índices en memoria con `nucleo-matcher` (<50 ms con más de 300.000 entradas) y conserva un consumo contenido (<80 MB de RAM en reposo).
+- **Diseño enfocado al teclado y cuidado visual:** Interfaz limpia con temas claro, oscuro y del sistema, 4 colores de acento y una Paleta de Comandos (`Ctrl+K` / `Cmd+K`) inspirada en VS Code y Obsidian.
+- **Compatibilidad total con docsets:** Detecta automáticamente esquemas SQLite estándar (`searchIndex`) y Core Data (`ZTOKEN...`), lee metadatos de `Info.plist`, extrae paquetes *tarix* de forma segura y resuelve rutas internas sin fallos.
+- **Aislamiento y seguridad:** Muestra la documentación dentro de un `<iframe>` aislado (`sandbox="allow-scripts"`), utiliza un protocolo nativo propio `opendoc://` para evitar ataques de salto de directorio (path traversal) y delega los enlaces externos directamente en el navegador predeterminado del sistema.
 
-- **Paleta de comandos** (`Ctrl+K` / `Cmd+K`) con búsqueda difusa en vivo y teclado completo (↑/↓, Enter, Esc).
-- **Búsqueda en memoria** con `nucleo`: coincidencia exacta > prefijo > difusa, con prioridad por tipo (clases y funciones antes que secciones). Medido: ~37 ms con 300.000 entradas en build release.
-- **Pestañas e historial independiente**: atrás/adelante por pestaña, pestañas reordenables arrastrando y enlaces internos preparados mientras pasas el cursor para reducir la espera al navegar.
-- **Explorador por tipos**: navega clases, funciones y otras entradas con contadores, además de filtrar la búsqueda por docset (`cpp:vector`).
-- **Visor integrado** con protocolo propio `opendoc://` y `<iframe>` aislado (`sandbox`), protegido contra rutas maliciosas (`..`, rutas absolutas, enlaces simbólicos, codificaciones dobles).
-- **Catálogo configurable**: consulta feeds, instala docsets `.tgz`, reinstala versiones, comprueba actualizaciones y desinstala docsets instalados.
-- **Compatibilidad con docsets:**
-  - Índice `searchIndex` y esquema Core Data (`ZTOKEN`…), detectado automáticamente.
-  - Lectura de `Info.plist`.
-  - Docsets **tarix**: se extraen una sola vez a una caché propia, con validación de seguridad y sin tocar tu carpeta de docsets.
-- **Tema claro / oscuro / sistema** para la aplicación, con ajustes persistentes. Los docsets se muestran siempre con su estilo claro original: el modo oscuro del contenido está desactivado (se retomará con temas por docset).
-- **Color de acento** (Ajustes): Rojo, Azul, Ámbar o Catppuccin. Recolorea el logo, los resaltados y el icono de la app en ejecución (barra de tareas / Dock). Los errores conservan su rojo fijo, independiente del acento.
-- **Ajustes persistentes** para el tema, la carpeta de docsets y el repositorio del catálogo.
-- **Enlaces externos** abiertos en el navegador del sistema, no dentro del visor.
-- **Robusto:** un docset corrupto o raro se registra como incidencia y no tumba el resto.
+---
 
-## Stack
+## Funcionalidades principales
 
-| Capa | Tecnología |
-|---|---|
-| Frontend | React + TypeScript + Tailwind CSS v3 (Vite) |
-| Backend | Rust (`rusqlite`, `plist`, `nucleo-matcher`, `flate2`/`tar`) |
-| Puente | Tauri v2 |
+### Búsqueda y Navegación
+- **Paleta de Comandos (`Ctrl+K` / `Cmd+K`):** Modal de búsqueda global en vivo con navegación fluida por teclado (flechas, Enter, Esc), distintivos por tipo de símbolo y coincidencia en tiempo real.
+- **Motor difuso en memoria:** Clasificación por niveles mediante `nucleo-matcher`: coincidencia exacta > coincidencia por prefijo > coincidencia difusa > coincidencia en el último segmento, con ponderación prioritaria de clases y funciones sobre secciones o guías.
+- **Filtros por prefijo (`docset:consulta`):** Restringe la búsqueda a docsets específicos directamente desde el cajón de búsqueda (ej. `cpp:vector`, `py:dumps` o `rust,go:channel`).
+- **Exploración de símbolos por tipo:** Consulta todas las entradas clasificadas por categoría (funciones, clases, módulos, propiedades, tipos) con contadores reales y páginas paginadas.
 
-Tauri usa el WebView del sistema (WebView2 en Windows), por lo que el instalador es pequeño y el consumo de memoria bajo.
+### Espacio de trabajo y Visualización
+- **Pestañas e historial independiente:** Navegación hacia adelante y hacia atrás por pestaña, pestañas reordenables por arrastre, precarga de enlaces al pasar el cursor para eliminar el parpadeo blanco, y clic central o `Ctrl/Cmd+clic` para abrir en pestañas nuevas.
+- **Persistencia de sesión:** Conserva pestañas abiertas, pestaña activa, historial de navegación y posiciones de scroll entre reinicios mediante `session.json` (con escritura atómica y copias de seguridad `.bak` automáticas). Puede activarse o desactivarse desde Ajustes.
+- **Protocolo de visor seguro (`opendoc://`):** Sirve los archivos locales previniendo cualquier acceso indebido fuera de `Documents/` (`..`, symlinks, unidades de disco o secuencias con doble codificación percent). Normaliza y reenvía los gestos de rueda y trackpad hacia el interior del iframe.
+- **Protección de enlaces externos:** Los hipervínculos externos (`http://`, `https://`, `mailto:`) se abren automáticamente en el navegador web del sistema operativo en lugar de navegar dentro de la ventana de la aplicación.
+
+### Gestión de Docsets y Catálogo
+- **Catálogo de feeds configurable:** Configura y actualiza repositorios de feeds personalizados (como `zealdocs/feeds` o feeds XML compatibles).
+- **Instalación con un clic:** Descarga paquetes `.tgz` con reporte del progreso real en bytes y archivos (`docset-progress`), valida la integridad del paquete y realiza sustituciones atómicas de carpetas.
+- **Comprobación de actualizaciones y desinstalación:** Detección de versiones disponibles mediante comparación numérica estricta, con desinstalación segura de docsets desde la carpeta configurada.
+- **Gestión de mirrors y caché de velocidad:** Conexión alternativa a mirrors si uno falla, memorizando el host más rápido (`fast_mirror`) para optimizar descargas posteriores.
+- **Soporte de paquetes Tarix:** Identifica docsets en formato *tarix* (`tarix.tgz`) y permite extraerlos de forma segura hacia la caché de la app sin modificar la carpeta original de docsets.
+
+### Personalización y Accesibilidad
+- **Temas (Claro / Oscuro / Sistema):** Cambio de tema de alto contraste para la interfaz de la aplicación. Los documentos de los docsets conservan siempre su estilo claro original para evitar artefactos visuales en tablas, código o diagramas.
+- **Colores de acento:** Permite elegir entre **Rojo**, **Azul**, **Ámbar** o **Catppuccin** (Latte/Mocha Mauve). Actualiza los resaltados de la UI, botones principales, el logotipo de la aplicación y el icono en ejecución en la barra de tareas y el Dock.
+- **Interfaz bilingüe:** Completamente traducida al **inglés** (por defecto) y **español**, con selector en caliente desde Ajustes y paridad exacta entre claves de diccionario.
+
+---
+
+## Arquitectura y Stack Tecnológico
+
+```
+opendoc/
+├── Frontend:    React 19, TypeScript, Tailwind CSS v3, Vite, Zustand
+├── Desktop App: Tauri v2 (Gestión de ventana, IPC, protocolo seguro, diálogos nativos)
+└── Shared Core: opendoc-core (Rust puro: escaneo, índices SQLite, tarix, búsqueda difusa, rutas)
+```
+
+La aplicación de escritorio forma parte de un ecosistema compuesto por:
+- **[`opendoc-core`](https://github.com/daidarzzz/opendoc-core):** El motor en Rust sin dependencias gráficas ni de red que centraliza la indexación, el escaneo y la búsqueda difusa.
+- **[`opendoc-cli` (`odc`)](https://github.com/daidarzzz/opendoc-cli):** Herramienta de línea de comandos para buscar y abrir documentación en el navegador o visor directamente desde la terminal.
+
+---
 
 ## Requisitos
 
-- [Node.js](https://nodejs.org/) (probado con v24) y npm.
-- [Rust](https://rustup.rs/) estable.
-- **Windows:** Build Tools de Visual Studio con la carga de trabajo de C++, y WebView2 (incluido en Windows 11 y Windows 10 actualizado).
-- **Linux / macOS:** las dependencias de Tauri v2 de tu plataforma. Ver la [guía oficial](https://v2.tauri.app/start/prerequisites/). *Aún no se ha probado fuera de Windows.*
+- [Node.js](https://nodejs.org/) (versión 22 o 24 recomendada) y `npm`.
+- [Rust](https://rustup.rs/) estable (edición 2021).
+- **Windows:** Herramientas de compilación de C++ de Visual Studio y WebView2 (incluido en Windows 11 y Windows 10 actualizado).
+- **macOS:** Herramientas de línea de comandos de Xcode (`xcode-select --install`).
+- **Linux:** Librerías de sistema para Tauri v2 y WebKitGTK (ej. `libwebkit2gtk-4.1-dev`, `libappindicator3-dev`, `librsvg2-dev`). Ver la [guía de requisitos de Tauri v2](https://v2.tauri.app/start/prerequisites/).
 
-## Primeros pasos
+---
+
+## Primeros Pasos
+
+### 1. Clonar y Ejecutar en Desarrollo
 
 ```bash
 git clone https://github.com/daidarzzz/opendoc.git
@@ -60,117 +85,94 @@ npm install
 npm run tauri dev
 ```
 
-La primera compilación tarda unos minutos (compila el backend en Rust). Después, el frontend se recarga en caliente.
+> Usa siempre `npm run tauri dev`. El comando `npm run dev` solo abre la vista previa en el navegador, donde los comandos nativos de Rust no están disponibles.
 
-> Usa siempre `npm run tauri dev`. `npm run dev` abre solo el frontend en el navegador y los comandos de Rust no funcionan ahí.
+### 2. Añadir Documentación
 
-### Añadir docsets
+OpenDoc **no redistribuye docsets propietarios**.
+- Si ya utilizas Zeal o Dash, puedes abrir **Ajustes** y apuntar a tu carpeta de docsets existente.
+- Si comienzas desde cero, puedes conservar la carpeta predeterminada (`<app_data>/docsets`) y abrir la pestaña **Catálogo** para descargar docsets desde feeds comunitarios.
+- Cualquier carpeta que termine en `.docset` situada en tu directorio configurado será reconocida al arrancar o al guardar cambios.
 
-OpenDoc **no incluye docsets**. Si no eliges una carpeta, crea y usa una carpeta predeterminada dentro de los datos de la aplicación. Puedes cambiarla en Ajustes y también usar la misma carpeta que Zeal. Cada docset clásico es una carpeta `.docset`.
-
-Si todavía no tienes docsets, puedes buscar documentación desde la bienvenida o abrir el catálogo. Para instalar desde el catálogo, configura un repositorio de feeds compatible y actualízalo para cargar sus entradas.
-
-- Los docsets *tarix* aparecen como **"Por instalar"**: el botón *Instalar* los extrae a la caché de la app (puede tardar un minuto en los más grandes y ocupar cientos de MB).
-- Si un docset no aparece, revisa la lista de incidencias en la barra lateral: indica qué le falta.
-
-Respeta la licencia y las condiciones de cada fuente de documentación. OpenDoc no incluye ni redistribuye los docsets.
-
-### Compilar el instalador
+### 3. Compilar el Instalador
 
 ```bash
 npm run tauri build
 ```
 
-El resultado queda en `src-tauri/target/release/` (`opendoc.exe`) y los instaladores en `src-tauri/target/release/bundle/`.
+Los binarios compilados se generan en `src-tauri/target/release/` y los instaladores empaquetados (.exe, .msi, .dmg, .deb, .AppImage) en `src-tauri/target/release/bundle/`.
 
-> Los ejecutables **no están firmados**: Windows SmartScreen y macOS Gatekeeper mostrarán advertencias al instalar o abrir la app. Además, macOS y Linux están poco probados (el desarrollo se hace en Windows).
+---
 
-### Publicar una versión
+## Desarrollo y Pruebas
 
-Los instaladores se construyen en CI (`.github/workflows/release.yml`): el `check` corre en cada push, pero el build y la publicación solo ocurren en tags `v*`.
-
-```bash
-# 1. Sube la versión en package.json, src-tauri/Cargo.toml y src-tauri/tauri.conf.json
-# 2. Crea y sube el tag (debe coincidir con esas tres versiones)
-git tag vX.Y.Z
-git push origin vX.Y.Z
-```
-
-El release se crea como **borrador** y se publica a mano cuando todos los trabajos terminan bien. Desde la pestaña *Actions* (Run workflow) se pueden lanzar builds de prueba sin crear ningún release.
-
-## Desarrollo
+Antes de dar por completado un cambio, ejecuta la batería de pruebas, linters y comprobaciones de tipo:
 
 ```bash
-cargo test   --manifest-path src-tauri/Cargo.toml          # tests de Rust
+# Pruebas de frontend (Vitest: 105 tests sobre stores, sync de sesión, i18n, etc.)
+npm test
+
+# Comprobación de tipos de TypeScript
+npx tsc --noEmit
+
+# Batería de pruebas de Rust (83 tests unitarios y de integración)
+cargo test --manifest-path src-tauri/Cargo.toml
+
+# Linter de Rust
 cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
-cargo fmt    --manifest-path src-tauri/Cargo.toml -- --check
-npx tsc --noEmit                                           # typecheck del frontend
+
+# Comprobación de formato de Rust
+cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
 ```
 
-Los tests que usan docsets reales (`CSS.docset`, `Python_3.docset`, `C++.docset`) buscan los archivos en `src-tauri/tests/fixtures/` y **se omiten con un aviso** si no están, así que `cargo test` pasa en un clon limpio. Cómo conseguirlos: ver `src-tauri/tests/fixtures/README.md`.
+Los tests que utilizan fixtures reales de docsets (`CSS.docset`, `Python_3.docset`, `C++.docset`, `Swift.docset`) buscan los archivos en `src-tauri/tests/fixtures/`. Si no están presentes, los tests correspondientes se omiten limpiamente con un aviso `SKIP`, permitiendo que `cargo test` pase en verde en clones limpios. Consulta las instrucciones en [`src-tauri/tests/fixtures/README.md`](./src-tauri/tests/fixtures/README.md).
 
-### Desarrollar contra un `opendoc-core` local
+### Desarrollo local contra `opendoc-core`
 
-Por defecto la app depende de [`opendoc-core`](https://github.com/daidarzzz/opendoc-core) **por etiqueta de Git** (ver `src-tauri/Cargo.toml`), para que app y CLI compartan exactamente la misma versión publicada. Para trabajar a la vez en los dos repositorios sin publicar un tag, descomenta el bloque `[patch]` al final de `src-tauri/Cargo.toml` y apunta a tu clon local (la ruta es relativa a `src-tauri/`):
+Por defecto, OpenDoc consume `opendoc-core` a través de una etiqueta de Git fija en `src-tauri/Cargo.toml`. Para probar modificaciones locales conjuntas en el núcleo, descomenta el bloque `[patch]` al final de `src-tauri/Cargo.toml`:
 
 ```toml
 [patch."https://github.com/daidarzzz/opendoc-core"]
 opendoc-core = { path = "../../opendoc-core" }
 ```
 
-Vuelve a comentarlo antes de commitear: mientras el patch esté activo, `Cargo.lock` resuelve a la ruta local en vez de al tag, y las releases deben compilar contra el tag versionado.
+Asegúrate de volver a comentar el bloque de patch antes de realizar un commit.
 
-### Estructura
+---
 
-```
-opendoc/
-├── SPEC.md               # Especificación técnica
-├── AGENTS.md             # Guía para agentes de código
-├── src/                  # Frontend React + TypeScript
-│   ├── components/       # Paleta, barra lateral, visor
-│   ├── lib/              # Wrappers tipados de los comandos de Tauri
-│   └── store/            # Estado (docsets, paleta, tema, visor)
-└── src-tauri/
-    └── src/
-        ├── docset/       # Escaneo, Info.plist, índices, tarix
-        ├── search/       # Índice en memoria y búsqueda difusa
-        ├── protocol/     # Protocolo opendoc:// y seguridad de rutas
-        ├── commands/     # Comandos de Tauri (finos)
-        ├── catalog/      # Feeds y catálogo configurable
-        └── settings/     # Ajustes persistentes
-```
+## Limitaciones Conocidas
 
-La lógica vive en módulos de Rust independientes de Tauri y con tests; los comandos solo delegan.
+- **Ejecutables no firmados:** Los instaladores publicados en GitHub Releases no cuentan con certificados comerciales de firma; Windows SmartScreen y macOS Gatekeeper mostrarán advertencias estándar durante la primera instalación.
+- **Modo oscuro en el contenido de docsets:** Los docsets se muestran siempre con su presentación clara original. El modo oscuro aplica exclusivamente a la interfaz nativa de OpenDoc. (La inversión global mediante CSS fue descartada por provocar fallos de contraste y errores visuales en bloques de código, tablas y diagramas; la incorporación de temas CSS personalizados por docset está planificada para fases posteriores).
+- **Alcance del icono de acento:** El acento de color modifica la UI y el icono de la aplicación en ejecución (barra de tareas y Dock de macOS). El archivo ejecutable estático `.exe`, los accesos directos y el icono del instalador permanecen con el rojo de marca.
+- **Espacio en disco con docsets Tarix:** Los docsets tarix extraídos requieren espacio de almacenamiento significativo en `tarix-cache/` (decenas o cientos de megabytes por paquete).
+- **WebKitGTK en Linux:** El comportamiento del motor WebKit en Linux depende de la versión del sistema y puede presentar pequeñas diferencias respecto a WebView2 (Windows) y WebKit (macOS).
 
-## Hoja de ruta
+---
 
-- [x] **v0.1:** lectura de docsets, índices estándar y Core Data, búsqueda difusa, paleta, visor seguro, tarix, ajustes y temas de la aplicación.
-- [x] **v0.2:** navegación por tipos, pestañas e historial, filtro por docset, tema y carpeta predeterminada, catálogo configurable con instalación, actualización y desinstalación.
-- [ ] **Pendiente:** favoritos y cancelar extracciones.
-- [ ] **v1.0:** importar temas visuales, mejorar el resaltado de sintaxis y verificar el rendimiento con colecciones grandes de docsets.
+## Hoja de Ruta
 
-El detalle completo está en [`SPEC.md`](./SPEC.md).
+- [x] **v0.1 (MVP):** Escaneo de docsets, lectura de índices SQLite (estándar y Core Data), búsqueda difusa en memoria, Paleta de Comandos, visor seguro `opendoc://`, ajustes y temas.
+- [x] **v0.2 (Uso diario):** Pestañas con historial independiente, sesiones persistentes entre reinicios, explorador por tipos de símbolo, filtros por prefijo y gestor de catálogo (descarga, instalación, actualización y desinstalación).
+- [ ] **v0.3 (Mejoras):** Favoritos y marcadores, tabla de contenidos (TOC) contextual y cancelación interactiva de extracciones.
+- [ ] **v1.0 (Refinamiento final):** Temas CSS personalizados por docset, resaltado de sintaxis avanzado, ejecución de instancia única y pruebas de estrés con colecciones masivas de documentación (más de 20 docsets).
 
-## Limitaciones conocidas
+Para profundizar en el diseño del sistema, consulta [`SPEC.md`](./SPEC.md). La guía operativa para agentes y colaboradores se encuentra en [`AGENTS.md`](./AGENTS.md).
 
-- Solo probado en **Windows**. macOS y Linux están poco probados; en Linux, WebKitGTK puede comportarse distinto.
-- Los ejecutables no están firmados (avisos de SmartScreen / Gatekeeper).
-- Los docsets se ven siempre con su estilo claro; el modo oscuro del contenido está desactivado.
-- El acento solo cambia el icono en ejecución (barra de tareas / Dock): el del ejecutable, instalador y Finder sigue rojo.
-- Los docsets *tarix* ocupan bastante en disco una vez extraídos (decenas o cientos de MB cada uno).
+---
 
 ## Licencia
 
-Copyright (C) 2026 daidarzzz
+Copyright (C) 2026 daidarzzz.
 
-OpenDoc es software libre, licenciado bajo la Licencia Pública General de GNU v3.0 o posterior (GPL-3.0-or-later). Ver LICENSE.
+OpenDoc es software libre, distribuido bajo la **Licencia Pública General de GNU v3.0 o posterior (GPL-3.0-or-later)**. Consulta el archivo [`LICENSE`](./LICENSE) para más detalles.
 
-Cada documentación que cargues conserva su propia licencia; OpenDoc no incluye ni redistribuye docsets.
+Cada documentación que descargues o consultes pertenece a sus respectivos autores y conserva su propia licencia; OpenDoc no incluye ni redistribuye documentación de terceros.
 
-El código fuente de cada versión publicada está en este repositorio, que es lo que pide la GPL al distribuir los instaladores.
+---
 
 ## Agradecimientos
 
-- [Zeal](https://zealdocs.org/) y [Dash](https://kapeli.com/dash) por popularizar el formato docset y la idea del navegador de documentación offline. OpenDoc es un proyecto independiente y no está afiliado a ninguno de los dos.
-- [Catppuccin](https://catppuccin.com/) por dos colores de su paleta usados en el tema de acento (Mauve Latte/Mocha, MIT).
-- Las documentaciones que cargues pertenecen a sus autores y mantienen sus propias licencias.
+- [Zeal](https://zealdocs.org/) y [Dash](https://kapeli.com/dash) por popularizar el ecosistema de docsets offline. OpenDoc es un proyecto independiente y no está afiliado a ninguna de las dos herramientas.
+- [Catppuccin](https://catppuccin.com/) por los valores de paleta Mauve (Latte/Mocha) empleados en el tema de acento (Licencia MIT).
+- [nucleo-matcher](https://github.com/helix-editor/nucleo) por su excelente rendimiento en la búsqueda difusa en memoria.

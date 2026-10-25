@@ -78,6 +78,9 @@ jobs:
       - name: Frontend typecheck
         run: npx tsc --noEmit
 
+      - name: Frontend tests
+        run: npm test
+
   verify-version:
     runs-on: ubuntu-latest
     steps:
