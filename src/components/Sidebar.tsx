@@ -4,6 +4,7 @@ import { AppLogo } from "./AppLogo";
 import { DocsetIcon } from "./DocsetIcon";
 
 import { PanelToggleIcon } from "./PanelToggleIcon";
+import { CloseIcon, FolderIcon, SettingsIcon } from "./Icons";
 import { useT } from "../hooks/useT";
 import { LANGUAGE_NAMES, type I18nKey } from "../lib/i18n";
 import { ACCENTS, ACCENT_HEX } from "../lib/accent";
@@ -90,18 +91,28 @@ export function Sidebar({
     })();
   };
 
+  const segBtn = (on: boolean): string =>
+    `flex-1 rounded-md px-3 py-1.5 text-sm transition-all duration-150 ease-smooth ${
+      on
+        ? "bg-white font-medium text-gray-900 shadow-soft dark:bg-white/15 dark:text-white"
+        : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+    }`;
+  const segGroup = "flex gap-0.5 rounded-lg bg-gray-100 p-0.5 dark:bg-white/5";
+  const sectionLabel =
+    "mb-2 text-[11px] font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500";
+
   return (
     <aside
       style={collapsed ? { width: 0, flexBasis: 0 } : style}
       inert={collapsed}
-      className={`flex h-full shrink-0 overflow-hidden border-r ${animate ? "transition-[width,flex-basis] duration-200 ease-in-out" : ""} ${collapsed ? "border-transparent" : "border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-950"}`}
+      className={`flex h-full shrink-0 overflow-hidden border-r ${animate ? "transition-[width,flex-basis] duration-300 ease-smooth" : ""} ${collapsed ? "border-transparent" : "border-gray-200/80 bg-gray-50/80 dark:border-white/5 dark:bg-gray-950"}`}
     >
       <div
         style={{ width: expandedWidth }}
-        className="flex h-full min-w-0 shrink-0 flex-col"
+        className={`flex h-full min-w-0 shrink-0 flex-col transition-opacity duration-200 ${collapsed ? "opacity-0" : "opacity-100"}`}
       >
-      <div className="flex items-center justify-between p-3">
-        <h1 className="flex items-center gap-2 text-sm font-semibold">
+      <div className="flex items-center justify-between px-3 pb-2 pt-3">
+        <h1 className="flex items-center gap-2 text-sm font-semibold tracking-tight">
           <AppLogo size={18} />
           OpenDoc
         </h1>
@@ -110,17 +121,15 @@ export function Sidebar({
             onClick={() => setSettingsOpen(true)}
             title={t("settings.title")}
             aria-label={t("settings.title")}
-            className="rounded-full p-1.5 text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800"
+            className="icon-btn"
           >
-            <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
-              <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54A.49.49 0 0 0 13.92 2h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.21.07-.47-.12-.61l-2.03-1.58ZM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6Z" />
-            </svg>
+            <SettingsIcon size={18} />
           </button>
           <button
             onClick={onCollapse}
             title={t("settings.collapseSidebar")}
             aria-label={t("settings.collapseSidebar")}
-            className="rounded-full p-1.5 text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800"
+            className="icon-btn"
           >
             <PanelToggleIcon direction="left" />
           </button>
@@ -128,14 +137,31 @@ export function Sidebar({
       </div>
 
       {settingsOpen && (
-        <div className="fixed inset-0 z-40 flex items-start justify-center bg-black/40 p-4 pt-[18vh]" onClick={() => setSettingsOpen(false)} role="presentation">
-          <section role="dialog" aria-modal="true" aria-label={t("settings.title")} className="w-full max-w-sm space-y-4 rounded-lg bg-white p-5 shadow-xl dark:bg-gray-900" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between"><h2 className="text-base font-semibold">{t("settings.title")}</h2><button aria-label={t("settings.close")} onClick={() => setSettingsOpen(false)}>×</button></div>
-            <div><p className="mb-2 text-xs text-gray-500">{t("settings.theme")}</p><div className="flex gap-2">{THEME_VALUES.map((value) => <button key={value} aria-pressed={mode === value} onClick={() => void useTheme.getState().setMode(value)} className={`rounded border px-3 py-1 text-sm ${mode === value ? "border-accent-text bg-accent/10" : "border-gray-300 dark:border-gray-700"}`}>{themeLabel(value)}</button>)}</div></div>
-            <div><p className="mb-2 text-xs text-gray-500">{t("settings.language")}</p><div className="flex gap-2">{LANG_VALUES.map((value) => <button key={value} aria-pressed={lang === value} onClick={() => void setLang(value)} className={`rounded border px-3 py-1 text-sm ${lang === value ? "border-accent-text bg-accent/10" : "border-gray-300 dark:border-gray-700"}`}>{LANGUAGE_NAMES[value]}</button>)}</div></div>
+        <div className="backdrop z-40 pt-[16vh]" onClick={() => setSettingsOpen(false)} role="presentation">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("settings.title")}
+            className="surface w-full max-w-sm space-y-5 p-5"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                e.stopPropagation();
+                setSettingsOpen(false);
+              }
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold tracking-tight">{t("settings.title")}</h2>
+              <button aria-label={t("settings.close")} onClick={() => setSettingsOpen(false)} className="icon-btn -mr-1.5" autoFocus>
+                <CloseIcon size={16} />
+              </button>
+            </div>
+            <div><p className={sectionLabel}>{t("settings.theme")}</p><div className={segGroup}>{THEME_VALUES.map((value) => <button key={value} aria-pressed={mode === value} onClick={() => void useTheme.getState().setMode(value)} className={segBtn(mode === value)}>{themeLabel(value)}</button>)}</div></div>
+            <div><p className={sectionLabel}>{t("settings.language")}</p><div className={segGroup}>{LANG_VALUES.map((value) => <button key={value} aria-pressed={lang === value} onClick={() => void setLang(value)} className={segBtn(lang === value)}>{LANGUAGE_NAMES[value]}</button>)}</div></div>
             <div>
-              <p id="opendoc-accent-label" className="mb-2 text-xs text-gray-500">{t("settings.accent")}</p>
-              <div role="radiogroup" aria-labelledby="opendoc-accent-label" className="flex items-center gap-2.5" onKeyDown={(e) => {
+              <p id="opendoc-accent-label" className={sectionLabel}>{t("settings.accent")}</p>
+              <div role="radiogroup" aria-labelledby="opendoc-accent-label" className="flex items-center gap-3" onKeyDown={(e) => {
                 if (e.key !== "ArrowRight" && e.key !== "ArrowLeft" && e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
                 e.preventDefault();
                 const dir = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : -1;
@@ -156,14 +182,18 @@ export function Sidebar({
                     title={t(ACCENT_KEY[value])}
                     onClick={() => void useAccent.getState().setAccent(value)}
                     style={{ backgroundColor: ACCENT_HEX[value].light.accent }}
-                    className={`h-6 w-6 rounded-full ${accent === value ? "ring-2 ring-accent-text ring-offset-2 ring-offset-white dark:ring-offset-gray-900" : "ring-1 ring-gray-300 hover:ring-gray-400 dark:ring-gray-700"}`}
+                    className={`h-7 w-7 rounded-full shadow-soft transition-all duration-200 ease-smooth hover:scale-110 ${accent === value ? "scale-110 ring-2 ring-accent-text ring-offset-2 ring-offset-white dark:ring-offset-gray-900" : "ring-1 ring-black/10 dark:ring-white/10"}`}
                   />
                 ))}
-                <AppLogo size={22} className="ml-1" />
+                <AppLogo size={24} className="ml-auto" />
               </div>
             </div>
-            <div><label className="flex cursor-pointer items-center gap-2 text-sm"><input type="checkbox" checked={restoreTabs} onChange={toggleRestoreTabs} className="accent-accent-solid" />{t("settings.restoreTabs")}</label></div>
-            <div><p className="mb-1 text-xs text-gray-500">{t("settings.docsetsFolder")}</p><p className="break-all text-xs text-gray-600 dark:text-gray-300">{savedDir ?? t("settings.notConfigured")}</p><button onClick={() => void choose()} className="mt-2 rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800">{t("settings.chooseFolder")}</button></div>
+            <div><label className="flex cursor-pointer items-center gap-2.5 text-sm"><input type="checkbox" checked={restoreTabs} onChange={toggleRestoreTabs} className="h-4 w-4 accent-accent-solid" />{t("settings.restoreTabs")}</label></div>
+            <div className="border-t border-gray-100 pt-4 dark:border-white/5">
+              <p className={sectionLabel}>{t("settings.docsetsFolder")}</p>
+              <p className="break-all rounded-md bg-gray-50 px-2.5 py-2 font-mono text-xs text-gray-600 dark:bg-white/5 dark:text-gray-300">{savedDir ?? t("settings.notConfigured")}</p>
+              <button onClick={() => void choose()} className="btn mt-2.5"><FolderIcon size={15} />{t("settings.chooseFolder")}</button>
+            </div>
           </section>
         </div>
       )}
@@ -172,16 +202,16 @@ export function Sidebar({
         <BrowseTree />
         {pending.length > 0 && (
           <>
-            <p className="px-2 pb-1 pt-2 text-[11px] uppercase text-gray-400">
+            <p className="px-2 pb-1 pt-3 text-[11px] font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">
               {t("settings.pendingTarix")}
             </p>
-            <ul className="space-y-0.5">
+            <ul className="space-y-0.5 pb-1">
               {pending.map((p) => {
                 const busy = extractingIds.includes(p.id);
                 return (
                   <li
                     key={p.id}
-                    className="flex items-center justify-between rounded px-2 py-1.5 text-sm"
+                    className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-gray-200/60 dark:hover:bg-white/5"
                   >
                     <span className="flex min-w-0 items-center gap-2">
                       <DocsetIcon icon={p.icon} name={p.name} />
@@ -190,7 +220,7 @@ export function Sidebar({
                     <button
                       onClick={() => void extract(p.id)}
                       disabled={busy}
-                      className="rounded border border-gray-300 px-2 py-0.5 text-xs hover:bg-gray-200 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                      className="btn px-2 py-0.5 text-xs"
                     >
                       {busy ? t("settings.extracting") : t("common.install")}
                     </button>
@@ -202,8 +232,8 @@ export function Sidebar({
         )}
       </nav>
 
-      <div className="border-t border-gray-200 p-3 text-xs text-gray-500 dark:border-gray-800">
-        <p>v{version}</p>
+      <div className="border-t border-gray-200/80 px-3 py-2.5 text-[11px] text-gray-400 dark:border-white/5 dark:text-gray-500">
+        <p className="font-mono">v{version}</p>
       </div>
       </div>
     </aside>

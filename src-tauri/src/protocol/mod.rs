@@ -135,12 +135,54 @@ window.addEventListener("wheel",function(e){if(e.ctrlKey){e.preventDefault();ret
 window.addEventListener("message",function(e){if(e.source!==window.parent||!e.data||e.data.type!=="opendoc-wheel")return;var d=e.data;if(typeof d.deltaX!=="number"||typeof d.deltaY!=="number"||!isFinite(d.deltaX)||!isFinite(d.deltaY)||d.ctrlKey)return;if(Date.now()-lastSelf<50)return;apply(Number(d.x)||0,Number(d.y)||0,d.deltaX,d.deltaY,Number(d.deltaMode)||0);});
 })();</script>"#;
 
+/// Resaltado de la búsqueda en página (CSS Custom Highlight API). Donde no
+/// existe `::highlight`, la regla es inválida y se ignora (el script cae a
+/// seleccionar la coincidencia actual).
+pub const ACTIONS_STYLE: &str = "<style>::highlight(opendoc-find){background-color:rgba(250,204,21,.45);color:inherit;}::highlight(opendoc-find-current){background-color:#f97316;color:#fff;}</style>";
+
+/// Acciones propias de OpenDoc dentro del docset:
+/// - Menú contextual: anula el nativo y, SOLO con `event.isTrusted`, pide
+///   `{type:"opendoc-context", x, y, selection, link}` al padre (enlace solo
+///   si es del mismo origen; el padre lo valida igualmente).
+/// - Búsqueda en página: obedece `opendoc-find` / `opendoc-find-clear` de
+///   `window.parent` (consulta ≤200, como máximo 2000 coincidencias visibles)
+///   y responde `opendoc-find-result` con el total y la posición actual.
+/// - Zoom: aplica `opendoc-zoom` (0.25..5) como `zoom` del documento y
+///   reenvía Ctrl/Cmd+rueda, Ctrl/Cmd +/-/0 y Ctrl/Cmd+F como `opendoc-key`.
+/// - `opendoc-select-all`: selecciona el contenido del documento.
+///
+/// Igual que el resto del canal: no lleva datos de usuario y todo lo que
+/// manda al padre se valida allí (ver `src/lib/iframeMessages.ts`).
+pub const ACTIONS_SCRIPT: &str = r#"<script>(function(){
+function rep(t,x){x=x||{};x.type=t;window.parent.postMessage(x,"*");}
+var SKIP={SCRIPT:1,STYLE:1,NOSCRIPT:1,TEMPLATE:1,TEXTAREA:1,SELECT:1,OPTION:1};
+var HL=!!(window.CSS&&CSS.highlights&&window.Highlight);
+var ranges=[],cur=-1,lastQ="",lastCase=false,MAX=2000;
+function clearHl(){if(HL){CSS.highlights.delete("opendoc-find");CSS.highlights.delete("opendoc-find-current");}}
+function collect(q,cs){ranges=[];cur=-1;if(!q||!document.body)return;var nq=cs?q:q.toLowerCase();var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode:function(n){var p=n.parentElement;return !p||SKIP[p.tagName]?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT;}});var n;while((n=w.nextNode())&&ranges.length<MAX){var s=cs?n.data:n.data.toLowerCase();if(s.length!==n.data.length)continue;var i=s.indexOf(nq);while(i!==-1&&ranges.length<MAX){var r=document.createRange();r.setStart(n,i);r.setEnd(n,i+nq.length);if(r.getClientRects().length>0)ranges.push(r);i=s.indexOf(nq,i+nq.length);}}}
+function paint(){if(HL){clearHl();if(ranges.length){var h=new Highlight();for(var i=0;i<ranges.length;i++)h.add(ranges[i]);CSS.highlights.set("opendoc-find",h);}if(cur>=0)CSS.highlights.set("opendoc-find-current",new Highlight(ranges[cur]));}else if(cur>=0){var sel=window.getSelection();if(sel){sel.removeAllRanges();sel.addRange(ranges[cur]);}}}
+function reveal(r){var vh=window.innerHeight,rect=r.getBoundingClientRect();if(rect.top>=0&&rect.bottom<=vh)return;var el=r.startContainer.parentElement;if(el&&el.scrollIntoView)el.scrollIntoView({block:"center",inline:"nearest"});rect=r.getBoundingClientRect();if(rect.top<0||rect.bottom>vh)window.scrollBy(0,rect.top-vh/2);}
+function clr(){ranges=[];cur=-1;lastQ="";clearHl();}
+function find(q,dir,cs){if(q!==lastQ||cs!==lastCase||!ranges.length){lastQ=q;lastCase=cs;collect(q,cs);if(ranges.length){cur=0;for(var i=0;i<ranges.length;i++){if(ranges[i].getBoundingClientRect().bottom>=0){cur=i;break;}}}}else{cur=(cur+dir+ranges.length)%ranges.length;}paint();if(cur>=0)reveal(ranges[cur]);rep("opendoc-find-result",{total:ranges.length,current:cur+1});}
+window.addEventListener("message",function(e){if(e.source!==window.parent)return;var d=e.data;if(!d||typeof d!=="object")return;
+if(d.type==="opendoc-find"){var q=typeof d.query==="string"?d.query.slice(0,200):"";if(!q){clr();rep("opendoc-find-result",{total:0,current:0});return;}find(q,d.dir===-1?-1:d.dir===1?1:0,d.caseSensitive===true);}
+else if(d.type==="opendoc-find-clear"){clr();}
+else if(d.type==="opendoc-zoom"){var z=Number(d.level);if(isFinite(z)&&z>=0.25&&z<=5)document.documentElement.style.zoom=z===1?"":String(z);}
+else if(d.type==="opendoc-select-all"){var s=window.getSelection();if(s&&document.body){s.removeAllRanges();var r=document.createRange();r.selectNodeContents(document.body);s.addRange(r);}}});
+window.addEventListener("keydown",function(e){if(e.isComposing||e.key==="Process")return;if(e.key==="Escape"&&lastQ&&!e.ctrlKey&&!e.metaKey&&!e.altKey){rep("opendoc-key",{key:"find-close",shift:false});return;}if(!(e.ctrlKey||e.metaKey)||e.altKey)return;var c=e.code||"",k=c==="KeyF"?"f":(c==="Equal"||c==="NumpadAdd"||e.key==="+"||e.key==="=")?"zoom-in":(c==="Minus"||c==="NumpadSubtract"||e.key==="-")?"zoom-out":(c==="Digit0"||c==="Numpad0")?"zoom-reset":null;if(k===null)return;e.preventDefault();if(e.stopPropagation)e.stopPropagation();rep("opendoc-key",{key:k,shift:!!e.shiftKey});},true);
+var acc=0,lastZ=0;
+window.addEventListener("wheel",function(e){if(!e.ctrlKey||!e.isTrusted)return;e.preventDefault();acc+=e.deltaMode===1?e.deltaY*33:e.deltaY;var now=Date.now();if(Math.abs(acc)<50||now-lastZ<80)return;lastZ=now;rep("opendoc-key",{key:acc<0?"zoom-in":"zoom-out",shift:false});acc=0;},{capture:true,passive:false});
+window.addEventListener("pointerdown",function(e){if(e.isTrusted&&e.button!==2)rep("opendoc-pointerdown");},true);
+window.addEventListener("contextmenu",function(e){e.preventDefault();if(!e.isTrusted)return;var s="";try{s=String(window.getSelection()||"");}catch(_){}var a=e.target&&e.target.closest?e.target.closest("a[href]"):null,u=null;if(a){try{var x=new URL(a.getAttribute("href"),location.href);if(x.origin===location.origin)u=x.toString();}catch(_){}}rep("opendoc-context",{x:e.clientX,y:e.clientY,selection:s.slice(0,10000),link:u});},true);
+})();</script>"#;
+
 /// BOM UTF-8 (se respeta al insertar al inicio).
 const UTF8_BOM: [u8; 3] = [0xEF, 0xBB, 0xBF];
 
 /// Inserta `THEME_STYLE + THEME_SCRIPT` en un HTML.
 pub fn inject_theme_support(html: &[u8]) -> Vec<u8> {
-    let block = format!("{THEME_STYLE}{THEME_SCRIPT}{THEME_WHEEL_SCRIPT}");
+    let block =
+        format!("{THEME_STYLE}{ACTIONS_STYLE}{THEME_SCRIPT}{THEME_WHEEL_SCRIPT}{ACTIONS_SCRIPT}");
     let bytes = block.as_bytes();
     if let Some(pos) = find_head_close(html) {
         let mut out = Vec::with_capacity(html.len() + bytes.len());
@@ -351,6 +393,32 @@ mod tests {
         for token in ["opendoc-wheel", "passive:false", "scrollTop", "scrollLeft"] {
             assert!(THEME_WHEEL_SCRIPT.contains(token), "falta {token}");
         }
+        // Acciones propias: menú contextual, búsqueda y zoom.
+        assert!(ACTIONS_SCRIPT.starts_with("<script>(function(){"));
+        assert!(ACTIONS_SCRIPT.ends_with("})();</script>"));
+        assert!(ACTIONS_SCRIPT.is_ascii());
+        assert!(ACTIONS_STYLE.is_ascii());
+        for token in [
+            "e.source!==window.parent",
+            "\"contextmenu\"",
+            "\"opendoc-context\"",
+            "isTrusted",
+            "\"opendoc-find\"",
+            "\"opendoc-find-clear\"",
+            "\"opendoc-find-result\"",
+            "\"opendoc-zoom\"",
+            "\"opendoc-select-all\"",
+            "KeyF",
+            "zoom-in",
+            "zoom-out",
+            "zoom-reset",
+            "find-close",
+            "CSS.highlights",
+            "\"opendoc-pointerdown\"",
+        ] {
+            assert!(ACTIONS_SCRIPT.contains(token), "falta {token}");
+        }
+        assert!(ACTIONS_STYLE.contains("::highlight(opendoc-find)"));
     }
 
     #[test]

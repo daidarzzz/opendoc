@@ -2,14 +2,18 @@
 // chrome de navegador ni menú nativo con estas teclas).
 // - Ctrl/Cmd+K: paleta. Ctrl+W: cerrar pestaña. Ctrl+Tab/Shift: cambiar.
 //   Ctrl/Cmd+1..9: saltar. Alt+←/→: atrás/adelante.
-//   F3: abrir catálogo.
+//   F3: abrir catálogo. Ctrl/Cmd+F: buscar en la página.
+//   Ctrl/Cmd + +/-/0: zoom del docset.
 // El foco dentro del iframe no llega aquí: el script inyectado reenvía
 // esas mismas teclas por postMessage (ver Viewer).
 // Nota macOS: Cmd+Tab lo roba el conmutador del SO (solo vale Ctrl+Tab).
 import { useEffect } from "react";
-import { matchParentShortcut } from "../lib/iframeMessages";
+import { matchParentShortcut, matchViewerShortcut } from "../lib/iframeMessages";
+import { currentEntry } from "../lib/tabHistory";
+import { useFind } from "../store/find";
 import { usePalette } from "../store/palette";
 import { useTabs } from "../store/tabs";
+import { useZoom } from "../store/zoom";
 
 export function useGlobalKeys() {
   useEffect(() => {
@@ -31,6 +35,23 @@ export function useGlobalKeys() {
       // Enter/flechas/Tab/Escape ya los consume ella (defaultPrevented).
       if (usePalette.getState().open) return;
       if (e.defaultPrevented) return;
+      const viewerHit = matchViewerShortcut(e);
+      if (viewerHit) {
+        // Siempre se anula: sin esto el webview abre su propia búsqueda
+        // o aplica su zoom a toda la interfaz.
+        e.preventDefault();
+        if (viewerHit === "find") {
+          const tab = useTabs.getState().active();
+          if (tab && tab.type !== "catalog" && currentEntry(tab) !== null) useFind.getState().openFind();
+        } else if (viewerHit === "zoom-in") {
+          useZoom.getState().zoomIn();
+        } else if (viewerHit === "zoom-out") {
+          useZoom.getState().zoomOut();
+        } else {
+          useZoom.getState().reset();
+        }
+        return;
+      }
       const hit = matchParentShortcut(e);
       if (!hit) return;
       e.preventDefault();

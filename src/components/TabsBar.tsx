@@ -10,6 +10,7 @@ import { AppLogo } from "./AppLogo";
 import { DocsetIcon } from "./DocsetIcon";
 import { PanelToggleIcon } from "./PanelToggleIcon";
 import { CatalogIcon } from "./CatalogIcon";
+import { ChevronIcon, CloseIcon, PlusIcon } from "./Icons";
 
 const TabButton = memo(function TabButton({
   id,
@@ -73,12 +74,15 @@ const TabButton = memo(function TabButton({
           onActivate();
         }
       }}
-      className={`relative flex max-w-44 select-none touch-none cursor-default items-center gap-1.5 rounded-t border-l-2 px-2 py-1.5 text-xs ${
+      className={`group relative flex h-8 w-44 min-w-[6rem] shrink select-none touch-none cursor-default items-center gap-2 rounded-t-lg pl-2.5 pr-1 text-xs transition-colors duration-150 ease-smooth ${
         selected
-          ? "border-accent-text bg-white font-medium dark:bg-gray-900"
-          : "border-transparent text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-800"
-      } ${dragging ? "z-10 bg-white shadow-lg dark:bg-gray-800" : ""} ${unavailable ? "opacity-50" : ""}`}
+          ? "z-[1] bg-white font-medium text-gray-900 shadow-[0_-1px_0_0_rgb(0_0_0/0.04),1px_0_0_0_rgb(0_0_0/0.05),-1px_0_0_0_rgb(0_0_0/0.05)] dark:bg-gray-900 dark:text-gray-100 dark:shadow-[1px_0_0_0_rgb(255_255_255/0.05),-1px_0_0_0_rgb(255_255_255/0.05)]"
+          : "text-gray-500 hover:bg-gray-200/70 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-200"
+      } ${dragging ? "z-10 bg-white shadow-float dark:bg-gray-800" : ""} ${unavailable ? "opacity-50" : ""}`}
     >
+      {selected && (
+        <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-2 rounded-t-lg border-t-2 border-accent-text" />
+      )}
       {isNew ? (
         <AppLogo size={14} />
       ) : isCatalog ? (
@@ -94,9 +98,11 @@ const TabButton = memo(function TabButton({
           e.stopPropagation();
           onClose();
         }}
-        className="rounded px-1 text-gray-400 hover:bg-gray-300 hover:text-gray-700 dark:hover:bg-gray-700"
+        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded text-gray-400 transition-all duration-150 hover:bg-gray-200 hover:text-gray-800 dark:hover:bg-white/10 dark:hover:text-gray-100 ${
+          selected ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+        }`}
       >
-        ×
+        <CloseIcon size={12} strokeWidth={2.5} />
       </button>
     </div>
   );
@@ -262,36 +268,38 @@ export function TabsBar({
   };
 
   return (
-    <div className="flex items-end gap-1 border-b border-gray-200 bg-gray-50 px-2 pt-1 dark:border-gray-800 dark:bg-gray-950">
-      {sidebarCollapsed && (
+    <div className="flex items-end gap-1 border-b border-gray-200/80 bg-gray-50/80 px-2 pt-1.5 dark:border-white/5 dark:bg-gray-950">
+      <div className="mb-1 flex items-center gap-0.5">
+        {sidebarCollapsed && (
+          <button
+            aria-label={tr("settings.expandSidebar")}
+            title={tr("settings.expandSidebar")}
+            onClick={() => onExpandSidebar?.()}
+            className="icon-btn animate-fade-in"
+          >
+            <PanelToggleIcon direction="right" />
+          </button>
+        )}
         <button
-          aria-label={tr("settings.expandSidebar")}
-          title={tr("settings.expandSidebar")}
-          onClick={() => onExpandSidebar?.()}
-          className="mb-0.5 rounded-full p-1.5 text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800"
+          aria-label={tr("tabs.back")}
+          title={tr("tabs.back")}
+          disabled={!canBack}
+          onClick={() => goBack()}
+          className="icon-btn"
         >
-          <PanelToggleIcon direction="right" />
+          <ChevronIcon direction="left" size={17} />
         </button>
-      )}
-      <button
-        aria-label={tr("tabs.back")}
-        title={tr("tabs.back")}
-        disabled={!canBack}
-        onClick={() => goBack()}
-        className="rounded px-2 py-1.5 text-sm text-gray-600 disabled:opacity-30 dark:text-gray-300"
-      >
-        ←
-      </button>
-      <button
-        aria-label={tr("tabs.forward")}
-        title={tr("tabs.forward")}
-        disabled={!canForward}
-        onClick={() => goForward()}
-        className="rounded px-2 py-1.5 text-sm text-gray-600 disabled:opacity-30 dark:text-gray-300"
-      >
-        →
-      </button>
-      <div role="tablist" aria-label={tr("tabs.list")} onKeyDown={onListKeyDown} className="flex flex-1 items-end gap-0.5 overflow-x-auto">
+        <button
+          aria-label={tr("tabs.forward")}
+          title={tr("tabs.forward")}
+          disabled={!canForward}
+          onClick={() => goForward()}
+          className="icon-btn"
+        >
+          <ChevronIcon direction="right" size={17} />
+        </button>
+      </div>
+      <div role="tablist" aria-label={tr("tabs.list")} onKeyDown={onListKeyDown} className="-mb-px flex min-w-0 flex-1 items-end gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {tabs.map((t) => {
           const isCatalogTab = t.type === "catalog";
           const m = meta.get(t.docsetId);
@@ -348,9 +356,9 @@ export function TabsBar({
           newTab();
           usePalette.getState().setOpen(true);
         }}
-        className="rounded px-2 py-1.5 text-sm text-gray-600 dark:text-gray-300"
+        className="icon-btn mb-1"
       >
-        +
+        <PlusIcon size={16} />
       </button>
     </div>
   );

@@ -8,6 +8,7 @@ import { useDocsets } from "../store/docsets";
 import type { SearchResult } from "../lib/types";
 import { filterKeys, ghostFor, tailAfterColon } from "../lib/paletteFilter";
 import { DocsetIcon } from "./DocsetIcon";
+import { CloseIcon, SearchIcon } from "./Icons";
 
 // Fila memoizada: el icono se resuelve por docset_id desde un mapa (las
 // data-URL largas no se repiten en el estado de la paleta).
@@ -33,8 +34,8 @@ const PaletteRow = memo(function PaletteRow({
       id={`palette-option-${index}`}
       role="option"
       aria-selected={active}
-      className={`cursor-pointer px-4 py-1.5 text-sm ${
-        active ? "bg-accent/10 shadow-[inset_2px_0_0_rgb(var(--accent-text-ch))]" : ""
+      className={`mx-1.5 cursor-pointer rounded-lg px-2.5 py-2 text-sm transition-colors duration-75 ${
+        active ? "bg-accent/10 text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-300"
       }`}
       onMouseEnter={() => onHover(index)}
       onClick={() => onChoose()}
@@ -48,11 +49,14 @@ const PaletteRow = memo(function PaletteRow({
         }
       }}
     >
-      <span className="flex items-center gap-2">
+      <span className="flex min-w-0 items-center gap-2.5">
         <DocsetIcon icon={icon} name={docName} />
-        <span className="font-medium">{result.name}</span>
-        <span className="ml-2 text-xs text-gray-500">
-          {result.kind} · {docName}
+        <span className="truncate font-medium">{result.name}</span>
+        <span className="ml-auto flex shrink-0 items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
+          <span className="rounded bg-gray-100 px-1.5 py-px font-medium text-gray-500 dark:bg-white/5 dark:text-gray-400">
+            {result.kind}
+          </span>
+          <span className="max-w-[10rem] truncate">{docName}</span>
         </span>
       </span>
     </li>
@@ -102,6 +106,14 @@ export function CommandPalette() {
     usePalette.setState({ activeIndex: index });
   }, []);
 
+  // Al moverse con las flechas, la fila activa se mantiene visible.
+  useEffect(() => {
+    if (!open) return;
+    document
+      .getElementById(`palette-option-${activeIndex}`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [open, activeIndex, results]);
+
   useEffect(() => {
     if (open) {
       inputRef.current?.focus();
@@ -149,7 +161,7 @@ export function CommandPalette() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-[15vh]"
+      className="backdrop z-50 pt-[14vh]"
       onClick={() => setOpen(false)}
       role="presentation"
     >
@@ -157,14 +169,14 @@ export function CommandPalette() {
         role="dialog"
         aria-modal="true"
         aria-label={t("palette.dialog")}
-        className="w-full max-w-xl overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-900"
+        className="surface w-full max-w-xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {(applied.length > 0 || unknown.length > 0) && (
           <div
             role="group"
             aria-label={t("palette.filters")}
-            className="flex flex-wrap gap-1 px-4 pt-2"
+            className="flex flex-wrap gap-1 px-4 pt-3"
           >
             {applied.map((f) => {
               const meta = docMeta.get(f.docset_id);
@@ -175,12 +187,12 @@ export function CommandPalette() {
                   onClick={() => removeFilter(f.token)}
                   aria-label={t("palette.removeFilter", { name })}
                   title={t("palette.removeFilterTitle", { name })}
-                  className="flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-xs text-accent-text"
+                  className="flex animate-fade-in items-center gap-1 rounded-full bg-accent/15 py-0.5 pl-1.5 pr-1 text-xs font-medium text-accent-text transition-colors hover:bg-accent/25"
                 >
                   <DocsetIcon icon={meta?.icon ?? null} name={name} size={12} />
                   <span>{name}</span>
                   {!f.installed && <span>{t("palette.notInstalled")}</span>}
-                  <span aria-hidden>×</span>
+                  <CloseIcon size={11} strokeWidth={2.5} className="opacity-70" />
                 </button>
               );
             })}
@@ -197,10 +209,14 @@ export function CommandPalette() {
             ))}
           </div>
         )}
-        <div className="relative border-b border-gray-200 dark:border-gray-700">
+        <div className="relative border-b border-gray-100 dark:border-white/5">
+          <SearchIcon
+            size={17}
+            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+          />
           <div
             aria-hidden
-            className="pointer-events-none select-none overflow-hidden whitespace-pre px-4 py-3 text-sm text-gray-900 dark:text-gray-100"
+            className="pointer-events-none select-none overflow-hidden whitespace-pre py-3.5 pl-11 pr-4 text-[15px] text-gray-900 dark:text-gray-100"
           >
             {query === "" ? (
               <span className="text-gray-400">{t("palette.ghost")}</span>
@@ -224,21 +240,21 @@ export function CommandPalette() {
             }
             role="combobox"
             aria-autocomplete="list"
-            className="absolute inset-0 w-full bg-transparent px-4 py-3 text-sm text-transparent outline-none caret-gray-900 selection:bg-accent/30 dark:caret-gray-100"
+            className="absolute inset-0 w-full border-0 bg-transparent py-3.5 pl-11 pr-4 text-[15px] text-transparent caret-accent-text outline-none selection:bg-accent/30 focus-visible:shadow-none"
           />
         </div>
         {query.trim() === "" ? (
-          <p className="px-4 py-3 text-xs text-gray-500">
+          <p className="px-4 py-3.5 text-xs text-gray-500 dark:text-gray-400">
             {t("palette.emptyHint")}
           </p>
         ) : noticeMode ? (
-          <p className="px-4 py-3 text-xs text-gray-500">
+          <p className="px-4 py-3.5 text-xs text-gray-500 dark:text-gray-400">
             {t("palette.searchingIn", { names: noticeNames.join(", ") })}
           </p>
         ) : results.length === 0 ? (
-          <p className="px-4 py-3 text-xs text-gray-500">{t("palette.noResults")}</p>
+          <p className="px-4 py-3.5 text-xs text-gray-500 dark:text-gray-400">{t("palette.noResults")}</p>
         ) : (
-          <ul role="listbox" className="max-h-80 overflow-y-auto py-1">
+          <ul role="listbox" className="max-h-96 overflow-y-auto py-1.5">
             {results.map((r, i) => {
               const meta = docMeta.get(r.docset_id);
               return (

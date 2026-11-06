@@ -5,6 +5,7 @@
 import { useEffect, useMemo } from "react";
 import { CatalogRow } from "./CatalogRow";
 import { ErrorDetails } from "./ErrorDetails";
+import { RefreshIcon } from "./Icons";
 import { useT } from "../hooks/useT";
 import { useCatalog } from "../store/catalog";
 import { useDocsets } from "../store/docsets";
@@ -85,10 +86,10 @@ export function CatalogView() {
       className="flex min-h-0 min-w-0 flex-1 flex-col"
       aria-label={t("catalog.main")}
     >
-      <div className="flex items-center gap-2 border-b border-gray-200 p-3 dark:border-gray-800">
-        <h2 className="text-sm font-semibold">{t("catalog.title")}</h2>
+      <div className="flex items-center gap-2.5 border-b border-gray-200/80 px-5 py-3.5 dark:border-white/5">
+        <h2 className="text-base font-semibold tracking-tight">{t("catalog.title")}</h2>
         {status && status.count > 0 && (
-          <span className="text-xs text-gray-500 dark:text-gray-400">
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium tabular-nums text-gray-500 dark:bg-white/5 dark:text-gray-400">
             {tn(lang, status.count, "catalog.entriesOne", "catalog.entriesMany", { n: status.count })}
           </span>
         )}
@@ -97,13 +98,14 @@ export function CatalogView() {
           onClick={() => void refresh()}
           disabled={refreshing}
           title={t("catalog.refreshTitle")}
-          className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-200 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
+          className="btn py-1 text-xs"
         >
+          <RefreshIcon size={13} className={refreshing ? "animate-spin" : ""} />
           {refreshing ? t("catalog.refreshing") : t("catalog.refresh")}
         </button>
       </div>
 
-      <div className="border-b border-gray-200 p-3 text-xs dark:border-gray-800">
+      <div className="border-b border-gray-200/80 px-5 py-3.5 text-xs dark:border-white/5">
         <p className="text-gray-500 dark:text-gray-400">
           {t("catalog.repo")}{" "}
           <span className="font-mono">
@@ -125,12 +127,12 @@ export function CatalogView() {
             onChange={(e) => setRepoInput(e.target.value)}
             placeholder={t("catalog.repoPlaceholder")}
             aria-label={t("catalog.repoLabel")}
-            className="min-w-0 flex-1 rounded border border-gray-300 px-2 py-1.5 text-xs dark:border-gray-700 dark:bg-gray-800"
+            className="field min-w-0 flex-1 text-xs"
           />
           <button
             onClick={() => void saveRepo(repoInput)}
             disabled={repoBusy}
-            className="shrink-0 rounded bg-accent-solid px-3 py-1 text-xs text-on-accent hover:brightness-110 disabled:opacity-50"
+            className="btn-primary shrink-0 text-xs"
           >
             {repoBusy ? t("catalog.saving") : t("common.save")}
           </button>
@@ -138,13 +140,13 @@ export function CatalogView() {
         <ErrorDetails error={repoError} />
       </div>
 
-      <div className="flex gap-2 border-b border-gray-200 p-3 dark:border-gray-800">
+      <div className="flex gap-2 border-b border-gray-200/80 px-5 py-3 dark:border-white/5">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t("catalog.searchPlaceholder")}
           aria-label={t("catalog.searchLabel")}
-          className="min-w-0 flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800"
+          className="field min-w-0 flex-1"
         />
         <select
           value={filter}
@@ -153,7 +155,7 @@ export function CatalogView() {
             if (value in FILTER_KEYS) setFilter(value as CatalogFilter);
           }}
           aria-label={t("catalog.filterLabel")}
-          className="shrink-0 rounded border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800"
+          className="field shrink-0 cursor-pointer dark:[color-scheme:dark]"
         >
           {Object.entries(FILTER_KEYS).map(([value, key]) => (
             <option key={value} value={value}>
@@ -163,7 +165,7 @@ export function CatalogView() {
         </select>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-3">
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
         {loading ? (
           <p className="text-sm text-gray-500">{t("catalog.loading")}</p>
         ) : error !== null && entries.length === 0 ? (
@@ -171,7 +173,7 @@ export function CatalogView() {
             <ErrorDetails error={error} />
             <button
               onClick={() => void load()}
-              className="mt-2 rounded border border-gray-300 px-3 py-1 text-xs hover:bg-gray-200 dark:border-gray-700 dark:hover:bg-gray-800"
+              className="btn mt-2 text-xs"
             >
               {t("catalog.retry")}
             </button>
@@ -185,7 +187,7 @@ export function CatalogView() {
             {query.trim() !== "" ? t("catalog.noResultsFor", { query: query.trim() }) : t("catalog.noResults")}.
           </p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="mx-auto max-w-4xl space-y-2">
             {visible.map(({ entry, status: st }) => (
               <CatalogRow
                 key={entry.id}

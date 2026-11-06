@@ -10,11 +10,18 @@ import { AppLogo } from "./AppLogo";
 
 function Shortcut({ keys, label }: { keys: string; label: string }) {
   return (
-    <li className="flex items-baseline gap-3">
-      <span className="w-20 shrink-0 font-mono text-xs text-gray-500 dark:text-gray-400">
-        {keys}
-      </span>
+    <li className="flex items-center justify-between gap-6">
       <span className="text-sm text-gray-600 dark:text-gray-300">{label}</span>
+      <span className="flex shrink-0 gap-1">
+        {keys.split(" ").map((k) => (
+          <kbd
+            key={k}
+            className="min-w-[1.6rem] rounded-md border border-gray-200 bg-white px-1.5 py-0.5 text-center text-[11px] font-medium text-gray-500 shadow-[0_1px_0_rgb(0_0_0/0.06)] dark:border-white/10 dark:bg-white/5 dark:text-gray-400"
+          >
+            {k}
+          </kbd>
+        ))}
+      </span>
     </li>
   );
 }
@@ -39,9 +46,15 @@ export function Welcome({ docCount }: { docCount: number }) {
   }, []);
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center p-8">
+    <div className="flex flex-1 animate-rise-in flex-col items-center justify-center p-8">
       <h1 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">
-        <AppLogo size={40} />
+        <span className="relative isolate">
+          <span
+            aria-hidden="true"
+            className="absolute inset-0 -z-10 scale-150 rounded-full bg-accent/25 blur-2xl"
+          />
+          <AppLogo size={44} />
+        </span>
         OpenDoc
       </h1>
 
@@ -51,7 +64,7 @@ export function Welcome({ docCount }: { docCount: number }) {
         type="button"
         onClick={() => setOpen(true)}
         onMouseMove={handleMouseMove}
-        className="group relative mt-7 flex w-full max-w-md items-center justify-between gap-6 overflow-hidden rounded-xl border border-gray-200/90 bg-gray-50/70 px-4 py-2.5 text-sm text-gray-500 shadow-xs transition-all duration-200 hover:border-accent hover:text-gray-800 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-text dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-gray-400 dark:hover:border-accent dark:hover:text-gray-200"
+        className="group relative mt-8 flex w-full max-w-md items-center justify-between gap-6 overflow-hidden rounded-xl border border-gray-200/90 bg-white px-4 py-3 text-sm text-gray-500 shadow-soft transition-all duration-300 ease-smooth hover:-translate-y-0.5 hover:border-accent/60 hover:text-gray-800 hover:shadow-lg active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-text dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-gray-400 dark:hover:border-accent dark:hover:text-gray-200"
         aria-label={t("welcome.searchDocs", { mod })}
       >
         <div
@@ -93,14 +106,14 @@ export function Welcome({ docCount }: { docCount: number }) {
         </button>
       </div>
 
-      <ul className="mt-8 space-y-1.5" aria-label={t("welcome.shortcuts")}>
+      <ul className="mt-10 w-full max-w-[15rem] space-y-2" aria-label={t("welcome.shortcuts")}>
         <Shortcut keys={`${mod} K`} label={t("welcome.search")} />
         <Shortcut keys={`${mod} T`} label={t("welcome.newTab")} />
         <Shortcut keys={`${mod} W`} label={t("welcome.closeTab")} />
       </ul>
       <p className="mt-8 text-xs text-gray-400 dark:text-gray-500">
         {t("welcome.filterBy")}{" "}
-        <code className="font-mono text-gray-500 dark:text-gray-400">cpp:vector</code>
+        <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-gray-600 dark:bg-white/5 dark:text-gray-300">cpp:vector</code>
       </p>
       <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
         {tn(lang, docCount, "welcome.docCountOne", "welcome.docCountMany", { n: docCount })}

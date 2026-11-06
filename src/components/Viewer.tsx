@@ -14,6 +14,11 @@ import { useDocsets } from "../store/docsets";
 import { usePalette } from "../store/palette";
 import { useTabs } from "../store/tabs";
 import {
+  CONTEXT_RATE_MAX,
+  CONTEXT_RATE_WINDOW_MS,
+  rateAllow,
+  validateContextMessage,
+  validateFindResultMessage,
   validateKeyMessage,
   validateNavigateMessage,
   validateNavMessage,
@@ -26,7 +31,40 @@ import { toBackendUrl } from "../lib/iframeMessages";
 import { toViewerUrl } from "../lib/opendocUrl";
 import { currentEntry } from "../lib/tabHistory";
 import { findLoadedFrame, isPendingFrameLoad } from "../lib/viewerFrames";
+import { formatZoom } from "../lib/zoom";
+import { docMenuEntries } from "../hooks/useAppContextMenu";
+import { useContextMenu } from "../store/contextMenu";
+import { useFind } from "../store/find";
+import { useZoom } from "../store/zoom";
 import { CatalogView } from "./CatalogView";
+import { FindBar } from "./FindBar";
+
+/** Envía al iframe el estado de búsqueda actual (o lo limpia). */
+function sendFind(win: Window, dir: -1 | 0 | 1): void {
+  const f = useFind.getState();
+  if (f.open && f.query !== "") {
+    win.postMessage({ type: "opendoc-find", query: f.query, dir }, "*");
+  } else {
+    win.postMessage({ type: "opendoc-find-clear" }, "*");
+    if (f.open) f.setResult(0, 0);
+  }
+}
+
+/** Ctrl/Cmd+rueda: acumula el desplazamiento para que el pellizco del
+ *  trackpad no salte de golpe varios pasos. */
+function makeWheelZoom(): (e: WheelEvent) => void {
+  let acc = 0;
+  let last = 0;
+  return (e) => {
+    acc += e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
+    const now = Date.now();
+    if (Math.abs(acc) < 50 || now - last < 80) return;
+    last = now;
+    if (acc < 0) useZoom.getState().zoomIn();
+    else useZoom.getState().zoomOut();
+    acc = 0;
+  };
+}
 
 export function Viewer() {
   const tabs = useTabs((s) => s.tabs);
@@ -51,6 +89,11 @@ export function Viewer() {
   const pendingFrame = useRef<{ index: number; url: string; version: number } | null>(null);
   const preloadedFrame = useRef<{ index: number; url: string; version: number } | null>(null);
   const prefetchTime = useRef(0);
+  const contextTimes = useRef<number[]>([]);
+  const zoomLevel = useZoom((s) => s.level);
+  const zoomChangedAt = useZoom((s) => s.changedAt);
+  const findSeq = useFind((s) => s.seq);
+  const [zoomToast, setZoomToast] = useState(false);
 
   // WKWebView can route trackpad wheel input to the outer document instead
   // of the nested docset iframe. Relay those deltas to the active frame.
@@ -62,9 +105,11 @@ export function Viewer() {
     wheelCleanup.current?.();
     wheelCleanup.current = null;
     if (!viewer) return;
+    const wheelZoom = makeWheelZoom();
     const relayWheel = (event: WheelEvent): void => {
-      if (event.ctrlKey) {
+      if (event.ctrlKey || event.metaKey) {
         event.preventDefault();
+        if (frontFrameRef.current !== null) wheelZoom(event);
         return;
       }
       const index = frontFrameRef.current;
@@ -119,6 +164,8 @@ export function Viewer() {
     // El tema oscuro solo afecta a la interfaz de OpenDoc. El contenido de
     // los docsets conserva su presentación clara original.
     win.postMessage({ type: "opendoc-theme", value: "light" }, "*");
+    win.postMessage({ type: "opendoc-zoom", level: useZoom.getState().level }, "*");
+    sendFind(win, 0);
     const tab = useTabs.getState().active();
     const url = tab ? currentEntry(tab)?.url : undefined;
     if (url) {
@@ -191,6 +238,10 @@ export function Viewer() {
       if (type === "opendoc-ready") {
         const ready = validateReadyMessage(data, true, ids);
         if (!ready) return;
+        // Zoom cuanto antes (antes del primer pintado) en cualquiera de
+        // nuestros iframes, también el que precarga.
+        const own = frames.current.find((f) => f !== null && e.source === f.contentWindow);
+        own?.contentWindow?.postMessage({ type: "opendoc-zoom", level: useZoom.getState().level }, "*");
         const activeTab = useTabs.getState().active();
         const activeUrl = activeTab ? currentEntry(activeTab)?.url : null;
         const pending = pendingFrame.current;
@@ -223,7 +274,41 @@ export function Viewer() {
         if (sc && url) childScroll(url, sc.y);
         return;
       }
+      // Clic dentro del docset: el padre no recibe el pointerdown (ni
+      // siempre un blur), así que el iframe lo avisa para cerrar el menú.
+      if (type === "opendoc-pointerdown") {
+        useContextMenu.getState().close();
+        return;
+      }
+      if (type === "opendoc-find-result") {
+        const res = validateFindResultMessage(data, true);
+        if (res) useFind.getState().setResult(res.total, res.current);
+        return;
+      }
       if (transitioning) return;
+      if (type === "opendoc-context") {
+        const req = validateContextMessage(data, true, ids);
+        if (!req) return;
+        const rate = rateAllow(contextTimes.current, Date.now(), CONTEXT_RATE_MAX, CONTEXT_RATE_WINDOW_MS);
+        contextTimes.current = rate.times;
+        if (!rate.allowed) return;
+        const rect = frame.getBoundingClientRect();
+        const win = frame.contentWindow;
+        const linkDoc = req.link
+          ? useDocsets.getState().docsets.find((d) => d.id === req.link?.slice("opendoc://".length).split("/", 1)[0])
+          : undefined;
+        useContextMenu.getState().show(
+          Math.min(rect.right, Math.max(rect.left, rect.left + req.x)),
+          Math.min(rect.bottom, Math.max(rect.top, rect.top + req.y)),
+          docMenuEntries({
+            selection: req.selection,
+            link: req.link,
+            linkTitle: linkDoc?.name ?? req.link ?? "",
+            selectAll: () => win?.postMessage({ type: "opendoc-select-all" }, "*"),
+          }),
+        );
+        return;
+      }
       if (type === "opendoc-nav") {
         const nav = validateNavMessage(data, true, ids);
         if (nav) childNav(nav.url, nav.title);
@@ -257,6 +342,21 @@ export function Viewer() {
       } else if (type === "opendoc-key") {
         const kp = validateKeyMessage(data, true);
         if (!kp) return;
+        if (kp.key === "f") {
+          useFind.getState().openFind();
+          return;
+        }
+        if (kp.key === "find-close") {
+          useFind.getState().close();
+          return;
+        }
+        if (kp.key === "zoom-in" || kp.key === "zoom-out" || kp.key === "zoom-reset") {
+          const z = useZoom.getState();
+          if (kp.key === "zoom-in") z.zoomIn();
+          else if (kp.key === "zoom-out") z.zoomOut();
+          else z.reset();
+          return;
+        }
         if (kp.key === "k") {
           usePalette.getState().toggle();
           return;
@@ -280,6 +380,44 @@ export function Viewer() {
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, [activateFrame, childNav, childScroll, childKey, openTabUrl, newTab, transitioning]);
+
+  // Zoom: se aplica a los dos iframes (el oculto puede ser la próxima página)
+  // y se muestra un aviso breve con el nivel.
+  useEffect(() => {
+    for (const f of frames.current) {
+      f?.contentWindow?.postMessage({ type: "opendoc-zoom", level: zoomLevel }, "*");
+    }
+  }, [zoomLevel]);
+
+  useEffect(() => {
+    if (zoomChangedAt === 0) return;
+    setZoomToast(true);
+    const id = window.setTimeout(() => setZoomToast(false), 1200);
+    return () => window.clearTimeout(id);
+  }, [zoomChangedAt]);
+
+  // Búsqueda en página: cada petición va al iframe visible. Al escribir se
+  // espera un poco (no se recorre el documento en cada tecla).
+  useEffect(() => {
+    if (findSeq === 0) return;
+    const { dir } = useFind.getState();
+    const send = () => {
+      const index = frontFrameRef.current;
+      const win = index === null ? null : frames.current[index]?.contentWindow;
+      if (win) sendFind(win, dir);
+    };
+    if (dir !== 0) {
+      send();
+      return;
+    }
+    const id = window.setTimeout(send, 120);
+    return () => window.clearTimeout(id);
+  }, [findSeq]);
+
+  // Cambiar de pestaña cierra la búsqueda (cada página es otro documento).
+  useEffect(() => {
+    useFind.getState().close();
+  }, [activeId]);
 
   // Solo promover la carga que sigue siendo la solicitada; un destino lento
   // sustituido por otra navegación no debe robar el visor al destino nuevo.
@@ -340,7 +478,7 @@ export function Viewer() {
                   if (active) void extract(active.docsetId);
                 }}
                 disabled={active !== undefined && extractingIds.includes(active.docsetId)}
-                className="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-200 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                className="btn"
               >
                 {active !== undefined && extractingIds.includes(active.docsetId)
                   ? t("settings.extracting")
@@ -357,7 +495,7 @@ export function Viewer() {
       ) : (
         <>
           {frontFrame === null && (
-            <p className="p-4 text-sm text-gray-500">{t("viewer.loading", { title: activeTitle })}</p>
+            <p className="animate-fade-in p-4 text-sm text-gray-500">{t("viewer.loading", { title: activeTitle })}</p>
           )}
           {[0, 1].map((index) => (
             <iframe
@@ -368,11 +506,20 @@ export function Viewer() {
               sandbox="allow-scripts"
               scrolling="yes"
               aria-hidden={frontFrame !== index}
-              className={`h-full min-h-0 w-full flex-1 border-0 bg-white transition-opacity duration-100 motion-reduce:transition-none ${frontFrame === index ? `opacity-100 ${transitioning ? "pointer-events-none" : ""}` : "absolute inset-0 pointer-events-none opacity-0"}`}
+              className={`h-full min-h-0 w-full flex-1 border-0 bg-white transition-opacity duration-150 ease-out motion-reduce:transition-none ${frontFrame === index ? `opacity-100 ${transitioning ? "pointer-events-none" : ""}` : "absolute inset-0 pointer-events-none opacity-0"}`}
               onLoad={() => onIframeLoad(index, frameUrls[index], frameVersions[index])}
             />
           ))}
           <ErrorDetails error={tabError} />
+          <FindBar />
+          {zoomToast && (
+            <div
+              aria-live="polite"
+              className="pointer-events-none absolute bottom-4 right-4 z-20 animate-pop-in rounded-full border border-gray-200/80 bg-white/95 px-3 py-1 text-xs font-medium tabular-nums text-gray-600 shadow-float backdrop-blur-xl dark:border-white/10 dark:bg-gray-900/95 dark:text-gray-300"
+            >
+              {t("zoom.toast", { pct: formatZoom(zoomLevel) })}
+            </div>
+          )}
         </>
       )}
     </main>
@@ -401,7 +548,7 @@ function FolderPrompt({
           </p>
           <button
             onClick={() => void choose()}
-            className="mt-3 rounded bg-accent-solid px-4 py-2 text-sm text-on-accent hover:brightness-110"
+            className="btn-primary mt-4 px-4 py-2"
           >
             {t("viewer.chooseAnother")}
           </button>
@@ -413,7 +560,7 @@ function FolderPrompt({
           </p>
           <button
             onClick={() => void choose()}
-            className="mt-3 rounded bg-accent-solid px-4 py-2 text-sm text-on-accent hover:brightness-110"
+            className="btn-primary mt-4 px-4 py-2"
           >
             {t("viewer.chooseFolder")}
           </button>

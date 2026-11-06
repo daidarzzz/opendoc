@@ -38,7 +38,22 @@ export type IframeKey =
   | "alt-left"
   | "alt-right"
   | "mouse-back"
-  | "mouse-forward";
+  | "mouse-forward"
+  | "f"
+  | "find-close"
+  | "zoom-in"
+  | "zoom-out"
+  | "zoom-reset";
+
+/** Máximo de texto seleccionado que se acepta del menú contextual. */
+export const MAX_SELECTION_LEN = 10_000;
+/** Máximo de coincidencias que reporta la búsqueda en página. */
+export const MAX_FIND_MATCHES = 2000;
+/** Coordenadas del menú contextual: holgadas, pero acotadas. */
+const MAX_COORD = 100_000;
+/** Ventana y máximo de menús contextuales pedidos por el documento. */
+export const CONTEXT_RATE_WINDOW_MS = 1000;
+export const CONTEXT_RATE_MAX = 5;
 
 export interface KeyPress {
   key: IframeKey;
@@ -177,6 +192,11 @@ function isIframeKey(raw: unknown): raw is IframeKey {
     raw === "alt-right" ||
     raw === "mouse-back" ||
     raw === "mouse-forward" ||
+    raw === "f" ||
+    raw === "find-close" ||
+    raw === "zoom-in" ||
+    raw === "zoom-out" ||
+    raw === "zoom-reset" ||
     (typeof raw === "string" && raw.length === 1 && raw >= "1" && raw <= "9")
   );
 }
@@ -192,6 +212,73 @@ export function validateKeyMessage(
   if (rec["type"] !== "opendoc-key") return null;
   if (!isIframeKey(rec["key"])) return null;
   return { key: rec["key"], shift: rec["shift"] === true };
+}
+
+export interface ContextRequest {
+  /** Posición dentro del iframe (px CSS del documento hijo). */
+  x: number;
+  y: number;
+  /** Texto seleccionado (sin controles salvo saltos/tabuladores), "" si nada. */
+  selection: string;
+  /** Enlace interno bajo el puntero (URL opendoc válida) o null. */
+  link: string | null;
+}
+
+/** Selección: texto acotado, sin caracteres de control (salvo \t \n). */
+export function sanitizeSelection(raw: unknown): string {
+  if (typeof raw !== "string") return "";
+  // eslint-disable-next-line no-control-regex
+  return raw.slice(0, MAX_SELECTION_LEN).replace(/[\u0000-\u0008\u000B-\u001F\u007F]/g, "");
+}
+
+function coord(raw: unknown): number | null {
+  if (typeof raw !== "number" || !Number.isFinite(raw)) return null;
+  if (Math.abs(raw) > MAX_COORD) return null;
+  return raw;
+}
+
+/**
+ * Mensaje `opendoc-context` (clic derecho en el docset). Null si roto o
+ * coordenadas fuera de rango. Un enlace inválido o de otro docset no anula
+ * el menú: solo se descarta (`link: null`).
+ */
+export function validateContextMessage(
+  data: unknown,
+  trustedSource: boolean,
+  docsetIds: readonly string[],
+): ContextRequest | null {
+  if (!trustedSource) return null;
+  if (typeof data !== "object" || data === null) return null;
+  const rec = data as Record<string, unknown>;
+  if (rec["type"] !== "opendoc-context") return null;
+  const x = coord(rec["x"]);
+  const y = coord(rec["y"]);
+  if (x === null || y === null) return null;
+  let link: string | null = null;
+  if (typeof rec["link"] === "string") {
+    const backend = toBackendUrl(rec["link"]);
+    if (backend !== null && isValidNavUrl(backend, docsetIds)) link = backend;
+  }
+  return { x, y, selection: sanitizeSelection(rec["selection"]), link };
+}
+
+/** Mensaje `opendoc-find-result`: enteros con 0 ≤ current ≤ total ≤ máximo. */
+export function validateFindResultMessage(
+  data: unknown,
+  trustedSource: boolean,
+): { total: number; current: number } | null {
+  if (!trustedSource) return null;
+  if (typeof data !== "object" || data === null) return null;
+  const rec = data as Record<string, unknown>;
+  if (rec["type"] !== "opendoc-find-result") return null;
+  const total = rec["total"];
+  const current = rec["current"];
+  if (!Number.isInteger(total) || !Number.isInteger(current)) return null;
+  const tot = total as number;
+  const cur = current as number;
+  if (tot < 0 || tot > MAX_FIND_MATCHES || cur < 0 || cur > tot) return null;
+  if (tot > 0 && cur === 0) return null;
+  return { total: tot, current: cur };
 }
 
 /**
@@ -259,6 +346,30 @@ export function matchParentShortcut(e: {
   if (k.length === 1 && k >= "1" && k <= "9" && !e.shiftKey) {
     return { action: "tab-n", index: Number(k) - 1 };
   }
+  return null;
+}
+
+export type ViewerShortcut = "find" | "zoom-in" | "zoom-out" | "zoom-reset";
+
+/**
+ * Atajos del visor en el padre: Ctrl/Cmd+F (buscar en página) y
+ * Ctrl/Cmd + `+`/`-`/`0` (zoom). Sin Alt. `+` también vale con Shift
+ * (en muchos teclados es Shift+=).
+ */
+export function matchViewerShortcut(e: {
+  key: string;
+  code?: string;
+  ctrlKey: boolean;
+  metaKey: boolean;
+  altKey: boolean;
+  shiftKey: boolean;
+}): ViewerShortcut | null {
+  if (!(e.ctrlKey || e.metaKey) || e.altKey) return null;
+  const code = e.code ?? "";
+  if (code === "KeyF" || (code === "" && e.key.toLowerCase() === "f")) return e.shiftKey ? null : "find";
+  if (code === "Equal" || code === "NumpadAdd" || e.key === "+" || e.key === "=") return "zoom-in";
+  if (code === "Minus" || code === "NumpadSubtract" || e.key === "-") return "zoom-out";
+  if ((code === "Digit0" || code === "Numpad0" || (code === "" && e.key === "0")) && !e.shiftKey) return "zoom-reset";
   return null;
 }
 

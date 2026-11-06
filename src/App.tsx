@@ -1,6 +1,8 @@
 // Layout: sidebar + área central + Command Palette.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CommandPalette } from "./components/CommandPalette";
+import { ContextMenu } from "./components/ContextMenu";
+import { useAppContextMenu } from "./hooks/useAppContextMenu";
 import { Sidebar } from "./components/Sidebar";
 import { TabsBar } from "./components/TabsBar";
 import { Viewer } from "./components/Viewer";
@@ -50,6 +52,7 @@ export default function App() {
   const sidebarAnimTimer = useRef<number | null>(null);
   const { t } = useT();
   useGlobalKeys();
+  useAppContextMenu();
 
   const toggleSidebar = useCallback((collapsed: boolean) => {
     setSidebarCollapsed(collapsed);
@@ -213,7 +216,7 @@ export default function App() {
           }
         }}
       >
-        <span className="h-8 w-px rounded bg-gray-300 transition-colors group-hover:bg-gray-500 group-focus-visible:bg-accent-text dark:bg-gray-700 dark:group-hover:bg-gray-500" />
+        <span className="h-full w-px bg-transparent transition-colors duration-200 group-hover:bg-accent-text/60 group-focus-visible:bg-accent-text group-active:bg-accent-text" />
       </div>
       )}
       {/* La cabecera vive fuera del visor para que nunca se desmonte al
@@ -226,6 +229,7 @@ export default function App() {
         <Viewer />
       </div>
       <CommandPalette />
+      <ContextMenu />
     </div>
   );
 }

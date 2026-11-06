@@ -99,8 +99,10 @@ graph TD
   - `CatalogView.tsx`: interfaz del gestor de docsets (búsqueda de paquetes, estado de instalación, actualización y progreso de descarga).
   - `Welcome.tsx`: pantalla inicial con accesos directos de búsqueda y selección de carpeta cuando no hay pestañas abiertas.
   - `ErrorDetails.tsx`: desglose de incidencias detectadas durante el escaneo.
+  - `ContextMenu.tsx`: menú contextual propio (sustituye al del navegador en toda la app y dentro de los docsets), con teclado completo y fila de zoom.
+  - `FindBar.tsx`: barra flotante de búsqueda en la página (`Ctrl/Cmd+F`).
 - **`store/`**:
-  - Stores de Zustand: `docsets`, `tabs`, `palette`, `catalog`, `browse`, `theme`, `accent` y `lang`.
+  - Stores de Zustand: `docsets`, `tabs`, `palette`, `catalog`, `browse`, `theme`, `accent`, `lang`, `contextMenu`, `find` y `zoom` (este último persistido en `localStorage`).
 - **`lib/`**:
   - `commands.ts`: funciones envolventes tipadas sobre `invoke()`, `listen()` y diálogos nativos.
   - `types.ts`: tipos TypeScript espejo de los modelos de Rust.
@@ -108,6 +110,8 @@ graph TD
   - `sessionSync.ts`: sincronización reactiva de estado con debounce hacia el backend y vuelco final en cierre.
   - `iframeMessages.ts`: validadores exhaustivos de los mensajes recibidos desde los iframes.
   - `accent.ts`: tokens CSS para los 4 acentos de color con contraste WCAG garantizado.
+  - `zoom.ts`: pasos de zoom de los docsets (50 %–300 %) y su formato.
+  - `clipboard.ts`: copiar/pegar con reserva `execCommand` cuando la API asíncrona no está disponible.
 
 ---
 
@@ -153,6 +157,12 @@ graph TD
     - Captura y reenvía atajos de teclado esenciales (`Ctrl/Cmd+K`, `Ctrl/Cmd+W`, `Ctrl/Cmd+T`, `Ctrl/Cmd+Tab`, `Alt+←/→`).
     - Captura clics con rueda central o `Ctrl/Cmd+clic` en enlaces internos y solicita apertura en nueva pestaña (`opendoc-open-tab`).
     - Recibe eventos de scroll de trackpad desde el contenedor cuando WebKit los intercepta en el padre.
+  - Se inyecta además `ACTIONS_STYLE` + `ACTIONS_SCRIPT` (acciones propias de OpenDoc):
+    - Anula el menú contextual nativo y, solo con `event.isTrusted`, pide `opendoc-context` `{x, y, selection, link}`; el padre lo valida (`validateContextMessage`: coordenadas acotadas, selección ≤10 000 caracteres sin controles, enlace solo si es una URL opendoc de un docset cargado) y limita a 5 menús/s.
+    - Búsqueda en página: obedece `opendoc-find {query ≤200, dir}` y `opendoc-find-clear`, resalta con la CSS Custom Highlight API (o selecciona la coincidencia si no existe), omite texto oculto, se limita a 2000 coincidencias y responde `opendoc-find-result {total, current}` (validado con `validateFindResultMessage`).
+    - Zoom: aplica `opendoc-zoom {level 0.25..5}` como `zoom` del documento; reenvía `Ctrl/Cmd+rueda` (acumulada para el pellizco del trackpad), `Ctrl/Cmd +/-/0` y `Ctrl/Cmd+F` como `opendoc-key` (`zoom-in`, `zoom-out`, `zoom-reset`, `f`) y `Esc` con búsqueda activa como `find-close`.
+    - `opendoc-select-all`: selecciona todo el contenido del documento.
+  - El visor envía el zoom en cuanto un iframe reporta `opendoc-ready` (antes del primer pintado) y repite la búsqueda activa al cambiar de página.
 - **Enlaces externos**:
   - Los clics en enlaces con esquemas `http://` o `https://` fuera del dominio local son interceptados por `navigation::nav_decision` en el manejador `on_navigation` de la ventana y abiertos en el navegador predeterminado del sistema operativo, impidiendo la navegación del visor hacia sitios externos.
 
@@ -236,7 +246,7 @@ El repositorio implementa una batería integral de pruebas en frontend y backend
    - `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings` (cero advertencias permitidas).
    - `cargo fmt --manifest-path src-tauri/Cargo.toml -- --check` (formato estricto según `rustfmt`).
 2. **Frontend**:
-   - `npm test` (105 tests ejecutados con Vitest: pruebas de historial, validación de mensajes postMessage, i18n, contraste de acentos, stores y serialización de sesión).
+   - `npm test` (121 tests ejecutados con Vitest: pruebas de historial, validación de mensajes postMessage, i18n, contraste de acentos, stores y serialización de sesión).
    - `npx tsc --noEmit` (comprobación estricta de tipos de TypeScript).
 3. **Flujo de Integración Continua (`.github/workflows/release.yml`)**:
    - El trabajo `check` corre en cada push y pull request hacia `master`, validando `npm ci`, `cargo test`, `cargo clippy`, `cargo fmt`, `npx tsc --noEmit` y `npm test`.

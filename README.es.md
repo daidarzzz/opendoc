@@ -33,6 +33,9 @@ Aunque Zeal es una herramienta consolidada en la comunidad, su interfaz en C++/Q
 - **Pestañas e historial independiente:** Navegación hacia adelante y hacia atrás por pestaña, pestañas reordenables por arrastre, precarga de enlaces al pasar el cursor para eliminar el parpadeo blanco, y clic central o `Ctrl/Cmd+clic` para abrir en pestañas nuevas.
 - **Persistencia de sesión:** Conserva pestañas abiertas, pestaña activa, historial de navegación y posiciones de scroll entre reinicios mediante `session.json` (con escritura atómica y copias de seguridad `.bak` automáticas). Puede activarse o desactivarse desde Ajustes.
 - **Protocolo de visor seguro (`opendoc://`):** Sirve los archivos locales previniendo cualquier acceso indebido fuera de `Documents/` (`..`, symlinks, unidades de disco o secuencias con doble codificación percent). Normaliza y reenvía los gestos de rueda y trackpad hacia el interior del iframe.
+- **Buscar en la página (`Ctrl/Cmd+F`):** Barra de búsqueda flotante propia de OpenDoc en lugar de la del webview: resalta todas las coincidencias, muestra `3 de 12` y se recorre con `Intro` / `Mayús+Intro`.
+- **Zoom de los docsets:** `Ctrl/Cmd+rueda del ratón`, `Ctrl/Cmd +`/`-`/`0` o desde el menú contextual. El nivel es común a todos los docsets y se recuerda entre sesiones.
+- **Menú contextual propio:** El clic derecho del navegador se sustituye por un menú minimalista de OpenDoc: copiar, buscar la selección en OpenDoc o en la página, abrir enlaces en pestaña nueva, atrás/adelante, seleccionar todo y zoom dentro de los docsets; acciones de pestaña (cerrar, cerrar las demás, reabrir) sobre las pestañas; cortar/copiar/pegar en los campos de texto.
 - **Protección de enlaces externos:** Los hipervínculos externos (`http://`, `https://`, `mailto:`) se abren automáticamente en el navegador web del sistema operativo en lugar de navegar dentro de la ventana de la aplicación.
 
 ### Gestión de Docsets y Catálogo
@@ -109,7 +112,7 @@ Los binarios compilados se generan en `src-tauri/target/release/` y los instalad
 Antes de dar por completado un cambio, ejecuta la batería de pruebas, linters y comprobaciones de tipo:
 
 ```bash
-# Pruebas de frontend (Vitest: 105 tests sobre stores, sync de sesión, i18n, etc.)
+# Pruebas de frontend (Vitest: 121 tests sobre stores, sync de sesión, i18n, etc.)
 npm test
 
 # Comprobación de tipos de TypeScript
