@@ -14,6 +14,11 @@ interface PaletteState {
   applied: AppliedFilter[];
   unknown: string[];
   activeIndex: number;
+  /**
+   * Hay una búsqueda en curso para `query`. Mientras tanto se siguen
+   * mostrando los resultados anteriores (sin parpadeo de "sin resultados").
+   */
+  pending: boolean;
   setOpen: (open: boolean) => void;
   toggle: () => void;
   setQuery: (query: string) => void;
@@ -28,6 +33,8 @@ interface PaletteState {
 export const usePalette = create<PaletteState>()((set, get) => {
   let seq = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
+  /** Intro pulsado con una búsqueda en curso: se elige al llegar el resultado. */
+  let chooseWhenReady: { newTab?: boolean } | null = null;
   return {
     open: false,
     query: "",
@@ -35,21 +42,29 @@ export const usePalette = create<PaletteState>()((set, get) => {
     applied: [],
     unknown: [],
     activeIndex: 0,
+    pending: false,
     setOpen: (open: boolean) => {
       set({ open });
-      if (!open) set({ activeIndex: 0 });
+      if (!open) {
+        chooseWhenReady = null;
+        set({ activeIndex: 0 });
+      }
     },
     toggle: () => {
-      const open = !get().open;
-      set({ open });
-      if (!open) set({ activeIndex: 0 });
+      get().setOpen(!get().open);
     },
     setQuery: (query: string) => {
-      // Keep the current filter chips visible while the debounced search runs.
-      // Clearing them here made selected docsets flash away on every keystroke.
-      set({ query, results: [], activeIndex: 0 });
+      // Se conservan resultados y chips de filtro mientras corre la búsqueda
+      // con debounce: vaciarlos aquí hacía parpadear "sin resultados" (y los
+      // chips) con cada tecla.
       const mySeq = ++seq;
       if (timer) clearTimeout(timer);
+      chooseWhenReady = null;
+      if (query.trim() === "") {
+        set({ query, results: [], applied: [], unknown: [], activeIndex: 0, pending: false });
+        return;
+      }
+      set({ query, pending: true });
       timer = setTimeout(() => void (async () => {
         try {
           const res = await searchDocs(query, { limit: PALETTE_LIMIT });
@@ -59,11 +74,15 @@ export const usePalette = create<PaletteState>()((set, get) => {
             applied: res.applied,
             unknown: res.unknown,
             activeIndex: 0,
+            pending: false,
           });
         } catch {
           if (mySeq !== seq) return;
-          set({ results: [], applied: [], unknown: [] });
+          set({ results: [], applied: [], unknown: [], pending: false });
         }
+        const waiting = chooseWhenReady;
+        chooseWhenReady = null;
+        if (waiting && get().open) get().chooseActive(waiting);
       })(), 35);
     },
     moveActive: (delta: number) => {
@@ -74,6 +93,12 @@ export const usePalette = create<PaletteState>()((set, get) => {
       set({ activeIndex: next });
     },
     chooseActive: (opts) => {
+      // Con la búsqueda en curso, los resultados visibles son de la
+      // consulta anterior: se espera a los nuevos en vez de abrir uno viejo.
+      if (get().pending) {
+        chooseWhenReady = opts ?? {};
+        return;
+      }
       const { results, activeIndex } = get();
       const chosen = results[activeIndex];
       if (!chosen) return;

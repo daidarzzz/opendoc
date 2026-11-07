@@ -112,7 +112,7 @@ Los binarios compilados se generan en `src-tauri/target/release/` y los instalad
 Antes de dar por completado un cambio, ejecuta la batería de pruebas, linters y comprobaciones de tipo:
 
 ```bash
-# Pruebas de frontend (Vitest: 121 tests sobre stores, sync de sesión, i18n, etc.)
+# Pruebas de frontend (Vitest: 124 tests sobre stores, sync de sesión, i18n, etc.)
 npm test
 
 # Comprobación de tipos de TypeScript

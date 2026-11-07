@@ -71,6 +71,7 @@ export function CommandPalette() {
     applied,
     unknown,
     activeIndex,
+    pending: searching,
     setOpen,
     setQuery,
     moveActive,
@@ -252,7 +253,14 @@ export function CommandPalette() {
             {t("palette.searchingIn", { names: noticeNames.join(", ") })}
           </p>
         ) : results.length === 0 ? (
-          <p className="px-4 py-3.5 text-xs text-gray-500 dark:text-gray-400">{t("palette.noResults")}</p>
+          // Mientras busca no se anuncia "sin resultados" (solo al terminar):
+          // la línea se reserva invisible para que la caja no cambie de alto.
+          <p
+            aria-hidden={searching}
+            className={`px-4 py-3.5 text-xs text-gray-500 dark:text-gray-400 ${searching ? "invisible" : ""}`}
+          >
+            {t("palette.noResults")}
+          </p>
         ) : (
           <ul role="listbox" className="max-h-96 overflow-y-auto py-1.5">
             {results.map((r, i) => {

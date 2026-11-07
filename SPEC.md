@@ -246,7 +246,7 @@ El repositorio implementa una batería integral de pruebas en frontend y backend
    - `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings` (cero advertencias permitidas).
    - `cargo fmt --manifest-path src-tauri/Cargo.toml -- --check` (formato estricto según `rustfmt`).
 2. **Frontend**:
-   - `npm test` (121 tests ejecutados con Vitest: pruebas de historial, validación de mensajes postMessage, i18n, contraste de acentos, stores y serialización de sesión).
+   - `npm test` (124 tests ejecutados con Vitest: pruebas de historial, validación de mensajes postMessage, i18n, contraste de acentos, stores y serialización de sesión).
    - `npx tsc --noEmit` (comprobación estricta de tipos de TypeScript).
 3. **Flujo de Integración Continua (`.github/workflows/release.yml`)**:
    - El trabajo `check` corre en cada push y pull request hacia `master`, validando `npm ci`, `cargo test`, `cargo clippy`, `cargo fmt`, `npx tsc --noEmit` y `npm test`.

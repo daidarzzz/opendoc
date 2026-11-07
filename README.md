@@ -112,7 +112,7 @@ Compiled binaries land in `src-tauri/target/release/` and platform installers (.
 Before submitting changes, ensure all tests, linters, and typechecks pass:
 
 ```bash
-# Frontend tests (Vitest: 121 tests covering stores, session sync, i18n, etc.)
+# Frontend tests (Vitest: 124 tests covering stores, session sync, i18n, etc.)
 npm test
 
 # Frontend typechecking
