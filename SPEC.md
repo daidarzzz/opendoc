@@ -96,13 +96,14 @@ graph TD
   - `Sidebar.tsx`: lista de docsets cargados, árbol de navegación por tipo (`BrowseTree`), acceso al catálogo, enlaces a ajustes y sección de incidencias.
   - `CommandPalette.tsx`: modal flotante de búsqueda rápida con atajos de teclado (`↑`/`↓`, `Enter`, `Esc`), badges por tipo y filtrado por docset.
   - `TabsBar.tsx`: pestañas reordenables por arrastre, botón de nueva pestaña, cierre y estado visual (activo, pendiente tarix o docset ausente).
-  - `CatalogView.tsx`: interfaz del gestor de docsets (búsqueda de paquetes, estado de instalación, actualización y progreso de descarga).
+  - `CatalogView.tsx` + `CatalogRow.tsx`: gestor de docsets en cuadrícula de tarjetas (cabecera con fuente plegable, barra fija de búsqueda y filtros con recuento, instalados primero, progreso de descarga, actualizar/desinstalar). Se muestra aunque no haya docsets instalados.
   - `Welcome.tsx`: pantalla inicial con accesos directos de búsqueda y selección de carpeta cuando no hay pestañas abiertas.
   - `ErrorDetails.tsx`: desglose de incidencias detectadas durante el escaneo.
   - `ContextMenu.tsx`: menú contextual propio (sustituye al del navegador en toda la app y dentro de los docsets), con teclado completo y fila de zoom.
   - `FindBar.tsx`: barra flotante de búsqueda en la página (`Ctrl/Cmd+F`).
+  - `SettingsDialog.tsx`: panel de Ajustes (`Ctrl/Cmd+,` o el engranaje de la barra lateral) con secciones General, Apariencia, Lectura, Docsets, Atajos y Acerca de. Con el panel abierto no actúa ningún otro atajo global.
 - **`store/`**:
-  - Stores de Zustand: `docsets`, `tabs`, `palette`, `catalog`, `browse`, `theme`, `accent`, `lang`, `contextMenu`, `find` y `zoom` (este último persistido en `localStorage`).
+  - Stores de Zustand: `docsets`, `tabs`, `palette`, `catalog`, `browse`, `theme`, `accent`, `lang`, `contextMenu`, `find`, `settingsUi` (apertura y sección del panel de Ajustes), `zoom` y `prefs` (estos dos últimos persistidos en `localStorage`; `prefs` guarda en `opendoc.prefs` el desplazamiento suave, la precarga de enlaces, reducir movimiento y el límite de resultados de la paleta).
 - **`lib/`**:
   - `commands.ts`: funciones envolventes tipadas sobre `invoke()`, `listen()` y diálogos nativos.
   - `types.ts`: tipos TypeScript espejo de los modelos de Rust.
@@ -111,6 +112,8 @@ graph TD
   - `iframeMessages.ts`: validadores exhaustivos de los mensajes recibidos desde los iframes.
   - `accent.ts`: tokens CSS para los 4 acentos de color con contraste WCAG garantizado.
   - `zoom.ts`: pasos de zoom de los docsets (50 %–300 %) y su formato.
+  - `langIcons.ts` + `langIcons.json`: tabla verificada nombre/id de docset → icono Devicon empaquetado en `src/assets/devicons/` (generado con `scripts/gen-devicons.mjs`, versión pineada, MIT), con lista de iconos que se invierten en tema oscuro y monograma de color como reserva. `DocsetIcon` usa: icono propio del docset → icono empaquetado → monograma.
+  - `prefs.ts`: preferencias de interfaz (valores por defecto, normalización tolerante y carga/guardado en `localStorage`).
   - `clipboard.ts`: copiar/pegar con reserva `execCommand` cuando la API asíncrona no está disponible.
 
 ---
@@ -157,12 +160,13 @@ graph TD
     - Captura y reenvía atajos de teclado esenciales (`Ctrl/Cmd+K`, `Ctrl/Cmd+W`, `Ctrl/Cmd+T`, `Ctrl/Cmd+Tab`, `Alt+←/→`).
     - Captura clics con rueda central o `Ctrl/Cmd+clic` en enlaces internos y solicita apertura en nueva pestaña (`opendoc-open-tab`).
     - Recibe eventos de scroll de trackpad desde el contenedor cuando WebKit los intercepta en el padre.
+    - Desplazamiento suave: con `opendoc-smooth-scroll {enabled}` del visor, los saltos de rueda de ratón (por línea/página o ≥50 px) se animan ~180 ms con easing; los deltas pequeños del trackpad siguen siendo directos y cualquier scroll externo (barra, teclado, ancla) cancela la animación.
   - Se inyecta además `ACTIONS_STYLE` + `ACTIONS_SCRIPT` (acciones propias de OpenDoc):
     - Anula el menú contextual nativo y, solo con `event.isTrusted`, pide `opendoc-context` `{x, y, selection, link}`; el padre lo valida (`validateContextMessage`: coordenadas acotadas, selección ≤10 000 caracteres sin controles, enlace solo si es una URL opendoc de un docset cargado) y limita a 5 menús/s.
     - Búsqueda en página: obedece `opendoc-find {query ≤200, dir}` y `opendoc-find-clear`, resalta con la CSS Custom Highlight API (o selecciona la coincidencia si no existe), omite texto oculto, se limita a 2000 coincidencias y responde `opendoc-find-result {total, current}` (validado con `validateFindResultMessage`).
     - Zoom: aplica `opendoc-zoom {level 0.25..5}` como `zoom` del documento; reenvía `Ctrl/Cmd+rueda` (acumulada para el pellizco del trackpad), `Ctrl/Cmd +/-/0` y `Ctrl/Cmd+F` como `opendoc-key` (`zoom-in`, `zoom-out`, `zoom-reset`, `f`) y `Esc` con búsqueda activa como `find-close`.
     - `opendoc-select-all`: selecciona todo el contenido del documento.
-  - El visor envía el zoom en cuanto un iframe reporta `opendoc-ready` (antes del primer pintado) y repite la búsqueda activa al cambiar de página.
+  - El visor envía el zoom y el ajuste de desplazamiento suave en cuanto un iframe reporta `opendoc-ready` (antes del primer pintado) y repite la búsqueda activa al cambiar de página.
 - **Enlaces externos**:
   - Los clics en enlaces con esquemas `http://` o `https://` fuera del dominio local son interceptados por `navigation::nav_decision` en el manejador `on_navigation` de la ventana y abiertos en el navegador predeterminado del sistema operativo, impidiendo la navegación del visor hacia sitios externos.
 

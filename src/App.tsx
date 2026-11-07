@@ -1,6 +1,7 @@
 // Layout: sidebar + área central + Command Palette.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CommandPalette } from "./components/CommandPalette";
+import { SettingsDialog } from "./components/SettingsDialog";
 import { ContextMenu } from "./components/ContextMenu";
 import { useAppContextMenu } from "./hooks/useAppContextMenu";
 import { Sidebar } from "./components/Sidebar";
@@ -228,6 +229,7 @@ export default function App() {
         />
         <Viewer />
       </div>
+      <SettingsDialog />
       <CommandPalette />
       <ContextMenu />
     </div>

@@ -3,7 +3,7 @@
 // - Ctrl/Cmd+K: paleta. Ctrl+W: cerrar pestaña. Ctrl+Tab/Shift: cambiar.
 //   Ctrl/Cmd+1..9: saltar. Alt+←/→: atrás/adelante.
 //   F3: abrir catálogo. Ctrl/Cmd+F: buscar en la página.
-//   Ctrl/Cmd + +/-/0: zoom del docset.
+//   Ctrl/Cmd + +/-/0: zoom del docset. Ctrl/Cmd+,: ajustes.
 // El foco dentro del iframe no llega aquí: el script inyectado reenvía
 // esas mismas teclas por postMessage (ver Viewer).
 // Nota macOS: Cmd+Tab lo roba el conmutador del SO (solo vale Ctrl+Tab).
@@ -14,12 +14,22 @@ import { useFind } from "../store/find";
 import { usePalette } from "../store/palette";
 import { useTabs } from "../store/tabs";
 import { useZoom } from "../store/zoom";
+import { useSettingsUi } from "../store/settingsUi";
 
 export function useGlobalKeys() {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       // Composición IME en curso: no interferir (el docset la gestiona).
       if (e.isComposing || e.key === "Process") return;
+      // Ctrl/Cmd+,: abrir/cerrar Ajustes. Con Ajustes abierto nada más actúa.
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.code === "Comma" || e.key === ",")) {
+        e.preventDefault();
+        const ui = useSettingsUi.getState();
+        if (ui.open) ui.close();
+        else ui.show();
+        return;
+      }
+      if (useSettingsUi.getState().open) return;
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         usePalette.getState().toggle();

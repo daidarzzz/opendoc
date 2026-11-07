@@ -178,3 +178,86 @@ export const FolderIcon =memo(function FolderIcon(props: IconProps) {
     </Svg>
   );
 });
+
+export const SlidersIcon = memo(function SlidersIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" />
+      <circle cx="16" cy="6" r="2" />
+      <circle cx="10" cy="12" r="2" />
+      <circle cx="18" cy="18" r="2" />
+    </Svg>
+  );
+});
+
+export const PaletteIcon = memo(function PaletteIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.8 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H16a5 5 0 0 0 5-5c0-3.9-4-7-9-7Z" />
+      <circle cx="7.5" cy="11" r="1" fill="currentColor" />
+      <circle cx="10" cy="7" r="1" fill="currentColor" />
+      <circle cx="14.5" cy="7" r="1" fill="currentColor" />
+      <circle cx="17" cy="11" r="1" fill="currentColor" />
+    </Svg>
+  );
+});
+
+export const BookIcon = memo(function BookIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5v-15Z" />
+      <path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5" />
+    </Svg>
+  );
+});
+
+export const KeyboardIcon = memo(function KeyboardIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="2" y="5" width="20" height="14" rx="2.5" />
+      <path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 13h.01M18 13h.01M10 13h4M7 16h10" />
+    </Svg>
+  );
+});
+
+export const InfoIcon = memo(function InfoIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5M12 8h.01" />
+    </Svg>
+  );
+});
+
+export const CheckIcon = memo(function CheckIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="m5 12.5 4.5 4.5L19 7.5" />
+    </Svg>
+  );
+});
+
+export const ExternalIcon = memo(function ExternalIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M14 4h6v6M20 4l-9 9" />
+      <path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4" />
+    </Svg>
+  );
+});
+
+export const TrashIcon = memo(function TrashIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" />
+    </Svg>
+  );
+});
+
+export const DownloadIcon = memo(function DownloadIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+    </Svg>
+  );
+});

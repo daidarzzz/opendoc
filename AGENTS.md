@@ -57,6 +57,7 @@ opendoc/
 - **Comprobación de formato Rust**: `cargo fmt --manifest-path src-tauri/Cargo.toml -- --check`
 - **Formatear Rust**: `cargo fmt --manifest-path src-tauri/Cargo.toml`
 - **Regenerar iconos de acento**: `node scripts/gen-accent-icons.mjs`
+- **Regenerar iconos de lenguaje (Devicon)**: `node scripts/gen-devicons.mjs` (lee `src/lib/langIcons.json` y escribe `src/assets/devicons/`)
 
 > [!IMPORTANT]
 > No existe script `npm run lint`. La validación de frontend se compone de `npx tsc --noEmit` y `npm test`. No añadas linters adicionales sin aprobación.

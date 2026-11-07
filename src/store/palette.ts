@@ -4,8 +4,8 @@ import { searchDocs } from "../lib/commands";
 import { dropTokens } from "../lib/paletteFilter";
 import type { AppliedFilter, SearchResult } from "../lib/types";
 import { useTabs } from "./tabs";
+import { usePrefs } from "./prefs";
 
-export const PALETTE_LIMIT = 20;
 
 interface PaletteState {
   open: boolean;
@@ -67,7 +67,7 @@ export const usePalette = create<PaletteState>()((set, get) => {
       set({ query, pending: true });
       timer = setTimeout(() => void (async () => {
         try {
-          const res = await searchDocs(query, { limit: PALETTE_LIMIT });
+          const res = await searchDocs(query, { limit: usePrefs.getState().paletteLimit });
           if (mySeq !== seq) return; // Obsoleta: se descarta.
           set({
             results: res.results,

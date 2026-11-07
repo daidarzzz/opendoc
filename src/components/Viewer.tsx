@@ -36,6 +36,7 @@ import { docMenuEntries } from "../hooks/useAppContextMenu";
 import { useContextMenu } from "../store/contextMenu";
 import { useFind } from "../store/find";
 import { useZoom } from "../store/zoom";
+import { usePrefs } from "../store/prefs";
 import { CatalogView } from "./CatalogView";
 import { FindBar } from "./FindBar";
 
@@ -92,6 +93,7 @@ export function Viewer() {
   const contextTimes = useRef<number[]>([]);
   const zoomLevel = useZoom((s) => s.level);
   const zoomChangedAt = useZoom((s) => s.changedAt);
+  const smoothScroll = usePrefs((s) => s.smoothScroll);
   const findSeq = useFind((s) => s.seq);
   const [zoomToast, setZoomToast] = useState(false);
 
@@ -165,6 +167,7 @@ export function Viewer() {
     // los docsets conserva su presentación clara original.
     win.postMessage({ type: "opendoc-theme", value: "light" }, "*");
     win.postMessage({ type: "opendoc-zoom", level: useZoom.getState().level }, "*");
+    win.postMessage({ type: "opendoc-smooth-scroll", enabled: usePrefs.getState().smoothScroll }, "*");
     sendFind(win, 0);
     const tab = useTabs.getState().active();
     const url = tab ? currentEntry(tab)?.url : undefined;
@@ -242,6 +245,7 @@ export function Viewer() {
         // nuestros iframes, también el que precarga.
         const own = frames.current.find((f) => f !== null && e.source === f.contentWindow);
         own?.contentWindow?.postMessage({ type: "opendoc-zoom", level: useZoom.getState().level }, "*");
+        own?.contentWindow?.postMessage({ type: "opendoc-smooth-scroll", enabled: usePrefs.getState().smoothScroll }, "*");
         const activeTab = useTabs.getState().active();
         const activeUrl = activeTab ? currentEntry(activeTab)?.url : null;
         const pending = pendingFrame.current;
@@ -321,7 +325,7 @@ export function Viewer() {
         const currentUrl = tab ? currentEntry(tab)?.url : null;
         const now = performance.now();
         if (
-          !prefetch || transitioning || pendingFrame.current ||
+          !prefetch || !usePrefs.getState().linkPrefetch || transitioning || pendingFrame.current ||
           frontFrameRef.current === null || prefetch.url === currentUrl ||
           findLoadedFrame(prefetch.url, loadedFrameUrls.current) !== null ||
           preloadedFrame.current?.url === prefetch.url || now - prefetchTime.current < 250
@@ -389,6 +393,13 @@ export function Viewer() {
     }
   }, [zoomLevel]);
 
+  // Desplazamiento suave: también a los dos iframes.
+  useEffect(() => {
+    for (const f of frames.current) {
+      f?.contentWindow?.postMessage({ type: "opendoc-smooth-scroll", enabled: smoothScroll }, "*");
+    }
+  }, [smoothScroll]);
+
   useEffect(() => {
     if (zoomChangedAt === 0) return;
     setZoomToast(true);
@@ -435,6 +446,17 @@ export function Viewer() {
     activateFrame(index);
   };
 
+  // Pestaña de catálogo: renderiza el catálogo directamente (sin iframe),
+  // también sin docsets instalados (es justo cuando más se necesita).
+  // No usamos attachWheel porque el catálogo usa scroll nativo del navegador
+  if (isCatalogTab) {
+    return (
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col" role="tabpanel" id="viewer-panel" aria-label={t("catalog.title")}>
+        <CatalogView />
+      </main>
+    );
+  }
+
   if (docsets.length === 0 && !loading) {
     return (
       <main ref={attachWheel} className="flex min-w-0 flex-1 flex-col">
@@ -448,16 +470,6 @@ export function Viewer() {
         ) : (
           <Welcome docCount={0} />
         )}
-      </main>
-    );
-  }
-
-  // Pestaña de catálogo: renderiza el catálogo directamente (sin iframe)
-  // No usamos attachWheel porque el catálogo usa scroll nativo del navegador
-  if (isCatalogTab) {
-    return (
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col" role="tabpanel" id="viewer-panel" aria-label={t("catalog.title")}>
-        <CatalogView />
       </main>
     );
   }

@@ -195,3 +195,12 @@ html.dark:root[data-accent="catppuccin"] {
   --accent-solid-ch: 203 166 247;
   --on-accent-ch: 17 24 39;
 }
+
+/* Ajustes → Reducir movimiento: sin animaciones ni transiciones. */
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}

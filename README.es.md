@@ -35,11 +35,14 @@ Aunque Zeal es una herramienta consolidada en la comunidad, su interfaz en C++/Q
 - **Protocolo de visor seguro (`opendoc://`):** Sirve los archivos locales previniendo cualquier acceso indebido fuera de `Documents/` (`..`, symlinks, unidades de disco o secuencias con doble codificación percent). Normaliza y reenvía los gestos de rueda y trackpad hacia el interior del iframe.
 - **Buscar en la página (`Ctrl/Cmd+F`):** Barra de búsqueda flotante propia de OpenDoc en lugar de la del webview: resalta todas las coincidencias, muestra `3 de 12` y se recorre con `Intro` / `Mayús+Intro`.
 - **Zoom de los docsets:** `Ctrl/Cmd+rueda del ratón`, `Ctrl/Cmd +`/`-`/`0` o desde el menú contextual. El nivel es común a todos los docsets y se recuerda entre sesiones.
+- **Desplazamiento suave:** El scroll con la rueda del ratón dentro de los docsets se anima con suavizado (el trackpad sigue siendo directo). Activado por defecto; se puede desactivar en Ajustes.
 - **Menú contextual propio:** El clic derecho del navegador se sustituye por un menú minimalista de OpenDoc: copiar, buscar la selección en OpenDoc o en la página, abrir enlaces en pestaña nueva, atrás/adelante, seleccionar todo y zoom dentro de los docsets; acciones de pestaña (cerrar, cerrar las demás, reabrir) sobre las pestañas; cortar/copiar/pegar en los campos de texto.
 - **Protección de enlaces externos:** Los hipervínculos externos (`http://`, `https://`, `mailto:`) se abren automáticamente en el navegador web del sistema operativo en lugar de navegar dentro de la ventana de la aplicación.
 
 ### Gestión de Docsets y Catálogo
 - **Catálogo de feeds configurable:** Configura y actualiza repositorios de feeds personalizados (como `zealdocs/feeds` o feeds XML compatibles).
+- **Explorador del catálogo:** Cuadrícula de tarjetas con los instalados primero, búsqueda en vivo, filtros por estado con recuento (todos / instalados / actualizables / no instalados), progreso de instalación y actualizar o desinstalar con un clic. Disponible incluso antes de instalar ningún docset.
+- **Iconos de lenguaje en todas partes:** Más de 120 iconos de lenguajes y frameworks ([Devicon](https://devicon.dev/), MIT) vienen con la app, así que el catálogo, las pestañas y la barra lateral muestran un icono reconocible sin conexión, incluso antes de instalar. Los docsets sin icono conocido muestran un monograma de color.
 - **Instalación con un clic:** Descarga paquetes `.tgz` con reporte del progreso real en bytes y archivos (`docset-progress`), valida la integridad del paquete y realiza sustituciones atómicas de carpetas.
 - **Comprobación de actualizaciones y desinstalación:** Detección de versiones disponibles mediante comparación numérica estricta, con desinstalación segura de docsets desde la carpeta configurada.
 - **Gestión de mirrors y caché de velocidad:** Conexión alternativa a mirrors si uno falla, memorizando el host más rápido (`fast_mirror`) para optimizar descargas posteriores.
@@ -48,6 +51,7 @@ Aunque Zeal es una herramienta consolidada en la comunidad, su interfaz en C++/Q
 ### Personalización y Accesibilidad
 - **Temas (Claro / Oscuro / Sistema):** Cambio de tema de alto contraste para la interfaz de la aplicación. Los documentos de los docsets conservan siempre su estilo claro original para evitar artefactos visuales en tablas, código o diagramas.
 - **Colores de acento:** Permite elegir entre **Rojo**, **Azul**, **Ámbar** o **Catppuccin** (Latte/Mocha Mauve). Actualiza los resaltados de la UI, botones principales, el logotipo de la aplicación y el icono en ejecución en la barra de tareas y el Dock.
+- **Panel de Ajustes (`Ctrl/Cmd+,`):** Ventana de ajustes completa organizada por secciones: General (idioma, restaurar pestañas, número de resultados de búsqueda), Apariencia (vista previa de temas, color de acento, reducir movimiento), Lectura (desplazamiento suave, zoom de los docsets, precarga de enlaces al pasar el ratón), Docsets (carpeta, volver a escanear, lista de instalados, pendientes, catálogo), referencia de atajos de teclado y Acerca de (versión, enlaces, restablecer preferencias).
 - **Interfaz bilingüe:** Completamente traducida al **inglés** (por defecto) y **español**, con selector en caliente desde Ajustes y paridad exacta entre claves de diccionario.
 
 ---
@@ -179,3 +183,4 @@ Cada documentación que descargues o consultes pertenece a sus respectivos autor
 - [Zeal](https://zealdocs.org/) y [Dash](https://kapeli.com/dash) por popularizar el ecosistema de docsets offline. OpenDoc es un proyecto independiente y no está afiliado a ninguna de las dos herramientas.
 - [Catppuccin](https://catppuccin.com/) por los valores de paleta Mauve (Latte/Mocha) empleados en el tema de acento (Licencia MIT).
 - [nucleo-matcher](https://github.com/helix-editor/nucleo) por su excelente rendimiento en la búsqueda difusa en memoria.
+- [Devicon](https://devicon.dev/) por los iconos de lenguajes y frameworks incluidos (Licencia MIT, ver `src/assets/devicons/LICENSE`).

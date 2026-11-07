@@ -35,11 +35,14 @@ While Zeal is a proven community tool, its Qt/C++ interface feels dated and offe
 - **Safe Viewer Protocol (`opendoc://`):** Serves local documentation files while preventing directory traversal (`..`, symlinks, drive letters, and percent-encoding attacks). Trackpad wheel scrolling is seamlessly bridged across iframe boundaries.
 - **Find in Page (`Ctrl/Cmd+F`):** OpenDoc's own floating find bar replaces the webview's: highlights every match, shows `3 of 12`, and moves with `Enter` / `Shift+Enter`.
 - **Docset Zoom:** `Ctrl/Cmd+mouse wheel`, `Ctrl/Cmd +`/`-`/`0` or the context menu. The level is shared across docsets and remembered between sessions.
+- **Smooth Scrolling:** Mouse-wheel scrolling inside docsets is animated with easing (trackpad input stays direct). On by default; toggle it in Settings.
 - **Custom Context Menu:** The browser's right-click menu is replaced by a minimal OpenDoc menu: copy, search the selection in OpenDoc or in the page, open links in a new tab, back/forward, select all and zoom inside docsets; tab actions (close, close others, reopen) on tabs; cut/copy/paste in text fields.
 - **External Link Protection:** External hyperlinks (`http://`, `https://`, `mailto:`) automatically open in your operating system's default browser rather than navigating the viewer window.
 
 ### Docset Management & Catalog
 - **Configurable Feeds Catalog:** Add and refresh custom feed repositories (such as `zealdocs/feeds` or compatible XML feeds).
+- **Catalog Browser:** A card grid with installed docsets first, live search, status filters with counts (all / installed / updatable / not installed), install progress and one-click update or uninstall. Available even before any docset is installed.
+- **Language Icons Everywhere:** Over 120 language and framework icons ([Devicon](https://devicon.dev/), MIT) ship with the app, so catalog entries, tabs and the sidebar show a recognizable icon offline, even before installing. Docsets without a known icon get a colored monogram.
 - **One-Click Installation:** Downloads `.tgz` archives with real-time byte and file progress notifications (`docset-progress`), validates archive integrity, and performs atomic folder replacements.
 - **Update Checks & Uninstallation:** Tristate version comparisons identify available updates for installed packages, with safe, validated uninstallation from the configured folder.
 - **Mirror Fallbacks & Speed Caching:** Automatically retries alternative download mirrors if a host fails, remembering the fastest responding mirror (`fast_mirror`) for future requests.
@@ -48,6 +51,7 @@ While Zeal is a proven community tool, its Qt/C++ interface feels dated and offe
 ### Customization & Accessibility
 - **Themes (Light / Dark / System):** High-contrast UI theme switching. Docset contents always preserve their authentic light documentation styling to prevent broken inversion artifacts on code samples, tables, and diagrams.
 - **Accent Colors:** Choose between **Red**, **Blue**, **Amber**, or **Catppuccin** (Latte/Mocha Mauve). Updates UI highlights, branded buttons, the app logo, and the running window/Dock icon in real time.
+- **Settings Panel (`Ctrl/Cmd+,`):** A full settings window organized in sections — General (language, tab restore, number of search results), Appearance (theme previews, accent color, reduce motion), Reading (smooth scrolling, docset zoom, link preloading on hover), Docsets (folder, rescan, installed list, pending installs, catalog), a keyboard shortcuts reference and About (version, links, reset preferences).
 - **Bilingual Interface:** Fully localized in **English** (default) and **Spanish**, switchable live from Settings with 100% dictionary key parity.
 
 ---
@@ -179,3 +183,4 @@ Each documentation set you load remains the intellectual property of its respect
 - [Zeal](https://zealdocs.org/) and [Dash](https://kapeli.com/dash) for establishing the offline docset ecosystem. OpenDoc is an independent project and is not affiliated with either tool.
 - [Catppuccin](https://catppuccin.com/) for the Mauve palette values (Latte/Mocha) utilized in the accent color scheme (MIT License).
 - [nucleo-matcher](https://github.com/helix-editor/nucleo) for high-performance in-memory fuzzy matching.
+- [Devicon](https://devicon.dev/) for the bundled language and framework icons (MIT License, see `src/assets/devicons/LICENSE`).

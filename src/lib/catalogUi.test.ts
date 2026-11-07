@@ -162,3 +162,13 @@ describe("formatBytes y progreso", () => {
     );
   });
 });
+
+describe("displayName", () => {
+  it("cambia guiones bajos por espacios", async () => {
+    const { displayName, filterCatalog } = await import("./catalogUi");
+    expect(displayName("Ruby_on_Rails")).toBe("Ruby on Rails");
+    expect(displayName("C++")).toBe("C++");
+    const rows = [{ entry: { id: "Ruby_on_Rails", name: "Ruby_on_Rails", version: "8", urls: [] }, status: null }];
+    expect(filterCatalog(rows, "ruby on", "all")).toHaveLength(1);
+  });
+});

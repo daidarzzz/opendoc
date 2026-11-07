@@ -58,6 +58,11 @@ export function versionLine(status: InstallStatus | null, lang: Language): strin
   return parts.join(" · ");
 }
 
+/** Nombre para mostrar: los feeds usan `_` como espacio (`Ruby_on_Rails`). */
+export function displayName(name: string): string {
+  return name.replace(/_+/g, " ").trim() || name;
+}
+
 /** Filtra por texto (nombre o id) y por estado. */
 export function filterCatalog(
   rows: CatalogRowData[],
@@ -69,6 +74,7 @@ export function filterCatalog(
     if (
       q !== "" &&
       !entry.name.toLowerCase().includes(q) &&
+      !displayName(entry.name).toLowerCase().includes(q) &&
       !entry.id.toLowerCase().includes(q)
     ) {
       return false;

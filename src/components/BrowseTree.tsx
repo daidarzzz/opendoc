@@ -322,7 +322,7 @@ const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDo
         >
           {chevron(row.expanded)}
         </button>
-        <DocsetIcon icon={row.icon} name={row.name} />
+        <DocsetIcon icon={row.icon} name={row.name} hint={row.docsetId} />
         <button
           onClick={() => onOpenHome(row.docsetId, false)}
           onMouseDown={(e) => {

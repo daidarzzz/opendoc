@@ -125,14 +125,26 @@ pub const THEME_SCRIPT: &str = r#"<script>(function(){function rep(t,x){x=x||{};
 /// normal), el reenviado se ignora durante 50 ms; si solo llegó al padre
 /// (rareza de WebKit), el reenviado sí se aplica. El pellizco (ctrlKey)
 /// nunca se reenvía como scroll.
+/// Desplazamiento suave: con `opendoc-smooth-scroll {enabled:true}` del
+/// padre, los saltos de rueda de ratón (por línea/página o ≥50 px) se animan
+/// ~180 ms con easing; los deltas pequeños del trackpad siguen siendo
+/// directos (salvo que se sumen a una animación en curso). Si algo externo
+/// mueve el scroller (barra, teclado, ancla), la animación se cancela.
 pub const THEME_WHEEL_SCRIPT: &str = r#"<script>(function(){
 function pixels(value,mode,viewport){return mode===1?value*16:mode===2?value*viewport:value;}
 function canMove(el,axis,delta){var size=axis==="y"?el.scrollHeight-el.clientHeight:el.scrollWidth-el.clientWidth;if(size<1)return false;var pos=axis==="y"?el.scrollTop:el.scrollLeft;return delta>0?pos<size-1:delta<0?pos>1:false;}
-function moveAxis(target,axis,delta){if(!delta)return;var root=document.scrollingElement;for(var el=target;el&&el!==document;el=el.parentElement){var node=el===document.body||el===document.documentElement?root:el;if(!node)continue;var style=getComputedStyle(node),overflow=axis==="y"?style.overflowY:style.overflowX;if(node===root||/^(auto|scroll|overlay|hidden)$/.test(overflow)){if(canMove(node,axis,delta)){if(axis==="y")node.scrollTop+=delta;else node.scrollLeft+=delta;return;}}}if(root&&canMove(root,axis,delta)){if(axis==="y")root.scrollTop+=delta;else root.scrollLeft+=delta;}}
-function apply(x,y,dx,dy,mode){var sx=pixels(dx,mode,window.innerWidth),sy=pixels(dy,mode,window.innerHeight),target=document.elementFromPoint(x,y)||document.documentElement;moveAxis(target,"x",sx);moveAxis(target,"y",sy);}
+var smooth=false,DUR=180,anim=typeof WeakMap==="function"?new WeakMap():null;
+function now(){return window.performance&&performance.now?performance.now():Date.now();}
+function pos(n,a){return a==="y"?n.scrollTop:n.scrollLeft;}
+function setPos(n,a,v){if(a==="y")n.scrollTop=v;else n.scrollLeft=v;}
+function ease(t){return 1-Math.pow(1-t,3);}
+function step(n,a,s){if(!s.run)return;if(Math.abs(pos(n,a)-s.last)>2){s.run=false;return;}var t=Math.min(1,(now()-s.t0)/DUR);setPos(n,a,s.from+(s.to-s.from)*ease(t));s.last=pos(n,a);if(t>=1){s.run=false;return;}requestAnimationFrame(function(){step(n,a,s);});}
+function go(n,a,delta,soft){var st=anim?anim.get(n):null,s=st?st[a]:null,running=!!(s&&s.run);if(!smooth||!anim||(!soft&&!running)){if(running)s.run=false;setPos(n,a,pos(n,a)+delta);return;}if(!st){st={};anim.set(n,st);}if(!s){s={run:false};st[a]=s;}var size=a==="y"?n.scrollHeight-n.clientHeight:n.scrollWidth-n.clientWidth,base=running?s.to:pos(n,a);s.from=pos(n,a);s.last=s.from;s.to=Math.max(0,Math.min(size,base+delta));s.t0=now();if(!running){s.run=true;requestAnimationFrame(function(){step(n,a,s);});}}
+function moveAxis(target,axis,delta,soft){if(!delta)return;var root=document.scrollingElement;for(var el=target;el&&el!==document;el=el.parentElement){var node=el===document.body||el===document.documentElement?root:el;if(!node)continue;var style=getComputedStyle(node),overflow=axis==="y"?style.overflowY:style.overflowX;if(node===root||/^(auto|scroll|overlay|hidden)$/.test(overflow)){if(canMove(node,axis,delta)){go(node,axis,delta,soft);return;}}}if(root&&canMove(root,axis,delta)){go(root,axis,delta,soft);}}
+function apply(x,y,dx,dy,mode){var sx=pixels(dx,mode,window.innerWidth),sy=pixels(dy,mode,window.innerHeight),target=document.elementFromPoint(x,y)||document.documentElement;moveAxis(target,"x",sx,mode!==0||Math.abs(sx)>=50);moveAxis(target,"y",sy,mode!==0||Math.abs(sy)>=50);}
 var lastSelf=0;
 window.addEventListener("wheel",function(e){if(e.ctrlKey){e.preventDefault();return;}e.preventDefault();lastSelf=Date.now();apply(e.clientX,e.clientY,e.deltaX,e.deltaY,e.deltaMode);},{capture:true,passive:false});
-window.addEventListener("message",function(e){if(e.source!==window.parent||!e.data||e.data.type!=="opendoc-wheel")return;var d=e.data;if(typeof d.deltaX!=="number"||typeof d.deltaY!=="number"||!isFinite(d.deltaX)||!isFinite(d.deltaY)||d.ctrlKey)return;if(Date.now()-lastSelf<50)return;apply(Number(d.x)||0,Number(d.y)||0,d.deltaX,d.deltaY,Number(d.deltaMode)||0);});
+window.addEventListener("message",function(e){if(e.source!==window.parent||!e.data)return;var d=e.data;if(d.type==="opendoc-smooth-scroll"){smooth=d.enabled===true;return;}if(d.type!=="opendoc-wheel")return;if(typeof d.deltaX!=="number"||typeof d.deltaY!=="number"||!isFinite(d.deltaX)||!isFinite(d.deltaY)||d.ctrlKey)return;if(Date.now()-lastSelf<50)return;apply(Number(d.x)||0,Number(d.y)||0,d.deltaX,d.deltaY,Number(d.deltaMode)||0);});
 })();</script>"#;
 
 /// Resaltado de la búsqueda en página (CSS Custom Highlight API). Donde no
@@ -390,7 +402,14 @@ mod tests {
         ] {
             assert!(THEME_SCRIPT.contains(token), "falta {token}");
         }
-        for token in ["opendoc-wheel", "passive:false", "scrollTop", "scrollLeft"] {
+        for token in [
+            "opendoc-wheel",
+            "passive:false",
+            "scrollTop",
+            "scrollLeft",
+            "\"opendoc-smooth-scroll\"",
+            "requestAnimationFrame",
+        ] {
             assert!(THEME_WHEEL_SCRIPT.contains(token), "falta {token}");
         }
         // Acciones propias: menú contextual, búsqueda y zoom.
