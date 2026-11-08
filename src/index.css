@@ -9,6 +9,13 @@
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     font-feature-settings: "cv11", "ss01";
+    /* La ventana de la app nunca rebota ni hace scroll como documento
+       (en macOS el gesto del trackpad podía acabar moviendo la app). */
+    overscroll-behavior: none;
+  }
+
+  body {
+    overscroll-behavior: none;
   }
 
   body {

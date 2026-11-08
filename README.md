@@ -30,12 +30,12 @@ While Zeal is a proven community tool, its Qt/C++ interface feels dated and offe
 - **Browse by Symbol Type:** Inspect all entries categorized by kind (functions, classes, modules, properties, types) with real-time counters and paginated listings.
 
 ### Workspace & Viewing
-- **Independent Tabs & History:** Forward and backward navigation per tab, reorderable tabs via drag-and-drop, link prefetching on hover to eliminate white-flash transitions, and middle-click or `Ctrl/Cmd+click` to open in new tabs.
+- **Independent Tabs & History:** Forward and backward navigation per tab, reorderable tabs via drag-and-drop, link prefetching on hover to eliminate white-flash transitions (without evicting the cached previous page, so Back stays instant), and middle-click or `Ctrl/Cmd+click` to open in new tabs.
 - **Session Persistence:** Remembers open tabs, active tab, navigation history, and scroll positions across restarts via `session.json` (with atomic disk writes and automatic `.bak` backups). Can be toggled on or off in Settings.
-- **Safe Viewer Protocol (`opendoc://`):** Serves local documentation files while preventing directory traversal (`..`, symlinks, drive letters, and percent-encoding attacks). Trackpad wheel scrolling is seamlessly bridged across iframe boundaries.
+- **Safe Viewer Protocol (`opendoc://`):** Serves local documentation files while preventing directory traversal (`..`, symlinks, drive letters, and percent-encoding attacks). Pages are served off the UI thread in parallel; trackpad scrolling stays native and is bridged across iframe boundaries when WebKit routes it to the app.
 - **Find in Page (`Ctrl/Cmd+F`):** OpenDoc's own floating find bar replaces the webview's: highlights every match, shows `3 of 12`, and moves with `Enter` / `Shift+Enter`.
 - **Docset Zoom:** `Ctrl/Cmd+mouse wheel`, `Ctrl/Cmd +`/`-`/`0` or the context menu. The level is shared across docsets and remembered between sessions.
-- **Smooth Scrolling:** Mouse-wheel scrolling inside docsets is animated with easing (trackpad input stays direct). On by default; toggle it in Settings.
+- **Smooth Scrolling:** Mouse-wheel scrolling inside docsets is animated with easing (trackpad input stays native). On by default; toggle it in Settings.
 - **Custom Context Menu:** The browser's right-click menu is replaced by a minimal OpenDoc menu: copy, search the selection in OpenDoc or in the page, open links in a new tab, back/forward, select all and zoom inside docsets; tab actions (close, close others, reopen) on tabs; cut/copy/paste in text fields.
 - **External Link Protection:** External hyperlinks (`http://`, `https://`, `mailto:`) automatically open in your operating system's default browser rather than navigating the viewer window.
 

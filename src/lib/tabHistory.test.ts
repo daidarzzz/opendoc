@@ -187,3 +187,20 @@ describe("appendTab/moveTab", () => {
     expect(moveTab(tabs, "nope", 1)).toBe(tabs);
   });
 });
+
+describe("URL normalization", () => {
+  it("the iframe echo of a raw index URL is the same stop (no duplicate)", () => {
+    let t = tabWith([a.url]);
+    t = navigateTab(t, { url: "opendoc://d/my page.html", title: "raw" });
+    const echoed = navigateTab(t, { url: "opendoc://d/my%20page.html", title: "loaded" });
+    expect(echoed.history.map((e) => e.url)).toEqual([a.url, "opendoc://d/my%20page.html"]);
+    expect(echoed.historyIndex).toBe(1);
+    expect(goBack(echoed).historyIndex).toBe(0);
+  });
+
+  it("restored raw entries match their normalized echo", () => {
+    const raw: Tab = { ...tabWithEntry("d", a), history: [a, { url: "opendoc://d/x y.html", title: "X" }], historyIndex: 1 };
+    const echoed = navigateTab(raw, { url: "opendoc://d/x%20y.html", title: "X" });
+    expect(echoed.history).toHaveLength(2);
+  });
+});

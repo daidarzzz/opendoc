@@ -1,7 +1,7 @@
 // Visor de documentación (T8 + pestañas V2-3): el HTML del docset aislado
 // en iframes (sandbox="allow-scripts", origen opaco). Solo la pestaña
-// activa monta su par de iframes; uno puede preparar la siguiente página en
-// segundo plano mientras el otro conserva la página visible.
+// activa monta sus 3 iframes: el visible, el que guarda la página vecina del
+// historial y uno libre para cargar o precargar la siguiente.
 // El hijo reporta navegaciones/anclas/scroll/teclas por postMessage
 // (inyectado por el protocolo); aquí se valida todo: fuente = el iframe
 // visible, forma exacta, URLs opendoc de docsets cargados, título ≤200 sin
@@ -27,10 +27,10 @@ import {
   validateReadyMessage,
   validateScrollMessage,
 } from "../lib/iframeMessages";
-import { toBackendUrl } from "../lib/iframeMessages";
-import { toViewerUrl } from "../lib/opendocUrl";
-import { currentEntry } from "../lib/tabHistory";
-import { findLoadedFrame, isPendingFrameLoad } from "../lib/viewerFrames";
+import { normalizeBackendUrl, toBackendUrl } from "../lib/iframeMessages";
+import { viewerUrl } from "../lib/opendocUrl";
+import { currentEntry, sameDocument } from "../lib/tabHistory";
+import { FRAME_SLOTS, findLoadedFrame, isPendingFrameLoad, pickFrameSlot } from "../lib/viewerFrames";
 import { formatZoom } from "../lib/zoom";
 import { docMenuEntries } from "../hooks/useAppContextMenu";
 import { useContextMenu } from "../store/contextMenu";
@@ -48,6 +48,35 @@ function sendFind(win: Window, dir: -1 | 0 | 1): void {
   } else {
     win.postMessage({ type: "opendoc-find-clear" }, "*");
     if (f.open) f.setResult(0, 0);
+  }
+}
+
+const frameSlotIndexes = Array.from({ length: FRAME_SLOTS }, (_, i) => i);
+
+function emptySlots<T>(value: T): T[] {
+  return Array.from({ length: FRAME_SLOTS }, () => value);
+}
+
+/** URLs vecinas del historial de la pestaña activa (las que conviene
+ *  conservar cargadas para que atrás/adelante sea instantáneo). */
+function neighborUrls(): string[] {
+  const tab = useTabs.getState().active();
+  if (!tab) return [];
+  const out: string[] = [];
+  for (const i of [tab.historyIndex - 1, tab.historyIndex + 1]) {
+    const e = tab.history[i];
+    if (e) out.push(normalizeBackendUrl(e.url));
+  }
+  return out;
+}
+
+/** `src` del iframe para una URL backend (null si no es válida). */
+function frameSrc(url: string | null): string | undefined {
+  if (!url) return undefined;
+  try {
+    return viewerUrl(url);
+  } catch {
+    return undefined;
   }
 }
 
@@ -79,13 +108,18 @@ export function Viewer() {
   const { docsets, loading, dirMissing, savedDir, choose, pending, extract, extractingIds } = useDocsets();
   const docsetsError = useDocsets((s) => s.error);
   const { t } = useT();
-  const [frameUrls, setFrameUrls] = useState<[string | null, string | null]>([null, null]);
-  const [frameVersions, setFrameVersions] = useState<[number, number]>([0, 0]);
+  // URLs backend canónicas (`opendoc://…`) por slot; el `src` real se
+  // calcula al renderizar (en Windows es http://opendoc.localhost/…).
+  const [frameUrls, setFrameUrls] = useState<(string | null)[]>(() => emptySlots<string | null>(null));
+  const [frameVersions, setFrameVersions] = useState<number[]>(() => emptySlots(0));
   const [frontFrame, setFrontFrame] = useState<number | null>(null);
   const [transitioning, setTransitioning] = useState(false);
-  const frames = useRef<[HTMLIFrameElement | null, HTMLIFrameElement | null]>([null, null]);
-  const loadedFrameUrls = useRef<[string | null, string | null]>([null, null]);
-  const frameVersionsRef = useRef<[number, number]>([0, 0]);
+  const frames = useRef<(HTMLIFrameElement | null)[]>(emptySlots<HTMLIFrameElement | null>(null));
+  /** Página que muestra de verdad cada slot (la reporta el propio iframe:
+   *  incluye navegaciones que el docset hace por su cuenta). */
+  const loadedFrameUrls = useRef<(string | null)[]>(emptySlots<string | null>(null));
+  const frameVersionsRef = useRef<number[]>(emptySlots(0));
+  const lastShown = useRef<number[]>(emptySlots(0));
   const frontFrameRef = useRef<number | null>(null);
   const pendingFrame = useRef<{ index: number; url: string; version: number } | null>(null);
   const preloadedFrame = useRef<{ index: number; url: string; version: number } | null>(null);
@@ -157,12 +191,19 @@ export function Viewer() {
   const activateFrame = useCallback((index: number): void => {
     const frame = frames.current[index];
     pendingFrame.current = null;
-    preloadedFrame.current = null;
+    if (preloadedFrame.current?.index === index) preloadedFrame.current = null;
     frontFrameRef.current = index;
+    lastShown.current[index] = performance.now();
     setFrontFrame(index);
     setTransitioning(false);
     const win = frame?.contentWindow;
-    if (!win) return;
+    if (!frame || !win) return;
+    // Foco al documento nuevo si nadie lo tiene (p. ej. tras Ctrl+K): el
+    // teclado y el trackpad apuntan a la página visible y no a la app.
+    const focused = document.activeElement;
+    if (!focused || focused === document.body || frames.current.includes(focused as HTMLIFrameElement)) {
+      frame.focus({ preventScroll: true });
+    }
     // El tema oscuro solo afecta a la interfaz de OpenDoc. El contenido de
     // los docsets conserva su presentación clara original.
     win.postMessage({ type: "opendoc-theme", value: "light" }, "*");
@@ -181,55 +222,69 @@ export function Viewer() {
   // nueva termine de cargar, evitando el destello blanco durante la navegación.
   useEffect(() => {
     // Un docset puede haberse actualizado en disco con las mismas URLs.
-    loadedFrameUrls.current = [null, null];
+    loadedFrameUrls.current = emptySlots<string | null>(null);
     preloadedFrame.current = null;
   }, [docsets]);
 
+  // Monta `url` en el slot `index` (iframe nuevo: key con versión).
+  const loadIntoSlot = useCallback((index: number, url: string): { index: number; url: string; version: number } => {
+    const versions = [...frameVersionsRef.current];
+    versions[index] += 1;
+    frameVersionsRef.current = versions;
+    loadedFrameUrls.current[index] = null;
+    setFrameVersions(versions);
+    setFrameUrls((current) => {
+      const next = [...current];
+      next[index] = url;
+      return next;
+    });
+    return { index, url, version: versions[index] };
+  }, []);
+
   useEffect(() => {
-    let alive = true;
     if (!backendUrl) {
       pendingFrame.current = null;
+      preloadedFrame.current = null;
       setTransitioning(false);
-      loadedFrameUrls.current = [null, null];
-      frameVersionsRef.current = [0, 0];
-      setFrameVersions([0, 0]);
+      loadedFrameUrls.current = emptySlots<string | null>(null);
+      frameVersionsRef.current = emptySlots(0);
+      setFrameVersions(emptySlots(0));
       setFrontFrame(null);
       frontFrameRef.current = null;
-      setFrameUrls([null, null]);
+      setFrameUrls(emptySlots<string | null>(null));
+      return;
+    }
+    const url = normalizeBackendUrl(backendUrl);
+    const mounted = (i: number | null): i is number => i !== null && frames.current[i] !== null;
+    const cachedIndex = findLoadedFrame(url, loadedFrameUrls.current);
+    if (mounted(cachedIndex)) {
+      activateFrame(cachedIndex);
+      return;
+    }
+    // Misma página, otra ancla (p. ej. desde Ctrl+K): se mueve el iframe
+    // visible sin recargar el documento.
+    const front = frontFrameRef.current;
+    const frontUrl = front === null ? null : loadedFrameUrls.current[front];
+    if (mounted(front) && frontUrl && sameDocument(frontUrl, url)) {
+      const hash = url.includes("#") ? url.slice(url.indexOf("#") + 1) : "";
+      frames.current[front]?.contentWindow?.postMessage({ type: "opendoc-hash", hash }, "*");
+      loadedFrameUrls.current[front] = url;
+      activateFrame(front);
       return;
     }
     setTransitioning(true);
-    void toViewerUrl(backendUrl).then((url) => {
-      if (!alive) return;
-      const cachedIndex = findLoadedFrame(url, loadedFrameUrls.current);
-      if (cachedIndex !== null) {
-        activateFrame(cachedIndex);
-        return;
-      }
-      const warmed = preloadedFrame.current;
-      if (warmed?.url === url) {
-        pendingFrame.current = warmed;
-        preloadedFrame.current = null;
-        return;
-      }
+    if (pendingFrame.current?.url === url) return;
+    const warmed = preloadedFrame.current;
+    if (warmed?.url === url) {
+      pendingFrame.current = warmed;
       preloadedFrame.current = null;
-      const currentFront = frontFrameRef.current;
-      const index = currentFront === 0 ? 1 : 0;
-      const versions: [number, number] = [...frameVersionsRef.current];
-      versions[index] += 1;
-      frameVersionsRef.current = versions;
-      setFrameVersions(versions);
-      pendingFrame.current = { index, url, version: versions[index] };
-      setFrameUrls((current) => {
-        const next: [string | null, string | null] = [...current];
-        next[index] = url;
-        return next;
-      });
-    });
-    return () => {
-      alive = false;
-    };
-  }, [activeId, backendUrl, activateFrame, docsets]);
+      return;
+    }
+    const index = pickFrameSlot(front, loadedFrameUrls.current, neighborUrls(), lastShown.current, true) ??
+      (front === 0 ? 1 : 0);
+    if (preloadedFrame.current?.index === index) preloadedFrame.current = null;
+    pendingFrame.current = loadIntoSlot(index, url);
+  }, [activeId, backendUrl, activateFrame, loadIntoSlot, docsets]);
 
   // Mensajes del hijo, con validación estricta.
   useEffect(() => {
@@ -238,36 +293,36 @@ export function Viewer() {
       if (typeof data !== "object" || data === null) return;
       const type = (data as Record<string, unknown>)["type"];
       const ids = useDocsets.getState().docsets.map((d) => d.id);
+      const sourceIndex = frames.current.findIndex((f) => f !== null && e.source === f.contentWindow);
+      if (sourceIndex < 0) return;
+      if (type === "opendoc-ready" || type === "opendoc-nav") {
+        // Cada iframe dice qué página tiene de verdad: así la caché de
+        // atrás/adelante no se cree una URL vieja si el docset navegó solo
+        // (JS, formularios, redirecciones) o cambió de ancla.
+        const reported = type === "opendoc-ready"
+          ? validateReadyMessage(data, true, ids)
+          : validateNavMessage(data, true, ids);
+        if (reported) loadedFrameUrls.current[sourceIndex] = reported.url;
+      }
       if (type === "opendoc-ready") {
-        const ready = validateReadyMessage(data, true, ids);
-        if (!ready) return;
         // Zoom cuanto antes (antes del primer pintado) en cualquiera de
         // nuestros iframes, también el que precarga.
-        const own = frames.current.find((f) => f !== null && e.source === f.contentWindow);
-        own?.contentWindow?.postMessage({ type: "opendoc-zoom", level: useZoom.getState().level }, "*");
-        own?.contentWindow?.postMessage({ type: "opendoc-smooth-scroll", enabled: usePrefs.getState().smoothScroll }, "*");
-        const activeTab = useTabs.getState().active();
-        const activeUrl = activeTab ? currentEntry(activeTab)?.url : null;
+        const own = frames.current[sourceIndex]?.contentWindow;
+        own?.postMessage({ type: "opendoc-zoom", level: useZoom.getState().level }, "*");
+        own?.postMessage({ type: "opendoc-smooth-scroll", enabled: usePrefs.getState().smoothScroll }, "*");
+        const ready = validateReadyMessage(data, true, ids);
+        if (!ready) return;
         const pending = pendingFrame.current;
-        if (
-          pending && activeUrl === ready.url &&
-          e.source === frames.current[pending.index]?.contentWindow && pending.url === ready.url
-        ) {
-          loadedFrameUrls.current[pending.index] = pending.url;
-          activateFrame(pending.index);
+        if (pending && pending.index === sourceIndex && sameDocument(pending.url, ready.url)) {
+          activateFrame(sourceIndex);
           return;
         }
-        const preloaded = preloadedFrame.current;
-        if (preloaded && e.source === frames.current[preloaded.index]?.contentWindow && preloaded.url === ready.url) {
-          loadedFrameUrls.current[preloaded.index] = preloaded.url;
-          preloadedFrame.current = null;
-        }
+        if (preloadedFrame.current?.index === sourceIndex) preloadedFrame.current = null;
         return;
       }
-      const frame = frontFrameRef.current === null
-        ? null
-        : frames.current[frontFrameRef.current];
-      if (!frame || e.source !== frame.contentWindow) return;
+      if (sourceIndex !== frontFrameRef.current) return;
+      const frame = frames.current[sourceIndex];
+      if (!frame) return;
       if (type === "opendoc-scroll") {
         // Sin puerta de `transitioning` a propósito: el reporte trae su
         // propia URL (incluye el volcado final en pagehide) y childScroll
@@ -287,6 +342,39 @@ export function Viewer() {
       if (type === "opendoc-find-result") {
         const res = validateFindResultMessage(data, true);
         if (res) useFind.getState().setResult(res.total, res.current);
+        return;
+      }
+      // Las teclas (atrás/adelante, pestañas…) son intención del usuario:
+      // no se descartan aunque la página siguiente aún esté cargando.
+      if (type === "opendoc-key") {
+        const kp = validateKeyMessage(data, true);
+        if (!kp) return;
+        if (kp.key === "f") {
+          useFind.getState().openFind();
+          return;
+        }
+        if (kp.key === "find-close") {
+          useFind.getState().close();
+          return;
+        }
+        if (kp.key === "zoom-in" || kp.key === "zoom-out" || kp.key === "zoom-reset") {
+          const z = useZoom.getState();
+          if (kp.key === "zoom-in") z.zoomIn();
+          else if (kp.key === "zoom-out") z.zoomOut();
+          else z.reset();
+          return;
+        }
+        if (kp.key === "k") {
+          usePalette.getState().toggle();
+          return;
+        }
+        // Ctrl/Cmd+T abre pestaña vacía + paleta (no es acción de pestaña).
+        if (kp.key === "t" && !kp.shift) {
+          newTab();
+          usePalette.getState().setOpen(true);
+          return;
+        }
+        childKey(kp.key, kp.shift);
         return;
       }
       if (transitioning) return;
@@ -330,48 +418,14 @@ export function Viewer() {
           findLoadedFrame(prefetch.url, loadedFrameUrls.current) !== null ||
           preloadedFrame.current?.url === prefetch.url || now - prefetchTime.current < 250
         ) return;
+        // Nunca expulsa la página anterior/siguiente del historial: si no
+        // hay slot libre, no se precarga.
+        const index = pickFrameSlot(
+          frontFrameRef.current, loadedFrameUrls.current, neighborUrls(), lastShown.current, false,
+        );
+        if (index === null) return;
         prefetchTime.current = now;
-        const index = frontFrameRef.current === 0 ? 1 : 0;
-        const versions: [number, number] = [...frameVersionsRef.current];
-        versions[index] += 1;
-        frameVersionsRef.current = versions;
-        loadedFrameUrls.current[index] = null;
-        preloadedFrame.current = { index, url: prefetch.url, version: versions[index] };
-        setFrameVersions(versions);
-        setFrameUrls((current) => {
-          const next: [string | null, string | null] = [...current];
-          next[index] = prefetch.url;
-          return next;
-        });
-      } else if (type === "opendoc-key") {
-        const kp = validateKeyMessage(data, true);
-        if (!kp) return;
-        if (kp.key === "f") {
-          useFind.getState().openFind();
-          return;
-        }
-        if (kp.key === "find-close") {
-          useFind.getState().close();
-          return;
-        }
-        if (kp.key === "zoom-in" || kp.key === "zoom-out" || kp.key === "zoom-reset") {
-          const z = useZoom.getState();
-          if (kp.key === "zoom-in") z.zoomIn();
-          else if (kp.key === "zoom-out") z.zoomOut();
-          else z.reset();
-          return;
-        }
-        if (kp.key === "k") {
-          usePalette.getState().toggle();
-          return;
-        }
-        // Ctrl/Cmd+T abre pestaña vacía + paleta (no es acción de pestaña).
-        if (kp.key === "t" && !kp.shift) {
-          newTab();
-          usePalette.getState().setOpen(true);
-          return;
-        }
-        childKey(kp.key, kp.shift);
+        preloadedFrame.current = loadIntoSlot(index, prefetch.url);
       } else if (type === "opendoc-open-tab") {
         const req = validateOpenTabMessage(data, true, ids);
         if (!req) return;
@@ -383,9 +437,10 @@ export function Viewer() {
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [activateFrame, childNav, childScroll, childKey, openTabUrl, newTab, transitioning]);
+  }, [activateFrame, loadIntoSlot, childNav, childScroll, childKey, openTabUrl, newTab, transitioning]);
 
-  // Zoom: se aplica a los dos iframes (el oculto puede ser la próxima página)
+
+  // Zoom: se aplica a todos los iframes (uno oculto puede ser la próxima página)
   // y se muestra un aviso breve con el nivel.
   useEffect(() => {
     for (const f of frames.current) {
@@ -393,7 +448,7 @@ export function Viewer() {
     }
   }, [zoomLevel]);
 
-  // Desplazamiento suave: también a los dos iframes.
+  // Desplazamiento suave: también a todos los iframes.
   useEffect(() => {
     for (const f of frames.current) {
       f?.contentWindow?.postMessage({ type: "opendoc-smooth-scroll", enabled: smoothScroll }, "*");
@@ -436,13 +491,15 @@ export function Viewer() {
     const pending = pendingFrame.current;
     if (!isPendingFrameLoad(pending, index, loadedUrl, version)) {
       if (isPendingFrameLoad(preloadedFrame.current, index, loadedUrl, version) && loadedUrl) {
-        loadedFrameUrls.current[index] = loadedUrl;
+        loadedFrameUrls.current[index] ??= loadedUrl;
         preloadedFrame.current = null;
       }
       return;
     }
     if (!loadedUrl) return;
-    loadedFrameUrls.current[index] = loadedUrl;
+    // Sin script inyectado (404, no-HTML) nadie reportó la URL: se asume
+    // la pedida. Si el iframe ya la reportó, manda la suya.
+    loadedFrameUrls.current[index] ??= loadedUrl;
     activateFrame(index);
   };
 
@@ -509,16 +566,24 @@ export function Viewer() {
           {frontFrame === null && (
             <p className="animate-fade-in p-4 text-sm text-gray-500">{t("viewer.loading", { title: activeTitle })}</p>
           )}
-          {[0, 1].map((index) => (
+          {/* Los iframes de reserva van `invisible` + `inert`: fuera del
+              hit-testing de verdad. Con solo opacity-0/pointer-events-none,
+              WebKit (macOS) podía seguir entregándoles el gesto del
+              trackpad aunque estén ocultos encima del visible. Fundido
+              cruzado breve: `visibility` entra en la transición, así que el
+              saliente se desvanece antes de ocultarse (ya inert, sin
+              recibir eventos). "Reducir movimiento" lo desactiva. */}
+          {frameSlotIndexes.map((index) => (
             <iframe
               key={`${index}:${frameVersions[index]}`}
               ref={(frame) => { frames.current[index] = frame; }}
-              src={frameUrls[index] ?? undefined}
+              src={frameSrc(frameUrls[index])}
               title={t("viewer.iframeTitle", { title: activeTitle })}
               sandbox="allow-scripts"
               scrolling="yes"
               aria-hidden={frontFrame !== index}
-              className={`h-full min-h-0 w-full flex-1 border-0 bg-white transition-opacity duration-150 ease-out motion-reduce:transition-none ${frontFrame === index ? `opacity-100 ${transitioning ? "pointer-events-none" : ""}` : "absolute inset-0 pointer-events-none opacity-0"}`}
+              inert={frontFrame !== index}
+              className={`h-full min-h-0 w-full flex-1 border-0 bg-white transition-[opacity,visibility] duration-150 ease-out motion-reduce:transition-none ${frontFrame === index ? `visible opacity-100 ${transitioning ? "pointer-events-none" : ""}` : "invisible absolute inset-0 pointer-events-none opacity-0"}`}
               onLoad={() => onIframeLoad(index, frameUrls[index], frameVersions[index])}
             />
           ))}

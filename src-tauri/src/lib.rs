@@ -61,7 +61,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
         .manage(AppState::default())
-        .register_uri_scheme_protocol("opendoc", protocol::handle)
+        .register_asynchronous_uri_scheme_protocol("opendoc", protocol::handle)
         .setup(|app| {
             // Ajustes persistentes (T9): se leen del directorio de datos
             // de la app. Si la carpeta guardada existe, se precarga para

@@ -62,9 +62,27 @@ export interface KeyPress {
 
 /** `http://opendoc.localhost/<id>/…` (Windows) → `opendoc://<id>/…`. */
 export function toBackendUrl(href: string): string | null {
-  if (href.startsWith(SCHEME)) return href;
-  if (href.startsWith(VIEWER_BASE)) return SCHEME + href.slice(VIEWER_BASE.length);
+  if (href.startsWith(SCHEME)) return normalizeBackendUrl(href);
+  if (href.startsWith(VIEWER_BASE)) return normalizeBackendUrl(SCHEME + href.slice(VIEWER_BASE.length));
   return null;
+}
+
+/**
+ * Forma canónica de una URL `opendoc://`: la misma que reporta
+ * `location.href` dentro del iframe (espacios → `%20`, `./` y `../`
+ * resueltos…). Sin ella, una ruta cruda del índice y el eco del iframe
+ * parecen páginas distintas (entrada duplicada en el historial y recarga).
+ * Se parsea con la forma http (la de Windows); en macOS/Linux coincide.
+ * Lo que no es `opendoc://` o no se puede parsear se devuelve igual.
+ */
+export function normalizeBackendUrl(url: string): string {
+  if (!url.startsWith(SCHEME)) return url;
+  try {
+    const href = new URL(VIEWER_BASE + url.slice(SCHEME.length)).href;
+    return href.startsWith(VIEWER_BASE) ? SCHEME + href.slice(VIEWER_BASE.length) : url;
+  } catch {
+    return url;
+  }
 }
 
 /** URL válida: esquema/host opendoc, longitud acotada, docset cargado. */

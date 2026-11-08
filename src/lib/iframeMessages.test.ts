@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   isValidNavUrl,
+  normalizeBackendUrl,
   KEY_RATE_MAX,
   keyRateAllow,
   matchParentShortcut,
@@ -289,5 +290,24 @@ describe("matchParentShortcut", () => {
     });
     // Sin code, manda key como antes.
     expect(matchParentShortcut({ ...base, key: "w" })).toEqual({ action: "close-tab" });
+  });
+});
+
+describe("normalizeBackendUrl", () => {
+  it("matches what location.href reports inside the iframe", () => {
+    expect(normalizeBackendUrl("opendoc://d/a b.html#x y")).toBe("opendoc://d/a%20b.html#x%20y");
+    expect(normalizeBackendUrl("opendoc://d/x/../a.html")).toBe("opendoc://d/a.html");
+    expect(normalizeBackendUrl("opendoc://C++/std/vector.html")).toBe("opendoc://C++/std/vector.html");
+  });
+
+  it("is idempotent and leaves foreign strings alone", () => {
+    const once = normalizeBackendUrl("opendoc://d/a b.html");
+    expect(normalizeBackendUrl(once)).toBe(once);
+    expect(normalizeBackendUrl("https://example.com/a b")).toBe("https://example.com/a b");
+  });
+
+  it("toBackendUrl returns the canonical form on both platforms", () => {
+    expect(toBackendUrl("http://opendoc.localhost/d/a%20b.html")).toBe("opendoc://d/a%20b.html");
+    expect(toBackendUrl("opendoc://d/a b.html")).toBe("opendoc://d/a%20b.html");
   });
 });

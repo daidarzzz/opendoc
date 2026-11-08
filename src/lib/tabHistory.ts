@@ -1,5 +1,6 @@
 // Historial y pestañas como funciones puras (testeadas con Vitest).
 // URLs canónicas `opendoc://<id>/<ruta>` (con `#ancla` si la hay).
+import { normalizeBackendUrl } from "./iframeMessages";
 import type { Tab, TabEntry } from "./types";
 
 /** Máximo de páginas que conserva el historial de cada pestaña. */
@@ -25,7 +26,8 @@ export function emptyTab(): Tab {
 
 /** Pestaña nueva con una entrada inicial (docset normal). */
 export function tabWithEntry(docsetId: string, entry: TabEntry): Tab {
-  return { ...emptyTab(), docsetId, type: "docset", history: [entry], historyIndex: 0 };
+  const first = { ...entry, url: normalizeBackendUrl(entry.url) };
+  return { ...emptyTab(), docsetId, type: "docset", history: [first], historyIndex: 0 };
 }
 
 /** Pestaña de catálogo (sin historial de navegación). */
@@ -59,8 +61,12 @@ export function sameDocument(a: string, b: string): boolean {
  * - Solo cambia el hash → sustituye la entrada actual y descarta el futuro.
  * - Otra URL → trunca el futuro y añade una parada (historial acotado).
  */
-export function navigateTab(tab: Tab, entry: TabEntry): Tab {
-  const current = currentEntry(tab);
+export function navigateTab(tab: Tab, rawEntry: TabEntry): Tab {
+  // Comparación en forma canónica: la ruta cruda del índice y el eco del
+  // iframe (`location.href`) son la misma parada aunque difiera la codificación.
+  const entry = { ...rawEntry, url: normalizeBackendUrl(rawEntry.url) };
+  const raw = currentEntry(tab);
+  const current = raw ? { ...raw, url: normalizeBackendUrl(raw.url) } : null;
   if (current && entry.url === current.url) {
     const history = [...tab.history];
     history[tab.historyIndex] = entry;

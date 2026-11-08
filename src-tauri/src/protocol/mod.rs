@@ -5,14 +5,15 @@
 //! y `http://opendoc.localhost/<id>/<ruta>` (Windows/Android).
 //! El contenido se muestra en un `<iframe>` aislado de la UI.
 //!
-//! Handler síncrono: son ficheros locales pequeños; el `async` no aporta.
+//! Handler asíncrono: cada fichero se lee en un hilo bloqueante para no
+//! frenar el hilo de UI ni servir en serie los recursos de una página.
 
 // La resolución segura de rutas vive en el núcleo compartido
 // (`opendoc_core::resolve`) para que el CLI use exactamente las mismas
 // reglas.
 pub use opendoc_core::resolve::{content_type_for, resolve_request, ResolveError, ResolvedFile};
 
-use tauri::{Manager, Runtime, UriSchemeContext};
+use tauri::{Manager, Runtime, UriSchemeContext, UriSchemeResponder};
 
 use crate::commands::AppState;
 use crate::docset::Docset;
@@ -104,7 +105,9 @@ fn serve_inner(
 /// el tema que mande `window.parent`, reportar navegaciones al padre en
 /// `load` y `hashchange` (caza anclas `#...` sin petición nueva), reportar
 /// scroll throttled con su URL (más volcado final en `pagehide`) y
-/// restaurarlo a petición, y reenviar solo los atajos
+/// restaurarlo a petición, saltar a un ancla sin recargar
+/// (`opendoc-hash`, con `location.replace`: sin entrada de historial nativa),
+/// y reenviar solo los atajos
 /// Ctrl/Cmd+K/W/T, Ctrl/Cmd+Tab, Ctrl/Cmd+1..9 y Alt+←/→.
 /// Además captura auxclick (botón central y botones laterales Atrás/Adelante) y Ctrl/Cmd+clic sobre enlaces
 /// `<a>` internos y pide `{type:"opendoc-open-tab", url}` al padre, SOLO
@@ -115,20 +118,25 @@ fn serve_inner(
 /// título ≤200 sin controles, scrollY finito en rango, teclas a ≤10/s).
 /// Punto de inserción: antes de `</head>` (insensible a caso) o, si no hay,
 /// tras el BOM / al inicio. Solo ASCII: no re-codifica el documento.
-pub const THEME_STYLE: &str = "<style>html{color-scheme:light!important;}</style>";
-pub const THEME_SCRIPT: &str = r#"<script>(function(){function rep(t,x){x=x||{};x.type=t;window.parent.postMessage(x,"*");}function here(){return {url:String(location.href),title:String(document.title)};}window.addEventListener("message",function(e){if(e.source!==window.parent)return;var d=e.data;if(!d)return;if(d.type==="opendoc-theme"){document.documentElement.removeAttribute("data-opendoc-theme");}else if(d.type==="opendoc-scroll-to"){var y=Number(d.y);if(isFinite(y)&&y>=0){window.scrollTo(0,y);}}});window.addEventListener("DOMContentLoaded",function(){rep("opendoc-ready",here());},{once:true});window.addEventListener("load",function(){rep("opendoc-nav",here());});window.addEventListener("hashchange",function(){rep("opendoc-nav",here());});var lastY=-1,lastT=0;function sendScroll(force){var y=window.scrollY||window.pageYOffset||0;var t=Date.now();if(y!==lastY&&(force||t-lastT>250)){lastT=t;lastY=y;rep("opendoc-scroll",{y:y,url:String(location.href)});}}window.addEventListener("scroll",function(){sendScroll(false);},true);window.addEventListener("pagehide",function(){sendScroll(true);});document.addEventListener("visibilitychange",function(){if(document.visibilityState==="hidden")sendScroll(true);});window.addEventListener("keydown",function(e){if(e.isComposing||e.key==="Process")return;var c=e.code||"",k=c==="KeyW"?"w":c==="KeyT"?"t":c==="KeyK"?"k":c==="Tab"?"tab":/^Digit([1-9])$/.test(c)?c.charAt(5):/^Numpad([1-9])$/.test(c)?c.charAt(6):null;if((e.ctrlKey||e.metaKey)&&!e.altKey&&k!==null){e.preventDefault();if(e.stopPropagation)e.stopPropagation();rep("opendoc-key",{key:k,shift:!!e.shiftKey});}else if(e.altKey&&!e.ctrlKey&&!e.metaKey&&(e.key==="ArrowLeft"||e.key==="ArrowRight")){e.preventDefault();if(e.stopPropagation)e.stopPropagation();rep("opendoc-key",{key:e.key==="ArrowLeft"?"alt-left":"alt-right",shift:!!e.shiftKey});}},true);function linkUrl(e){try{var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(!a)return null;var u=new URL(a.getAttribute("href"),location.href);if(u.origin!==location.origin)return null;return u.toString();}catch(_){return null;}}var hoverTimer=null,hoverAnchor=null;window.addEventListener("pointerover",function(e){if(!e.isTrusted)return;var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;var u=linkUrl(e);if(!a||!u)return;try{var target=new URL(u),current=new URL(location.href);if(target.pathname===current.pathname&&target.search===current.search)return;}catch(_){return;}if(hoverTimer)clearTimeout(hoverTimer);hoverAnchor=a;hoverTimer=setTimeout(function(){if(hoverAnchor===a&&a.matches(":hover"))rep("opendoc-prefetch",{url:u});},60);},true);function openTab(e){if(!e.isTrusted)return;var u=linkUrl(e);if(!u)return;e.preventDefault();if(e.stopImmediatePropagation)e.stopImmediatePropagation();else if(e.stopPropagation)e.stopPropagation();rep("opendoc-open-tab",{url:u});}window.addEventListener("mousedown",function(e){if(e.button===1&&linkUrl(e)){e.preventDefault();}},true);window.addEventListener("auxclick",function(e){if(e.button===1){openTab(e);}else if(e.button===3||e.button===4){e.preventDefault();e.stopPropagation();rep("opendoc-key",{key:e.button===3?"mouse-back":"mouse-forward",shift:false});}},true);window.addEventListener("click",function(e){if(e.button!==0||e.altKey||e.shiftKey)return;if(e.ctrlKey||e.metaKey){openTab(e);return;}if(!e.isTrusted)return;var u=linkUrl(e);if(!u)return;var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;try{var target=new URL(u),current=new URL(location.href);if(target.pathname===current.pathname&&target.search===current.search)return;}catch(_){return;}e.preventDefault();if(e.stopPropagation)e.stopPropagation();rep("opendoc-navigate",{url:u,title:a&&a.textContent?a.textContent.trim():document.title});},true);})();</script>"#;
+/// `overscroll-behavior:contain`: al llegar al final del documento el gesto
+/// no se encadena al documento de la app (que en macOS rebotaba entero).
+pub const THEME_STYLE: &str =
+    "<style>html{color-scheme:light!important;overscroll-behavior:contain;}</style>";
+pub const THEME_SCRIPT: &str = r#"<script>(function(){function rep(t,x){x=x||{};x.type=t;window.parent.postMessage(x,"*");}function here(){return {url:String(location.href),title:String(document.title)};}window.addEventListener("message",function(e){if(e.source!==window.parent)return;var d=e.data;if(!d)return;if(d.type==="opendoc-theme"){document.documentElement.removeAttribute("data-opendoc-theme");}else if(d.type==="opendoc-scroll-to"){var y=Number(d.y);if(isFinite(y)&&y>=0){window.scrollTo(0,y);}}else if(d.type==="opendoc-hash"&&typeof d.hash==="string"&&d.hash.length<=4096){if(d.hash){if(location.hash!=='#'+d.hash){location.replace('#'+d.hash);}}else{window.scrollTo(0,0);}}});window.addEventListener("DOMContentLoaded",function(){rep("opendoc-ready",here());},{once:true});window.addEventListener("load",function(){rep("opendoc-nav",here());});window.addEventListener("hashchange",function(){rep("opendoc-nav",here());});var lastY=-1,lastT=0;function sendScroll(force){var y=window.scrollY||window.pageYOffset||0;var t=Date.now();if(y!==lastY&&(force||t-lastT>250)){lastT=t;lastY=y;rep("opendoc-scroll",{y:y,url:String(location.href)});}}window.addEventListener("scroll",function(){sendScroll(false);},true);window.addEventListener("pagehide",function(){sendScroll(true);});document.addEventListener("visibilitychange",function(){if(document.visibilityState==="hidden")sendScroll(true);});window.addEventListener("keydown",function(e){if(e.isComposing||e.key==="Process")return;var c=e.code||"",k=c==="KeyW"?"w":c==="KeyT"?"t":c==="KeyK"?"k":c==="Tab"?"tab":/^Digit([1-9])$/.test(c)?c.charAt(5):/^Numpad([1-9])$/.test(c)?c.charAt(6):null;if((e.ctrlKey||e.metaKey)&&!e.altKey&&k!==null){e.preventDefault();if(e.stopPropagation)e.stopPropagation();rep("opendoc-key",{key:k,shift:!!e.shiftKey});}else if(e.altKey&&!e.ctrlKey&&!e.metaKey&&(e.key==="ArrowLeft"||e.key==="ArrowRight")){e.preventDefault();if(e.stopPropagation)e.stopPropagation();rep("opendoc-key",{key:e.key==="ArrowLeft"?"alt-left":"alt-right",shift:!!e.shiftKey});}},true);function linkUrl(e){try{var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(!a)return null;var u=new URL(a.getAttribute("href"),document.baseURI);if(u.origin!==location.origin)return null;return u.toString();}catch(_){return null;}}var hoverTimer=null,hoverAnchor=null;window.addEventListener("pointerover",function(e){if(!e.isTrusted)return;var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;var u=linkUrl(e);if(!a||!u)return;try{var target=new URL(u),current=new URL(location.href);if(target.pathname===current.pathname&&target.search===current.search)return;}catch(_){return;}if(hoverTimer)clearTimeout(hoverTimer);hoverAnchor=a;hoverTimer=setTimeout(function(){if(hoverAnchor===a&&a.matches(":hover"))rep("opendoc-prefetch",{url:u});},60);},true);function openTab(e){if(!e.isTrusted)return;var u=linkUrl(e);if(!u)return;e.preventDefault();if(e.stopImmediatePropagation)e.stopImmediatePropagation();else if(e.stopPropagation)e.stopPropagation();rep("opendoc-open-tab",{url:u});}window.addEventListener("mousedown",function(e){if(e.button===1&&linkUrl(e)){e.preventDefault();}},true);window.addEventListener("auxclick",function(e){if(e.button===1){openTab(e);}else if(e.button===3||e.button===4){e.preventDefault();e.stopPropagation();rep("opendoc-key",{key:e.button===3?"mouse-back":"mouse-forward",shift:false});}},true);window.addEventListener("click",function(e){if(e.button!==0||e.altKey||e.shiftKey)return;if(e.ctrlKey||e.metaKey){openTab(e);return;}if(!e.isTrusted)return;var u=linkUrl(e);if(!u)return;var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;try{var target=new URL(u),current=new URL(location.href);if(target.pathname===current.pathname&&target.search===current.search)return;}catch(_){return;}e.preventDefault();if(e.stopPropagation)e.stopPropagation();rep("opendoc-navigate",{url:u,title:a&&a.textContent?a.textContent.trim():document.title});},true);})();</script>"#;
 
-/// Normaliza y aplica el scroll del trackpad dentro del docset. Safari puede
-/// entregar el `wheel` al documento padre cuando el contenido vive en un iframe;
-/// el visor lo reenvía por postMessage y este script desplaza el scroller interno.
+/// Scroll de rueda/trackpad dentro del docset. Lo que llega nativo al iframe
+/// se deja al scroll nativo del navegador (fluido, con inercia, sin JS en
+/// cada evento). Safari puede entregar el `wheel` al documento padre cuando
+/// el contenido vive en un iframe; el visor lo reenvía por postMessage y este
+/// script desplaza el scroller interno a mano.
 /// Sin doble aplicación: si el gesto también llegó nativo al iframe (caso
 /// normal), el reenviado se ignora durante 50 ms; si solo llegó al padre
 /// (rareza de WebKit), el reenviado sí se aplica. El pellizco (ctrlKey)
 /// nunca se reenvía como scroll.
 /// Desplazamiento suave: con `opendoc-smooth-scroll {enabled:true}` del
 /// padre, los saltos de rueda de ratón (por línea/página o ≥50 px) se animan
-/// ~180 ms con easing; los deltas pequeños del trackpad siguen siendo
-/// directos (salvo que se sumen a una animación en curso). Si algo externo
+/// ~180 ms con easing (solo esos eventos se cancelan); los deltas pequeños
+/// del trackpad siguen siendo nativos. Si algo externo
 /// mueve el scroller (barra, teclado, ancla), la animación se cancela.
 pub const THEME_WHEEL_SCRIPT: &str = r#"<script>(function(){
 function pixels(value,mode,viewport){return mode===1?value*16:mode===2?value*viewport:value;}
@@ -143,7 +151,7 @@ function go(n,a,delta,soft){var st=anim?anim.get(n):null,s=st?st[a]:null,running
 function moveAxis(target,axis,delta,soft){if(!delta)return;var root=document.scrollingElement;for(var el=target;el&&el!==document;el=el.parentElement){var node=el===document.body||el===document.documentElement?root:el;if(!node)continue;var style=getComputedStyle(node),overflow=axis==="y"?style.overflowY:style.overflowX;if(node===root||/^(auto|scroll|overlay|hidden)$/.test(overflow)){if(canMove(node,axis,delta)){go(node,axis,delta,soft);return;}}}if(root&&canMove(root,axis,delta)){go(root,axis,delta,soft);}}
 function apply(x,y,dx,dy,mode){var sx=pixels(dx,mode,window.innerWidth),sy=pixels(dy,mode,window.innerHeight),target=document.elementFromPoint(x,y)||document.documentElement;moveAxis(target,"x",sx,mode!==0||Math.abs(sx)>=50);moveAxis(target,"y",sy,mode!==0||Math.abs(sy)>=50);}
 var lastSelf=0;
-window.addEventListener("wheel",function(e){if(e.ctrlKey){e.preventDefault();return;}e.preventDefault();lastSelf=Date.now();apply(e.clientX,e.clientY,e.deltaX,e.deltaY,e.deltaMode);},{capture:true,passive:false});
+window.addEventListener("wheel",function(e){if(e.ctrlKey){e.preventDefault();return;}lastSelf=Date.now();if(!smooth||!anim||!(e.deltaMode!==0||Math.abs(e.deltaY)>=50||Math.abs(e.deltaX)>=50))return;e.preventDefault();apply(e.clientX,e.clientY,e.deltaX,e.deltaY,e.deltaMode);},{capture:true,passive:false});
 window.addEventListener("message",function(e){if(e.source!==window.parent||!e.data)return;var d=e.data;if(d.type==="opendoc-smooth-scroll"){smooth=d.enabled===true;return;}if(d.type!=="opendoc-wheel")return;if(typeof d.deltaX!=="number"||typeof d.deltaY!=="number"||!isFinite(d.deltaX)||!isFinite(d.deltaY)||d.ctrlKey)return;if(Date.now()-lastSelf<50)return;apply(Number(d.x)||0,Number(d.y)||0,d.deltaX,d.deltaY,Number(d.deltaMode)||0);});
 })();</script>"#;
 
@@ -239,22 +247,40 @@ fn response(status: u16, mime: &'static str, body: Vec<u8>) -> tauri::http::Resp
         .unwrap_or_else(|_| tauri::http::Response::new(Vec::new()))
 }
 
-/// Handler registrado en `lib.rs`. Nunca pánico: todo error es un estado.
+/// Handler asíncrono registrado en `lib.rs`. La lectura de disco va en un
+/// hilo bloqueante: el hilo de UI (donde WebKit/WebView2 llaman al
+/// handler) no se queda esperando por cada CSS/JS/imagen, y las
+/// peticiones de una página se sirven en paralelo. Nunca pánico.
 pub fn handle<R: Runtime>(
     ctx: UriSchemeContext<'_, R>,
     req: tauri::http::Request<Vec<u8>>,
+    responder: UriSchemeResponder,
+) {
+    let app = ctx.app_handle().clone();
+    let uri = req.uri().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        responder.respond(serve_uri(&app, &uri));
+    });
+}
+
+/// Resuelve una URI: el candado de estado solo se toma para copiar el
+/// docset pedido; la lectura del fichero se hace sin él.
+fn serve_uri<R: Runtime>(
+    app: &tauri::AppHandle<R>,
+    uri: &tauri::http::Uri,
 ) -> tauri::http::Response<Vec<u8>> {
-    let (id, rest) = match parse_opendoc_uri(req.uri()) {
+    let (id, rest) = match parse_opendoc_uri(uri) {
         Some(parts) => parts,
         None => return response(400, "text/plain", b"invalid url".to_vec()),
     };
-    let Some(state) = ctx.app_handle().try_state::<AppState>() else {
+    let Some(state) = app.try_state::<AppState>() else {
         return response(500, "text/plain", b"no state".to_vec());
     };
-    let Ok(loaded) = state.loaded.lock() else {
-        return response(500, "text/plain", b"state locked".to_vec());
+    let docset = match state.loaded.lock() {
+        Ok(loaded) => loaded.docsets.iter().find(|d| d.id == id).cloned(),
+        Err(_) => return response(500, "text/plain", b"state locked".to_vec()),
     };
-    serve_file(&loaded.docsets, &id, &rest)
+    serve_file(docset.as_slice(), &id, &rest)
 }
 
 #[cfg(test)]
@@ -386,6 +412,9 @@ mod tests {
             "\"opendoc-open-tab\"",
             "\"opendoc-prefetch\"",
             "\"opendoc-ready\"",
+            "\"opendoc-hash\"",
+            "location.replace",
+            "document.baseURI",
             "e.ctrlKey||e.metaKey",
             "stopImmediatePropagation",
             "pointerover",

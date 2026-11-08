@@ -75,7 +75,7 @@ graph TD
   - `feed.rs`: parseo de repositorios de feeds en GitHub y feeds XML compatibles con el formato estándar de Kapeli/Zeal. Normalización de URLs y ordenamiento de mirrors.
   - `mod.rs`: serialización y persistencia atómica de la caché `catalog.json`.
 - **`protocol/`**:
-  - Manejador del esquema `opendoc://` (en Windows expuesto como `http://opendoc.localhost`).
+  - Manejador asíncrono del esquema `opendoc://` (en Windows expuesto como `http://opendoc.localhost`): cada petición se sirve en un hilo bloqueante (`spawn_blocking`) y el candado de estado solo se toma para copiar el docset pedido, de modo que los recursos de una página se leen en paralelo sin frenar el hilo de UI.
   - Resolución segura de ficheros dentro de `Documents/`.
   - Inyección en respuestas HTML del estilo forzado claro (`THEME_STYLE`), script de comunicación y atajos (`THEME_SCRIPT`), y normalizador de eventos de rueda/trackpad (`THEME_WHEEL_SCRIPT`).
 - **`navigation.rs`**:
@@ -92,7 +92,7 @@ graph TD
 ### 3.2 Frontend (`src/`)
 
 - **`components/`**:
-  - `Viewer.tsx`: contenedor de doble iframe para transiciones suaves sin parpadeo blanco, validación de mensajes postMessage y reenrutamiento de scroll.
+  - `Viewer.tsx`: grupo de 3 iframes (visible, página vecina del historial y libre para cargar/precargar; elección pura en `lib/viewerFrames.ts`) para cambios sin parpadeo blanco y atrás/adelante instantáneo, validación de mensajes postMessage y reenrutamiento de scroll. Los iframes de reserva van `invisible` + `inert` para quedar fuera del hit-testing (WebKit les entregaba el gesto del trackpad con solo `opacity-0`).
   - `Sidebar.tsx`: lista de docsets cargados, árbol de navegación por tipo (`BrowseTree`), acceso al catálogo, enlaces a ajustes y sección de incidencias.
   - `CommandPalette.tsx`: modal flotante de búsqueda rápida con atajos de teclado (`↑`/`↓`, `Enter`, `Esc`), badges por tipo y filtrado por docset.
   - `TabsBar.tsx`: pestañas reordenables por arrastre, botón de nueva pestaña, cierre y estado visual (activo, pendiente tarix o docset ausente).
@@ -155,12 +155,12 @@ graph TD
 - **Inyección en documentos HTML**:
   - Se añade un bloque `<style>` para forzar esquema claro en los controles nativos.
   - Se inyecta un `<script>` que:
-    - Escucha navegaciones y cambios de ancla (`hashchange`) para notificar al visor principal.
+    - Escucha navegaciones y cambios de ancla (`hashchange`) para notificar al visor principal, y obedece `opendoc-hash {hash}` (salto de ancla sin recargar, con `location.replace`).
     - Captura el scroll con limitación temporal (debounce a 250 ms) y lo reporta a la ventana principal.
     - Captura y reenvía atajos de teclado esenciales (`Ctrl/Cmd+K`, `Ctrl/Cmd+W`, `Ctrl/Cmd+T`, `Ctrl/Cmd+Tab`, `Alt+←/→`).
     - Captura clics con rueda central o `Ctrl/Cmd+clic` en enlaces internos y solicita apertura en nueva pestaña (`opendoc-open-tab`).
-    - Recibe eventos de scroll de trackpad desde el contenedor cuando WebKit los intercepta en el padre.
-    - Desplazamiento suave: con `opendoc-smooth-scroll {enabled}` del visor, los saltos de rueda de ratón (por línea/página o ≥50 px) se animan ~180 ms con easing; los deltas pequeños del trackpad siguen siendo directos y cualquier scroll externo (barra, teclado, ancla) cancela la animación.
+    - El scroll de rueda/trackpad que llega al iframe es nativo (no se cancela); `overscroll-behavior: contain` evita encadenarlo a la app. Recibe además los eventos de scroll que WebKit entrega al padre y los aplica a mano.
+    - Desplazamiento suave: con `opendoc-smooth-scroll {enabled}` del visor, solo los saltos de rueda de ratón (por línea/página o ≥50 px) se cancelan y se animan ~180 ms con easing; el trackpad sigue siendo nativo y cualquier scroll externo (barra, teclado, ancla) cancela la animación.
   - Se inyecta además `ACTIONS_STYLE` + `ACTIONS_SCRIPT` (acciones propias de OpenDoc):
     - Anula el menú contextual nativo y, solo con `event.isTrusted`, pide `opendoc-context` `{x, y, selection, link}`; el padre lo valida (`validateContextMessage`: coordenadas acotadas, selección ≤10 000 caracteres sin controles, enlace solo si es una URL opendoc de un docset cargado) y limita a 5 menús/s.
     - Búsqueda en página: obedece `opendoc-find {query ≤200, dir}` y `opendoc-find-clear`, resalta con la CSS Custom Highlight API (o selecciona la coincidencia si no existe), omite texto oculto, se limita a 2000 coincidencias y responde `opendoc-find-result {total, current}` (validado con `validateFindResultMessage`).
@@ -173,6 +173,10 @@ graph TD
 ### 4.4 Gestión de Pestañas e Historial
 
 - Cada pestaña mantiene su propio historial de navegación independiente (`history: TabEntry[]`, `historyIndex: number`) y un mapa de posiciones de scroll guardadas por URL.
+- Las URLs del historial se guardan en forma canónica (`normalizeBackendUrl`, igual que `location.href` en el iframe): la ruta cruda del índice y el eco del iframe son la misma parada, sin entradas duplicadas.
+- Cada iframe reporta la página que tiene de verdad (`opendoc-ready`/`opendoc-nav`), también si el docset navegó por su cuenta (JS, formularios, redirecciones); el visor solo reutiliza un iframe para atrás/adelante si su página coincide.
+- Ir a otra ancla de la página visible no recarga el documento. La precarga al pasar el ratón nunca expulsa la página anterior/siguiente del historial.
+- Los atajos reenviados desde el iframe (Alt+←/→, botones laterales del ratón, pestañas) se atienden aunque la página siguiente aún esté cargando.
 - **Persistencia de sesión**:
   - Se guarda periódicamente (con debounce de 500 ms) en `session.json` dentro del directorio de datos de la app.
   - Estructura: versión de esquema, lista de pestañas guardadas (`SavedTab`) con rutas relativas a `Documents/` sin esquema (para independizarlo de la plataforma), índice activo y scroll.
