@@ -74,11 +74,11 @@ const TabButton = memo(function TabButton({
           onActivate();
         }
       }}
-      className={`group relative flex h-[34px] w-52 min-w-[7rem] shrink select-none touch-none cursor-default items-center gap-2 rounded-t-[10px] pl-3 pr-1.5 text-[13px] transition-colors duration-150 ease-smooth ${
+      className={`group relative flex h-[34px] w-52 min-w-[7rem] shrink select-none touch-none cursor-default items-center gap-2 rounded-t-[var(--tab-r)] pl-3 pr-1.5 text-[13px] transition-colors duration-150 ease-smooth ${
         selected
           ? "tab-connected z-[1] bg-card font-medium text-ink"
           : "text-muted hover:text-ink"
-      } ${dragging ? "z-10 rounded-[10px] bg-card shadow-float" : ""} ${unavailable ? "opacity-50" : ""}`}
+      } ${dragging ? "z-10 rounded-[var(--tab-r)] bg-card shadow-float" : ""} ${unavailable ? "opacity-50" : ""}`}
     >
       {!selected && !dragging && (
         <span aria-hidden className="pointer-events-none absolute inset-x-1 bottom-1 top-1 rounded-lg transition-colors duration-150 group-hover:bg-canvas-2" />

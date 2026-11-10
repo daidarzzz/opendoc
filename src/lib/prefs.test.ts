@@ -10,11 +10,11 @@ describe("prefs", () => {
   it("usa los valores por defecto ante basura", () => {
     expect(normalizePrefs(null)).toEqual(DEFAULT_PREFS);
     expect(normalizePrefs("x")).toEqual(DEFAULT_PREFS);
-    expect(normalizePrefs({ smoothScroll: "yes", paletteLimit: 37 })).toEqual(DEFAULT_PREFS);
+    expect(normalizePrefs({ smoothScroll: "yes", paletteLimit: 37, design: "neon" })).toEqual(DEFAULT_PREFS);
   });
 
   it("conserva valores válidos", () => {
-    const p = { smoothScroll: false, linkPrefetch: false, reduceMotion: true, paletteLimit: 100 };
+    const p = { smoothScroll: false, linkPrefetch: false, reduceMotion: true, paletteLimit: 100, design: "paper" };
     expect(normalizePrefs(p)).toEqual(p);
   });
 

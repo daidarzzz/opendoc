@@ -49,7 +49,7 @@ export function Sidebar({
         className={`flex h-full min-w-0 shrink-0 flex-col transition-opacity duration-200 ${collapsed ? "opacity-0" : "opacity-100"}`}
       >
         <div className="flex items-center justify-between pb-3 pl-4 pr-2 pt-3">
-          <h1 className="flex items-center gap-2 font-display text-[17px] font-bold tracking-[-0.02em]">
+          <h1 className="flex items-center gap-2 heading text-[17px]">
             <AppLogo size={22} />
             OpenDoc
           </h1>

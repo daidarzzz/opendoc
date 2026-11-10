@@ -50,6 +50,7 @@ Aunque Zeal es una herramienta consolidada en la comunidad, su interfaz en C++/Q
 
 ### Personalización y Accesibilidad
 - **Una ventana con color propio:** La ventana es un lienzo teñido por tu acento (rubor, cielo, crema o lavanda, y versiones profundas en oscuro) y el contenido flota en una tarjeta redondeada, con la pestaña activa conectada a ella. Unos glifos de tipo de colores (C, F, M, P…) distinguen de un vistazo clases, funciones, propiedades y módulos en la paleta y la barra lateral. La pestaña de inicio saluda según la hora y muestra tu biblioteca en mosaicos, con filtros por docset a un clic. Compuesta en Bricolage Grotesque, Inter y JetBrains Mono, todas empaquetadas para que la app siga siendo totalmente offline.
+- **Tres estilos:** Elige **Color** (lienzo teñido por el acento, Bricolage Grotesque + Inter), **Papel** (papel y tinta, Newsreader + IBM Plex Mono, esquinas casi rectas) o **Clásico** (grises neutros e Inter) en Ajustes → Apariencia. Los tres comparten la distribución, los acentos y los glifos de tipo, y el cambio se aplica al instante, sin parpadeo al arrancar.
 - **Temas (Claro / Oscuro / Sistema):** Cambio de tema de alto contraste para la interfaz de la aplicación. Los documentos de los docsets conservan siempre su estilo claro original para evitar artefactos visuales en tablas, código o diagramas.
 - **Colores de acento:** Permite elegir entre **Rojo**, **Azul**, **Ámbar** o **Catppuccin** (Latte/Mocha Mauve). Actualiza los resaltados de la UI, botones principales, el logotipo de la aplicación y el icono en ejecución en la barra de tareas y el Dock.
 - **Panel de Ajustes (`Ctrl/Cmd+,`):** Ventana de ajustes completa organizada por secciones: General (idioma, restaurar pestañas, número de resultados de búsqueda), Apariencia (vista previa de temas, color de acento, reducir movimiento), Lectura (desplazamiento suave, zoom de los docsets, precarga de enlaces al pasar el ratón), Docsets (carpeta, volver a escanear, lista de instalados, pendientes, catálogo), referencia de atajos de teclado y Acerca de (versión, enlaces, restablecer preferencias).
@@ -117,7 +118,7 @@ Los binarios compilados se generan en `src-tauri/target/release/` y los instalad
 Antes de dar por completado un cambio, ejecuta la batería de pruebas, linters y comprobaciones de tipo:
 
 ```bash
-# Pruebas de frontend (Vitest: 146 tests sobre stores, sync de sesión, i18n, etc.)
+# Pruebas de frontend (Vitest: 149 tests sobre stores, sync de sesión, i18n, etc.)
 npm test
 
 # Comprobación de tipos de TypeScript
@@ -185,4 +186,4 @@ Cada documentación que descargues o consultes pertenece a sus respectivos autor
 - [Catppuccin](https://catppuccin.com/) por los valores de paleta Mauve (Latte/Mocha) empleados en el tema de acento (Licencia MIT).
 - [nucleo-matcher](https://github.com/helix-editor/nucleo) por su excelente rendimiento en la búsqueda difusa en memoria.
 - [Devicon](https://devicon.dev/) por los iconos de lenguajes y frameworks incluidos (Licencia MIT, ver `src/assets/devicons/LICENSE`).
-- Tipografías [Bricolage Grotesque](https://github.com/ateliertriay/bricolage), [Inter](https://rsms.me/inter/) y [JetBrains Mono](https://www.jetbrains.com/lp/mono/), empaquetadas mediante Fontsource (SIL Open Font License 1.1).
+- Tipografías [Bricolage Grotesque](https://github.com/ateliertriay/bricolage), [Inter](https://rsms.me/inter/), [JetBrains Mono](https://www.jetbrains.com/lp/mono/), [Newsreader](https://github.com/productiontype/Newsreader) e [IBM Plex Mono](https://github.com/IBM/plex), empaquetadas mediante Fontsource (SIL Open Font License 1.1).

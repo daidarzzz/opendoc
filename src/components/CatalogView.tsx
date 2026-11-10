@@ -124,7 +124,7 @@ export function CatalogView() {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2.5">
-                  <h2 className="font-display text-[34px] font-bold leading-none tracking-[-0.03em]">{t("catalog.title")}</h2>
+                  <h2 className="heading text-[34px] leading-none">{t("catalog.title")}</h2>
                   {status && status.count > 0 && (
                     <span className="rounded-full bg-accent/[0.12] px-2.5 py-0.5 text-[12px] font-semibold tabular-nums text-accent-text">
                       {tn(lang, status.count, "catalog.entriesOne", "catalog.entriesMany", { n: status.count })}
@@ -282,7 +282,7 @@ export function CatalogView() {
               {sections.map((s) => (
                 <section key={s.key ?? "list"}>
                   {s.key && (
-                    <h3 className="mb-3 flex items-center gap-2 font-display text-[17px] font-bold tracking-[-0.02em]">
+                    <h3 className="mb-3 flex items-center gap-2 heading text-[17px]">
                       {t(s.key)}
                       <span className="text-[12.5px] font-semibold tabular-nums text-faint">{s.rows.length}</span>
                     </h3>

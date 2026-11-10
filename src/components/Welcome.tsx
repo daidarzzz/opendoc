@@ -53,7 +53,7 @@ export function Welcome({ docCount }: { docCount: number }) {
         <div className="m-auto w-full max-w-lg animate-rise-in px-8 py-12 text-center">
           <EmptyShelf />
           <p className="mt-8 text-[13px] font-semibold text-accent-text">{greeting}</p>
-          <h1 className="mt-1 font-display text-[34px] font-bold leading-tight tracking-[-0.03em]">
+          <h1 className="mt-1 heading text-[34px] leading-tight">
             {t("welcome.emptyTitle")}
             <span className="caret-blink text-accent">_</span>
           </h1>
@@ -77,7 +77,7 @@ export function Welcome({ docCount }: { docCount: number }) {
     <div className="flex min-h-0 w-full flex-1 overflow-y-auto">
       <div className="mx-auto w-full max-w-[46rem] animate-rise-in px-10 pb-12 pt-[min(12vh,6rem)]">
         <p className="text-[13px] font-semibold text-accent-text">{greeting}</p>
-        <h1 className="mt-1 font-display text-[44px] font-bold leading-[1.05] tracking-[-0.035em] text-ink">
+        <h1 className="mt-1 heading text-[44px] leading-[1.05] text-ink">
           {t("welcome.title")}
           <span className="caret-blink text-accent">_</span>
         </h1>
@@ -119,7 +119,7 @@ export function Welcome({ docCount }: { docCount: number }) {
 
         <section className="mt-12" aria-label={t("sidebar.library")}>
           <div className="mb-3 flex items-baseline justify-between">
-            <h2 className="flex items-baseline gap-2 font-display text-[19px] font-bold tracking-[-0.02em]">
+            <h2 className="flex items-baseline gap-2 heading text-[19px]">
               {t("sidebar.library")}
               <span className="text-[13px] font-semibold tabular-nums text-faint">{library.length}</span>
             </h2>
@@ -149,7 +149,7 @@ export function Welcome({ docCount }: { docCount: number }) {
                   title={d.name}
                   className="group flex h-full w-full flex-col items-start gap-3 rounded-xl border border-line bg-card p-3.5 text-left transition-all duration-200 ease-smooth hover:-translate-y-0.5 hover:border-ink/15 hover:shadow-float"
                 >
-                  <span className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-card-2 ring-1 ring-line transition-transform duration-200 ease-smooth group-hover:scale-105">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-card-2 ring-1 ring-line transition-transform duration-200 ease-smooth group-hover:scale-105">
                     <DocsetIcon icon={d.icon} name={d.name} hint={d.id} size={24} />
                   </span>
                   <span className="w-full min-w-0">
@@ -165,7 +165,7 @@ export function Welcome({ docCount }: { docCount: number }) {
                 onClick={openCatalogTab}
                 className="group flex h-full w-full flex-col items-start gap-3 rounded-xl border border-dashed border-ink/15 p-3.5 text-left transition-all duration-200 ease-smooth hover:border-accent/50 hover:bg-accent/[0.04]"
               >
-                <span className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-accent/10 text-accent-text transition-transform duration-200 ease-smooth group-hover:scale-105">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent-text transition-transform duration-200 ease-smooth group-hover:scale-105">
                   <PlusIcon size={18} />
                 </span>
                 <span>

@@ -1,0 +1,43 @@
+// Estilo visual de la interfaz (solo frontend, se guarda en `prefs`).
+// Todos comparten la misma estructura (lienzo + tarjeta, pestañas
+// conectadas, glifos de tipo); cambian colores, tipografía y forma:
+// - `color`: lienzo teñido por el acento, Bricolage + Inter (por defecto).
+// - `paper`: papel y tinta sin tinte, Newsreader + IBM Plex Mono, esquinas casi rectas.
+// - `classic`: grises neutros e Inter, cercano al OpenDoc original.
+// El CSS (`index.css`, `[data-design="..."]`) usa estos mismos tonos de
+// superficie; `design.test.ts` vigila el contraste del texto del acento.
+import { CANVAS_HEX } from "./accent";
+import type { Accent } from "./types";
+
+export type Design = "color" | "paper" | "classic";
+
+export const DESIGNS: readonly Design[] = ["color", "paper", "classic"];
+
+export const DEFAULT_DESIGN: Design = "color";
+
+/** Cualquier valor desconocido cae al estilo por defecto. */
+export function normalizeDesign(value: unknown): Design {
+  return (DESIGNS as readonly unknown[]).includes(value) ? (value as Design) : DEFAULT_DESIGN;
+}
+
+/** Aplica el estilo al documento (cambio en caliente, sin reiniciar). */
+export function applyDesign(design: Design): void {
+  if (typeof document === "undefined") return;
+  document.documentElement.dataset.design = design;
+}
+
+type Mode = "light" | "dark";
+
+/** Tarjeta (contenido) por estilo y modo. */
+export const CARD_HEX: Record<Design, Record<Mode, string>> = {
+  color: { light: "#FFFFFF", dark: "#18181C" },
+  paper: { light: "#F5F1E8", dark: "#15140F" },
+  classic: { light: "#FFFFFF", dark: "#16171B" },
+};
+
+/** Lienzo (barra lateral y pestañas) por estilo, acento y modo. */
+export function canvasHex(design: Design, accent: Accent, mode: Mode): string {
+  if (design === "paper") return mode === "light" ? "#ECE6D9" : "#0F0E0B";
+  if (design === "classic") return mode === "light" ? "#F1F1F3" : "#0E0F12";
+  return CANVAS_HEX[accent][mode];
+}

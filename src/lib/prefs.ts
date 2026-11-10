@@ -1,6 +1,7 @@
 // Preferencias de interfaz (solo frontend, en localStorage). Tolerante:
 // sin storage, JSON roto o valores fuera de rango → valores por defecto.
 import type { StringStorage } from "./sidebar";
+import { DEFAULT_DESIGN, normalizeDesign, type Design } from "./design";
 
 export const PALETTE_LIMITS = [20, 50, 100] as const;
 export type PaletteLimit = (typeof PALETTE_LIMITS)[number];
@@ -14,6 +15,8 @@ export interface UiPrefs {
   reduceMotion: boolean;
   /** Máximo de resultados de la paleta de búsqueda. */
   paletteLimit: PaletteLimit;
+  /** Estilo visual de la interfaz (ver `lib/design`). */
+  design: Design;
 }
 
 export const DEFAULT_PREFS: UiPrefs = {
@@ -21,6 +24,7 @@ export const DEFAULT_PREFS: UiPrefs = {
   linkPrefetch: true,
   reduceMotion: false,
   paletteLimit: 20,
+  design: DEFAULT_DESIGN,
 };
 
 const STORAGE_KEY = "opendoc.prefs";
@@ -39,6 +43,7 @@ export function normalizePrefs(raw: unknown): UiPrefs {
     linkPrefetch: bool(r["linkPrefetch"], DEFAULT_PREFS.linkPrefetch),
     reduceMotion: bool(r["reduceMotion"], DEFAULT_PREFS.reduceMotion),
     paletteLimit: limit ?? DEFAULT_PREFS.paletteLimit,
+    design: normalizeDesign(r["design"]),
   };
 }
 

@@ -1,9 +1,15 @@
 /* Tipografías empaquetadas (la app es offline: nada se pide a la red).
-   Bricolage Grotesque (titulares, con carácter), Inter (interfaz) y
-   JetBrains Mono (símbolos, atajos, versiones). Todas SIL OFL 1.1. */
+   Estilo Color: Bricolage Grotesque + Inter + JetBrains Mono. Estilo
+   Papel: Newsreader + IBM Plex Mono. Clásico: Inter + JetBrains Mono.
+   Todas SIL OFL 1.1. */
 @import "@fontsource-variable/bricolage-grotesque/opsz.css";
 @import "@fontsource-variable/inter/opsz.css";
 @import "@fontsource-variable/jetbrains-mono/wght.css";
+@import "@fontsource-variable/newsreader/opsz.css";
+@import "@fontsource-variable/newsreader/opsz-italic.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
 
 @tailwind base;
 @tailwind components;
@@ -16,6 +22,14 @@
    (`bg-canvas`, `text-ink/60`…). Los tonos del lienzo están también en
    `lib/accent.ts` (CANVAS_HEX), que vigila su contraste. */
 :root {
+  /* Forma y voz del estilo (Color por defecto; ver bloques `data-design`). */
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Bricolage Grotesque Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --display-weight: 700;
+  --display-tracking: -0.03em;
+  --radius-scale: 1;
+  --tab-r: 10px;
   --card-ch: 255 255 255;
   --card-2-ch: 246 246 248;
   --line-ch: 231 231 235;
@@ -220,27 +234,103 @@ html.dark:root[data-accent="catppuccin"] {
     @apply animate-pop-in rounded-2xl border border-line bg-card shadow-pop;
   }
 
+  /* Titulares: familia, peso y espaciado los decide el estilo. */
+  .heading {
+    font-family: var(--font-display);
+    font-weight: var(--display-weight);
+    letter-spacing: var(--display-tracking);
+  }
+
   /* Pestaña activa conectada a la tarjeta: esquinas cóncavas en la base
-     que funden la pestaña con el contenido. */
+     que funden la pestaña con el contenido (radio según el estilo). */
   .tab-connected::before,
   .tab-connected::after {
     content: "";
     position: absolute;
     bottom: 0;
-    width: 10px;
-    height: 10px;
+    width: var(--tab-r);
+    height: var(--tab-r);
     pointer-events: none;
   }
 
   .tab-connected::before {
-    left: -10px;
-    background: radial-gradient(circle at 0 0, transparent 9.5px, rgb(var(--card-ch)) 10px);
+    left: calc(var(--tab-r) * -1);
+    background: radial-gradient(circle at 0 0, transparent calc(var(--tab-r) - 0.5px), rgb(var(--card-ch)) var(--tab-r));
   }
 
   .tab-connected::after {
-    right: -10px;
-    background: radial-gradient(circle at 100% 0, transparent 9.5px, rgb(var(--card-ch)) 10px);
+    right: calc(var(--tab-r) * -1);
+    background: radial-gradient(circle at 100% 0, transparent calc(var(--tab-r) - 0.5px), rgb(var(--card-ch)) var(--tab-r));
   }
+}
+
+/* ── Estilos ───────────────────────────────────────────────────────────
+   Misma estructura, otra piel. Van después de los bloques de acento para
+   ganarles en el orden de la cascada (igual especificidad). Los tonos de
+   superficie están también en `lib/design.ts` (contraste vigilado). */
+
+/* Papel: papel y tinta sin tinte del acento, serif, esquinas casi rectas. */
+:root[data-design="paper"] {
+  --font-sans: "Newsreader Variable", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-display: "Newsreader Variable", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --display-weight: 420;
+  --display-tracking: -0.02em;
+  --radius-scale: 0.3;
+  --tab-r: 4px;
+  --canvas-ch: 236 230 217;
+  --canvas-2-ch: 225 217 200;
+  --canvas-line-ch: 214 205 188;
+  --card-ch: 245 241 232;
+  --card-2-ch: 237 231 219;
+  --line-ch: 220 211 194;
+  --ink-ch: 27 25 21;
+  --ink-2-ch: 69 64 58;
+  --muted-ch: 108 100 88;
+  --faint-ch: 154 145 132;
+  --shadow-ch: 60 40 20;
+}
+
+html.dark:root[data-design="paper"] {
+  --canvas-ch: 15 14 11;
+  --canvas-2-ch: 30 28 22;
+  --canvas-line-ch: 42 38 31;
+  --card-ch: 21 20 15;
+  --card-2-ch: 30 28 23;
+  --line-ch: 50 46 39;
+  --ink-ch: 237 231 218;
+  --ink-2-ch: 199 191 176;
+  --muted-ch: 153 143 128;
+  --faint-ch: 107 99 87;
+  --shadow-ch: 0 0 0;
+}
+
+/* Clásico: grises neutros, sin tinte, cercano al OpenDoc original. */
+:root[data-design="classic"] {
+  --font-display: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --display-weight: 650;
+  --display-tracking: -0.025em;
+  --radius-scale: 0.8;
+  --tab-r: 8px;
+  --canvas-ch: 241 241 243;
+  --canvas-2-ch: 228 228 232;
+  --canvas-line-ch: 220 220 226;
+  --shadow-ch: 20 20 30;
+}
+
+html.dark:root[data-design="classic"] {
+  --canvas-ch: 14 15 18;
+  --canvas-2-ch: 30 31 36;
+  --canvas-line-ch: 40 41 48;
+  --card-ch: 22 23 27;
+  --card-2-ch: 30 31 36;
+  --line-ch: 42 43 50;
+  --shadow-ch: 0 0 0;
+}
+
+/* En Papel los glifos de tipo van un punto más sobrios. */
+:root[data-design="paper"] .kind-glyph {
+  filter: saturate(0.7);
 }
 
 /* Cursor del logo (`_`) que parpadea en la portada. */

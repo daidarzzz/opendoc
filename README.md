@@ -50,6 +50,7 @@ While Zeal is a proven community tool, its Qt/C++ interface feels dated and offe
 
 ### Customization & Accessibility
 - **A Window With Its Own Color:** The window is a canvas tinted by your accent (blush, sky, cream or lavender, and deep versions in dark mode) and content floats on a rounded card, with the active tab connected to it. Colored type glyphs (C, F, M, P…) tell classes, functions, properties and modules apart at a glance in the palette and the sidebar. The home tab greets you by time of day and shows your library as tiles, with one-click docset filters. Typeset in Bricolage Grotesque, Inter and JetBrains Mono, all bundled so the app stays fully offline.
+- **Three Styles:** Pick **Color** (accent-tinted canvas, Bricolage Grotesque + Inter), **Paper** (paper and ink, Newsreader + IBM Plex Mono, near-square corners) or **Classic** (neutral grays and Inter) in Settings → Appearance. All three share the same layout, accents and type glyphs, and the choice applies instantly without a flash on startup.
 - **Themes (Light / Dark / System):** High-contrast UI theme switching. Docset contents always preserve their authentic light documentation styling to prevent broken inversion artifacts on code samples, tables, and diagrams.
 - **Accent Colors:** Choose between **Red**, **Blue**, **Amber**, or **Catppuccin** (Latte/Mocha Mauve). Updates UI highlights, branded buttons, the app logo, and the running window/Dock icon in real time.
 - **Settings Panel (`Ctrl/Cmd+,`):** A full settings window organized in sections — General (language, tab restore, number of search results), Appearance (theme previews, accent color, reduce motion), Reading (smooth scrolling, docset zoom, link preloading on hover), Docsets (folder, rescan, installed list, pending installs, catalog), a keyboard shortcuts reference and About (version, links, reset preferences).
@@ -117,7 +118,7 @@ Compiled binaries land in `src-tauri/target/release/` and platform installers (.
 Before submitting changes, ensure all tests, linters, and typechecks pass:
 
 ```bash
-# Frontend tests (Vitest: 146 tests covering stores, session sync, i18n, etc.)
+# Frontend tests (Vitest: 149 tests covering stores, session sync, i18n, etc.)
 npm test
 
 # Frontend typechecking
@@ -185,4 +186,4 @@ Each documentation set you load remains the intellectual property of its respect
 - [Catppuccin](https://catppuccin.com/) for the Mauve palette values (Latte/Mocha) utilized in the accent color scheme (MIT License).
 - [nucleo-matcher](https://github.com/helix-editor/nucleo) for high-performance in-memory fuzzy matching.
 - [Devicon](https://devicon.dev/) for the bundled language and framework icons (MIT License, see `src/assets/devicons/LICENSE`).
-- [Bricolage Grotesque](https://github.com/ateliertriay/bricolage), [Inter](https://rsms.me/inter/) and [JetBrains Mono](https://www.jetbrains.com/lp/mono/) typefaces, bundled via Fontsource (SIL Open Font License 1.1).
+- [Bricolage Grotesque](https://github.com/ateliertriay/bricolage), [Inter](https://rsms.me/inter/), [JetBrains Mono](https://www.jetbrains.com/lp/mono/), [Newsreader](https://github.com/productiontype/Newsreader) and [IBM Plex Mono](https://github.com/IBM/plex) typefaces, bundled via Fontsource (SIL Open Font License 1.1).

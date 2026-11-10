@@ -8,7 +8,7 @@ export const KindGlyph = memo(function KindGlyph({ kind, size = 16 }: { kind: st
   return (
     <span
       aria-hidden
-      className={`inline-flex shrink-0 select-none items-center justify-center font-mono font-bold leading-none ${FAMILY_CLASSES[kindFamily(kind)]}`}
+      className={`kind-glyph inline-flex shrink-0 select-none items-center justify-center font-mono font-bold leading-none ${FAMILY_CLASSES[kindFamily(kind)]}`}
       style={{
         width: size,
         height: size,

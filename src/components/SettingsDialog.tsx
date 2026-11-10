@@ -24,6 +24,7 @@ import { LANGUAGE_NAMES, type I18nKey } from "../lib/i18n";
 import { ACCENTS, ACCENT_HEX, CANVAS_HEX } from "../lib/accent";
 import { getSettings, setRestoreTabs } from "../lib/commands";
 import { PALETTE_LIMITS } from "../lib/prefs";
+import { CARD_HEX, DESIGNS, canvasHex, type Design } from "../lib/design";
 import { setSessionEnabled } from "../lib/sessionSync";
 import { formatZoom, ZOOM_DEFAULT, ZOOM_MAX, ZOOM_MIN } from "../lib/zoom";
 import type { Accent, Language, ThemeMode } from "../lib/types";
@@ -70,6 +71,49 @@ const THEMES: { value: ThemeMode; key: I18nKey }[] = [
 ];
 
 const LANG_VALUES: Language[] = ["en", "es"];
+
+const DESIGN_KEY: Record<Design, I18nKey> = {
+  color: "settings.designColor",
+  paper: "settings.designPaper",
+  classic: "settings.designClassic",
+};
+
+/** Voz de cada estilo para su miniatura (independiente del estilo activo). */
+const DESIGN_LOOK: Record<Design, { font: string; radius: number; weight: number }> = {
+  color: { font: "'Bricolage Grotesque Variable', sans-serif", radius: 10, weight: 700 },
+  paper: { font: "'Newsreader Variable', serif", radius: 3, weight: 420 },
+  classic: { font: "'Inter Variable', sans-serif", radius: 8, weight: 650 },
+};
+
+/** Miniatura de un estilo: lienzo + tarjeta con un «Aa» en su tipografía. */
+function DesignPreview({ design, accent, dark }: { design: Design; accent: Accent; dark: boolean }) {
+  const look = DESIGN_LOOK[design];
+  const mode = dark ? "dark" : "light";
+  return (
+    <div className="flex h-full w-full gap-1.5 p-1.5" style={{ backgroundColor: canvasHex(design, accent, mode) }}>
+      <div className="w-1/4 space-y-1.5 pt-1">
+        <div className="h-1.5 w-3/4 rounded-full" style={{ backgroundColor: ACCENT_HEX[accent][mode].accent }} />
+        <div className={`h-1 w-full rounded-full ${dark ? "bg-white/20" : "bg-black/15"}`} />
+        <div className={`h-1 w-2/3 rounded-full ${dark ? "bg-white/20" : "bg-black/15"}`} />
+      </div>
+      <div
+        className="flex flex-1 flex-col justify-between p-2 shadow-sm"
+        style={{ backgroundColor: CARD_HEX[design][mode], borderRadius: look.radius * 0.6 }}
+      >
+        <span
+          className={`text-[22px] leading-none ${dark ? "text-white" : "text-black"}`}
+          style={{ fontFamily: look.font, fontWeight: look.weight }}
+        >
+          Aa<span style={{ color: ACCENT_HEX[accent][mode].accent }}>_</span>
+        </span>
+        <div className="space-y-1">
+          <div className={`h-1 w-full rounded-full ${dark ? "bg-white/15" : "bg-black/10"}`} />
+          <div className={`h-1 w-2/3 rounded-full ${dark ? "bg-white/15" : "bg-black/10"}`} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Piezas visuales
@@ -179,16 +223,16 @@ function Keys({ combos }: { combos: string[][] }) {
 }
 
 /** Miniatura de la interfaz para las tarjetas de tema. */
-function ThemePreview({ mode, accent }: { mode: ThemeMode; accent: Accent }) {
+function ThemePreview({ mode, accent, design }: { mode: ThemeMode; accent: Accent; design: Design }) {
   // Miniatura del lienzo teñido + tarjeta, con los tonos fijos de cada modo.
   const pane = (dark: boolean) => (
-    <div className="flex h-full flex-1 gap-1.5 p-1.5" style={{ backgroundColor: CANVAS_HEX[accent][dark ? "dark" : "light"] }}>
+    <div className="flex h-full flex-1 gap-1.5 p-1.5" style={{ backgroundColor: canvasHex(design, accent, dark ? "dark" : "light") }}>
       <div className="w-1/4 space-y-1.5 pt-1">
         <div className="h-1.5 w-3/4 rounded-full bg-accent" />
         <div className={`h-1 w-full rounded-full ${dark ? "bg-white/20" : "bg-black/15"}`} />
         <div className={`h-1 w-2/3 rounded-full ${dark ? "bg-white/20" : "bg-black/15"}`} />
       </div>
-      <div className={`flex-1 space-y-1.5 rounded-md p-2 shadow-sm ${dark ? "bg-[#18181C]" : "bg-white"}`}>
+      <div className="flex-1 space-y-1.5 rounded-md p-2 shadow-sm" style={{ backgroundColor: CARD_HEX[design][dark ? "dark" : "light"] }}>
         <div className={`h-2 w-1/2 rounded-full ${dark ? "bg-white/70" : "bg-black/70"}`} />
         <div className={`h-1 w-full rounded-full ${dark ? "bg-white/15" : "bg-black/10"}`} />
         <div className={`h-1 w-5/6 rounded-full ${dark ? "bg-white/15" : "bg-black/10"}`} />
@@ -269,11 +313,45 @@ function AppearanceSection() {
   const mode = useTheme((s) => s.mode);
   const accent = useAccent((s) => s.accent);
   const reduceMotion = usePrefs((s) => s.reduceMotion);
+  const design = usePrefs((s) => s.design);
   const accentButtons = useRef(new Map<Accent, HTMLButtonElement>());
+  // Se recalcula al cambiar `mode` (suscrito arriba), también con Sistema.
+  const dark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
 
   return (
     <div className="space-y-6">
       <Group>
+        <Row label={t("settings.design")} desc={t("settings.designDesc")} stacked>
+          <div role="radiogroup" aria-label={t("settings.design")} className="grid grid-cols-3 gap-3">
+            {DESIGNS.map((value) => {
+              const on = design === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  onClick={() => usePrefs.getState().set("design", value)}
+                  className="group text-left"
+                >
+                  <div
+                    className={`h-24 overflow-hidden rounded-xl border transition-all duration-150 ease-smooth ${
+                      on
+                        ? "border-transparent ring-2 ring-accent ring-offset-2 ring-offset-card"
+                        : "border-line group-hover:border-ink/25"
+                    }`}
+                  >
+                    <DesignPreview design={value} accent={accent} dark={dark} />
+                  </div>
+                  <span className={`mt-2 flex items-center gap-1.5 text-[13px] ${on ? "font-semibold text-ink" : "font-medium text-muted"}`}>
+                    {on && <CheckIcon size={14} className="text-accent-text" />}
+                    {t(DESIGN_KEY[value])}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </Row>
         <Row label={t("settings.theme")} desc={t("settings.themeDesc")} stacked>
           <div className="grid grid-cols-3 gap-3">
             {THEMES.map(({ value, key }) => {
@@ -293,7 +371,7 @@ function AppearanceSection() {
                         : "border-line group-hover:border-ink/25"
                     }`}
                   >
-                    <ThemePreview mode={value} accent={accent} />
+                    <ThemePreview mode={value} accent={accent} design={design} />
                   </div>
                   <span className={`mt-2 flex items-center gap-1.5 text-[13px] ${on ? "font-semibold text-ink" : "font-medium text-muted"}`}>
                     {on && <CheckIcon size={14} className="text-accent-text" />}
@@ -481,7 +559,7 @@ function DocsetsSection() {
         ].map((s) => (
           <div key={s.label} className="rounded-2xl border border-line bg-card px-5 py-4">
             <p className="label">{s.label}</p>
-            <p className="mt-1 font-display text-[34px] font-bold leading-none tabular-nums tracking-[-0.03em]">{s.value}</p>
+            <p className="mt-1 heading text-[34px] leading-none tabular-nums">{s.value}</p>
           </div>
         ))}
       </div>
@@ -635,7 +713,7 @@ function AboutSection() {
     <div className="space-y-6">
       <div className="flex flex-col items-center rounded-2xl bg-canvas px-6 py-9 text-center">
         <AppLogo size={68} className="drop-shadow-[0_10px_18px_rgb(var(--accent-ch)/0.45)]" />
-        <h3 className="mt-5 font-display text-[32px] font-bold leading-none tracking-[-0.03em]">
+        <h3 className="mt-5 heading text-[32px] leading-none">
           OpenDoc<span className="caret-blink text-accent">_</span>
         </h3>
         <p className="mt-3 rounded-full bg-card px-2.5 py-0.5 font-mono text-[11px] font-medium text-muted shadow-soft">{t("settings.version", { version })}</p>
@@ -729,7 +807,7 @@ export function SettingsDialog() {
           <div className="flex items-center gap-2.5 px-2 pb-5">
             <AppLogo size={28} />
             <div className="min-w-0">
-              <p className="font-display text-[16px] font-bold leading-tight tracking-[-0.02em]">{t("settings.title")}</p>
+              <p className="heading text-[16px] leading-tight">{t("settings.title")}</p>
               <p className="text-[12px] leading-tight text-muted">{t("settings.subtitle")}</p>
             </div>
           </div>
@@ -759,7 +837,7 @@ export function SettingsDialog() {
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex items-start justify-between gap-4 px-8 pb-5 pt-7">
             <div>
-              <h2 className="font-display text-[26px] font-bold leading-tight tracking-[-0.03em]">{t(NAV_KEY[section])}</h2>
+              <h2 className="heading text-[26px] leading-tight">{t(NAV_KEY[section])}</h2>
               <p className="mt-0.5 text-[13.5px] text-muted">{t(DESC_KEY[section])}</p>
             </div>
             <button aria-label={t("settings.close")} title={t("settings.close")} onClick={close} className="icon-btn -mr-2" autoFocus>

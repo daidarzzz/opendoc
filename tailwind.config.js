@@ -5,20 +5,20 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        // Inter para la interfaz, Bricolage Grotesque para titulares y
-        // JetBrains Mono para símbolos, atajos y versiones.
-        sans: [
-          "Inter Variable",
-          "ui-sans-serif",
-          "system-ui",
-          "-apple-system",
-          "Segoe UI Variable Text",
-          "Segoe UI",
-          "Roboto",
-          "sans-serif",
-        ],
-        display: ["Bricolage Grotesque Variable", "Inter Variable", "ui-sans-serif", "system-ui", "sans-serif"],
-        mono: ["JetBrains Mono Variable", "ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
+        // Las familias las decide el estilo activo (`--font-*` en index.css).
+        sans: ["var(--font-sans)"],
+        display: ["var(--font-display)"],
+        mono: ["var(--font-mono)"],
+      },
+      // Radios escalados por el estilo (`--radius-scale`: Papel casi recto).
+      borderRadius: {
+        sm: "calc(0.125rem * var(--radius-scale))",
+        DEFAULT: "calc(0.25rem * var(--radius-scale))",
+        md: "calc(0.375rem * var(--radius-scale))",
+        lg: "calc(0.5rem * var(--radius-scale))",
+        xl: "calc(0.75rem * var(--radius-scale))",
+        "2xl": "calc(1rem * var(--radius-scale))",
+        "3xl": "calc(1.5rem * var(--radius-scale))",
       },
       // Acento de color (canales RGB de `index.css`, con opacidad):
       // `accent` (marca), `accent-text` (texto e indicadores),
