@@ -25,13 +25,13 @@ export function FindBar() {
 
   const none = query !== "" && answered && total === 0;
   const btn =
-    "flex h-6 w-6 items-center justify-center rounded-sm text-muted transition-colors hover:bg-ink/[0.07] hover:text-ink disabled:pointer-events-none disabled:opacity-30";
+    "flex h-6 w-6 items-center justify-center rounded-md text-muted transition-colors hover:bg-ink/[0.07] hover:text-ink disabled:pointer-events-none disabled:opacity-30";
 
   return (
     <div
       role="search"
       aria-label={t("find.label")}
-      className="absolute right-5 top-3 z-20 flex animate-pop-in items-center gap-1 rounded-md border border-rule bg-paper-3 py-1 pl-3 pr-1 shadow-float"
+      className="absolute right-4 top-3 z-20 flex animate-pop-in items-center gap-1 rounded-xl border border-line bg-card py-1 pl-3 pr-1 shadow-pop"
     >
       <SearchIcon size={14} className={none ? "text-red-600" : "text-muted"} />
       <input
@@ -51,17 +51,17 @@ export function FindBar() {
         placeholder={t("find.placeholder")}
         aria-label={t("find.placeholder")}
         spellCheck={false}
-        className={`w-52 border-0 bg-transparent px-1 py-1 text-[15px] outline-none placeholder:italic placeholder:text-faint focus-visible:shadow-none ${
+        className={`w-52 border-0 bg-transparent px-1 py-1 text-[13.5px] outline-none placeholder:text-faint focus-visible:shadow-none ${
           none ? "text-red-700 dark:text-red-400" : "text-ink"
         }`}
       />
       <span
         aria-live="polite"
-        className={`min-w-[4.5rem] shrink-0 px-1 text-right font-mono text-[11px] tabular-nums ${none ? "text-red-600 dark:text-red-400" : "text-muted"}`}
+        className={`min-w-[4.5rem] shrink-0 px-1 text-right text-[12px] font-medium tabular-nums ${none ? "text-red-600 dark:text-red-400" : "text-muted"}`}
       >
         {query === "" || !answered ? "" : total === 0 ? t("find.none") : t("find.count", { current, total })}
       </span>
-      <span className="mx-0.5 h-4 w-px bg-rule" />
+      <span className="mx-0.5 h-4 w-px bg-line" />
       <button type="button" aria-label={t("find.prev")} title={t("find.prev")} disabled={total === 0} onClick={() => useFind.getState().step(-1)} className={btn}>
         <ChevronIcon direction="left" size={14} strokeWidth={2} className="rotate-90" />
       </button>

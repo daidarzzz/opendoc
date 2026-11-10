@@ -5,30 +5,25 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        // Newsreader para todo el texto (también el `font-sans` por
-        // defecto); IBM Plex Mono para etiquetas, teclas y símbolos.
+        // Inter para la interfaz, Bricolage Grotesque para titulares y
+        // JetBrains Mono para símbolos, atajos y versiones.
         sans: [
-          "Newsreader Variable",
-          "Iowan Old Style",
-          "Palatino Linotype",
-          "Palatino",
-          "Georgia",
-          "serif",
+          "Inter Variable",
+          "ui-sans-serif",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI Variable Text",
+          "Segoe UI",
+          "Roboto",
+          "sans-serif",
         ],
-        serif: ["Newsreader Variable", "Iowan Old Style", "Palatino Linotype", "Georgia", "serif"],
-        mono: [
-          "IBM Plex Mono",
-          "ui-monospace",
-          "SFMono-Regular",
-          "Menlo",
-          "Consolas",
-          "monospace",
-        ],
+        display: ["Bricolage Grotesque Variable", "Inter Variable", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["JetBrains Mono Variable", "ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
       },
       // Acento de color (canales RGB de `index.css`, con opacidad):
       // `accent` (marca), `accent-text` (texto e indicadores),
       // `accent-solid` (botones primarios) y `on-accent` (sobre sólido).
-      // Papel y tinta: superficies y textos de la interfaz.
+      // Superficies: lienzo teñido por el acento + tarjeta neutra.
       colors: {
         accent: {
           DEFAULT: "rgb(var(--accent-ch) / <alpha-value>)",
@@ -36,42 +31,33 @@ export default {
           solid: "rgb(var(--accent-solid-ch) / <alpha-value>)",
           on: "rgb(var(--on-accent-ch) / <alpha-value>)",
         },
-        paper: {
-          DEFAULT: "rgb(var(--paper-ch) / <alpha-value>)",
-          2: "rgb(var(--paper-2-ch) / <alpha-value>)",
-          3: "rgb(var(--paper-3-ch) / <alpha-value>)",
+        canvas: {
+          DEFAULT: "rgb(var(--canvas-ch) / <alpha-value>)",
+          2: "rgb(var(--canvas-2-ch) / <alpha-value>)",
+          line: "rgb(var(--canvas-line-ch) / <alpha-value>)",
         },
-        sheet: "rgb(var(--sheet-ch) / <alpha-value>)",
+        card: {
+          DEFAULT: "rgb(var(--card-ch) / <alpha-value>)",
+          2: "rgb(var(--card-2-ch) / <alpha-value>)",
+        },
+        line: "rgb(var(--line-ch) / <alpha-value>)",
         ink: {
           DEFAULT: "rgb(var(--ink-ch) / <alpha-value>)",
           2: "rgb(var(--ink-2-ch) / <alpha-value>)",
         },
         muted: "rgb(var(--muted-ch) / <alpha-value>)",
         faint: "rgb(var(--faint-ch) / <alpha-value>)",
-        rule: "rgb(var(--rule-ch) / <alpha-value>)",
-        // Gris cálido (piedra) por si algún resto usa `gray-*`.
-        gray: {
-          50: "#F8F6F1",
-          100: "#EFEBE2",
-          200: "#E2DCCF",
-          300: "#CFC6B5",
-          400: "#A69C8B",
-          500: "#7D7466",
-          600: "#5F574B",
-          700: "#4A4339",
-          800: "#2F2A23",
-          900: "#1F1C17",
-          950: "#15130F",
-        },
       },
       transitionTimingFunction: {
         // Curva suave de salida usada en toda la interfaz.
         smooth: "cubic-bezier(0.22, 1, 0.36, 1)",
       },
       boxShadow: {
-        soft: "0 1px 0 rgb(var(--shadow-ch) / 0.06)",
+        soft: "0 1px 2px rgb(var(--shadow-ch) / 0.06)",
+        card: "0 0 0 1px rgb(var(--shadow-ch) / 0.05), 0 1px 3px rgb(var(--shadow-ch) / 0.07), 0 12px 32px -18px rgb(var(--shadow-ch) / 0.25)",
         float:
-          "0 1px 0 rgb(var(--shadow-ch) / 0.05), 0 14px 32px -12px rgb(var(--shadow-ch) / 0.32), 0 30px 60px -30px rgb(var(--shadow-ch) / 0.35)",
+          "0 0 0 1px rgb(var(--shadow-ch) / 0.06), 0 10px 28px -8px rgb(var(--shadow-ch) / 0.28)",
+        pop: "0 0 0 1px rgb(var(--shadow-ch) / 0.05), 0 24px 64px -16px rgb(var(--shadow-ch) / 0.42), 0 8px 20px -10px rgb(var(--shadow-ch) / 0.2)",
       },
       keyframes: {
         "fade-in": {

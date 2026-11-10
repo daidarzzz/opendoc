@@ -176,7 +176,7 @@ export default function App() {
   if (!langLoaded) return null;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-paper text-ink">
+    <div className="flex h-screen overflow-hidden bg-canvas text-ink">
       <Sidebar
         style={{ width: sidebarWidth, flexBasis: sidebarWidth }}
         collapsed={sidebarCollapsed}
@@ -193,7 +193,7 @@ export default function App() {
         aria-valuemax={SIDEBAR_MAX}
         aria-valuenow={sidebarWidth}
         tabIndex={0}
-        className="group z-10 -ml-[3px] -mr-[2px] flex w-[5px] shrink-0 cursor-col-resize touch-none items-center justify-center outline-none focus-visible:bg-accent/30"
+        className="group z-10 -ml-[2px] flex w-[6px] shrink-0 cursor-col-resize touch-none items-center justify-center outline-none focus-visible:bg-accent/30"
         onPointerDown={(event) => {
           event.preventDefault();
           event.currentTarget.setPointerCapture(event.pointerId);
@@ -217,7 +217,7 @@ export default function App() {
           }
         }}
       >
-        <span className="h-full w-px bg-transparent transition-colors duration-200 group-hover:bg-accent-text/60 group-focus-visible:bg-accent-text group-active:bg-accent-text" />
+        <span className="my-auto h-10 w-[3px] rounded-full bg-transparent transition-colors duration-200 group-hover:bg-accent/50 group-focus-visible:bg-accent group-active:bg-accent" />
       </div>
       )}
       {/* La cabecera vive fuera del visor para que nunca se desmonte al
@@ -227,7 +227,12 @@ export default function App() {
           sidebarCollapsed={sidebarCollapsed}
           onExpandSidebar={() => toggleSidebar(false)}
         />
-        <Viewer />
+        {/* La tarjeta: el contenido flota sobre el lienzo teñido. */}
+        <div
+          className={`relative mb-2 mr-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-card shadow-card ${sidebarCollapsed ? "ml-2" : ""}`}
+        >
+          <Viewer />
+        </div>
       </div>
       <SettingsDialog />
       <CommandPalette />

@@ -12,8 +12,9 @@ import { formatCount } from "../lib/i18n";
 import type { NavEntry } from "../lib/types";
 import { DocsetIcon } from "./DocsetIcon";
 import { ChevronIcon } from "./Icons";
+import { KindGlyph } from "./KindGlyph";
 
-const ROW_H = 29;
+const ROW_H = 30;
 const OVERSCAN = 8;
 
 type Row =
@@ -229,7 +230,7 @@ export function BrowseTree() {
       className="group/tree relative flex-1 overflow-y-auto outline-none"
     >
       {rows.length === 0 ? (
-        <p className="px-2 py-1 text-[13.5px] italic text-muted">{t("browse.empty")}</p>
+        <p className="px-2 py-1 text-[13px] text-muted">{t("browse.empty")}</p>
       ) : (
         <div style={{ height: rows.length * ROW_H }} className="relative">
           {rows.slice(start, end).map((r, k) => (
@@ -285,8 +286,8 @@ const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDo
   };
   const hl = `transition-colors duration-100 ${
     active
-      ? "text-ink-2 hover:bg-ink/[0.04] group-focus/tree:bg-ink/[0.07] group-focus/tree:text-ink"
-      : "text-ink-2 hover:bg-ink/[0.04] hover:text-ink"
+      ? "text-ink-2 hover:bg-canvas-2/70 group-focus/tree:bg-canvas-2 group-focus/tree:text-ink"
+      : "text-ink-2 hover:bg-canvas-2/70 hover:text-ink"
   }`;
   const chevron = (expanded: boolean) => (
     <ChevronIcon
@@ -308,17 +309,14 @@ const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDo
         data-ctx="doc"
         data-ctx-docset={row.docsetId}
         style={{ ...base, paddingLeft: 4 }}
-        className={`flex items-center gap-2 rounded-sm text-[14.5px] ${hl} ${
-          currentDoc === row.docsetId ? "font-medium text-ink" : ""
+        className={`flex items-center gap-2 rounded-lg text-[13.5px] ${
+          currentDoc === row.docsetId ? "bg-card font-semibold text-ink shadow-soft" : hl
         }`}
       >
-        {currentDoc === row.docsetId && (
-          <span aria-hidden className="absolute bottom-[7px] left-0 top-[7px] w-[2px] bg-accent" />
-        )}
         <button
           aria-label={row.expanded ? t("browse.collapse") : t("browse.expand")}
           onClick={() => onToggleDoc(row.docsetId)}
-          className="-mr-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-sm hover:bg-ink/[0.07]"
+          className="-mr-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md hover:bg-ink/[0.07]"
         >
           {chevron(row.expanded)}
         </button>
@@ -344,7 +342,7 @@ const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDo
   }
   if (row.type === "kinds-loading") {
     return (
-      <div id={row.id} style={{ ...base, paddingLeft: 30 }} className="flex items-center text-[13px] italic text-muted">
+      <div id={row.id} style={{ ...base, paddingLeft: 32 }} className="flex items-center text-[12.5px] text-muted">
         {t("browse.loadingKinds")}
       </div>
     );
@@ -356,8 +354,8 @@ const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDo
         id={row.id}
         role="treeitem"
         aria-level={2}
-        style={{ ...base, paddingLeft: 30 }}
-        className={`flex items-center gap-2 rounded-sm text-[13px] text-red-700 dark:text-red-400 ${hl}`}
+        style={{ ...base, paddingLeft: 32 }}
+        className={`flex items-center gap-2 rounded-lg text-[12.5px] text-red-700 dark:text-red-400 ${hl}`}
         onClick={onActivate}
         title={info?.detail ?? undefined}
       >
@@ -368,7 +366,7 @@ const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDo
   }
   if (row.type === "kinds-empty") {
     return (
-      <div id={row.id} style={{ ...base, paddingLeft: 30 }} className="flex items-center text-[13px] italic text-muted">
+      <div id={row.id} style={{ ...base, paddingLeft: 32 }} className="flex items-center text-[12.5px] text-muted">
         {t("browse.noEntries")}
       </div>
     );
@@ -383,18 +381,19 @@ const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDo
         aria-setsize={row.ksize}
         aria-posinset={row.ki + 1}
         aria-selected={active}
-        style={{ ...base, paddingLeft: 24 }}
-        className={`flex cursor-pointer items-center gap-1.5 rounded-sm pr-2 text-[13.5px] ${hl}`}
+        style={{ ...base, paddingLeft: 22 }}
+        className={`flex cursor-pointer items-center gap-2 rounded-lg pr-2 text-[13px] ${hl}`}
         onClick={() => onToggleKind(row.docsetId, row.kind)}
       >
-        <span className="flex w-4 shrink-0 items-center justify-center">{chevron(row.expanded)}</span>
+        <span className="-mr-0.5 flex w-4 shrink-0 items-center justify-center">{chevron(row.expanded)}</span>
+        <KindGlyph kind={row.kind} size={15} />
         <span className="truncate" title={row.inferred ? t("browse.inferredTitle", { kind: row.kind }) : row.label}>
           {row.label}
         </span>
         {row.inferred && (
           <span className="shrink-0 font-mono text-[10.5px] text-faint">{row.kind}</span>
         )}
-        <span className="ml-auto shrink-0 font-mono text-[10.5px] tabular-nums text-faint">{formatCount(lang, row.count)}</span>
+        <span className="ml-auto shrink-0 text-[11px] font-medium tabular-nums text-faint">{formatCount(lang, row.count)}</span>
       </div>
     );
   }
@@ -405,8 +404,8 @@ const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDo
         id={row.id}
         role="treeitem"
         aria-level={3}
-        style={{ ...base, paddingLeft: 46 }}
-        className={`flex cursor-pointer items-center gap-2 rounded-sm text-[13px] text-red-700 dark:text-red-400 ${hl}`}
+        style={{ ...base, paddingLeft: 50 }}
+        className={`flex cursor-pointer items-center gap-2 rounded-lg text-[12.5px] text-red-700 dark:text-red-400 ${hl}`}
         onClick={onActivate}
         title={info?.detail ?? undefined}
       >
@@ -424,10 +423,11 @@ const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDo
         aria-setsize={row.esize}
         aria-posinset={row.ei + 1}
         aria-label={t("browse.loadingEntry")}
-        style={{ ...base, paddingLeft: 46 }}
+        style={{ ...base, paddingLeft: 50 }}
         className="flex items-center"
       >
-        <div className="h-2 w-2/3 animate-pulse rounded-full bg-ink/[0.07]" />
+        <span aria-hidden className="absolute bottom-0 top-0 w-px bg-canvas-line" style={{ left: 37 }} />
+        <div className="h-2 w-2/3 animate-pulse rounded-full bg-ink/[0.08]" />
       </div>
     );
   }
@@ -443,8 +443,8 @@ const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDo
       data-ctx-docset={row.docsetId}
       data-ctx-name={row.entry.name}
       data-ctx-path={row.entry.path}
-      style={{ ...base, paddingLeft: 46 }}
-      className={`flex cursor-pointer items-center rounded-sm pr-2 font-mono text-[12px] ${hl}`}
+      style={{ ...base, paddingLeft: 50 }}
+      className={`flex cursor-pointer items-center rounded-lg pr-2 font-mono text-[12px] ${hl}`}
       onClick={onActivate}
       onMouseDown={(e) => {
         if (e.button === 1) e.preventDefault();
@@ -457,6 +457,7 @@ const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDo
       }}
       title={row.entry.name}
     >
+      <span aria-hidden className="absolute bottom-0 top-0 w-px bg-canvas-line" style={{ left: 37 }} />
       <span className="truncate">{row.entry.name}</span>
     </div>
   );

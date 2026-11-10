@@ -1,48 +1,129 @@
 /* Tipografías empaquetadas (la app es offline: nada se pide a la red).
-   Newsreader (SIL OFL 1.1) para texto y títulos; IBM Plex Mono (SIL OFL
-   1.1) para etiquetas, contadores, atajos y nombres de símbolos. */
-@import "@fontsource-variable/newsreader/opsz.css";
-@import "@fontsource-variable/newsreader/opsz-italic.css";
-@import "@fontsource/ibm-plex-mono/400.css";
-@import "@fontsource/ibm-plex-mono/500.css";
-@import "@fontsource/ibm-plex-mono/600.css";
-@import "@fontsource/ibm-plex-mono/400-italic.css";
+   Bricolage Grotesque (titulares, con carácter), Inter (interfaz) y
+   JetBrains Mono (símbolos, atajos, versiones). Todas SIL OFL 1.1. */
+@import "@fontsource-variable/bricolage-grotesque/opsz.css";
+@import "@fontsource-variable/inter/opsz.css";
+@import "@fontsource-variable/jetbrains-mono/wght.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Papel y tinta: canales RGB para usar con opacidad desde Tailwind
-   (`bg-paper`, `text-ink/60`, `border-rule`…). `paper` es el fondo
-   (APP_BG en `lib/accent.ts`), `paper-2` el lomo (barra lateral y
-   pestañas), `paper-3` lo que flota (paleta, menús, campos), `sheet` la
-   hoja donde se lee (los docsets conservan siempre su estilo claro). */
+/* ── Superficies ───────────────────────────────────────────────────────
+   La ventana es un lienzo teñido por el acento (`canvas`): la barra
+   lateral y las pestañas viven sobre él. El contenido va en una tarjeta
+   neutra (`card`) que flota encima. Canales RGB para usar con opacidad
+   (`bg-canvas`, `text-ink/60`…). Los tonos del lienzo están también en
+   `lib/accent.ts` (CANVAS_HEX), que vigila su contraste. */
 :root {
-  --paper-ch: 245 241 232;
-  --paper-2-ch: 236 230 217;
-  --paper-3-ch: 251 249 244;
-  --sheet-ch: 255 255 255;
-  --ink-ch: 27 25 21;
-  --ink-2-ch: 69 64 58;
-  --muted-ch: 108 100 88;
-  --faint-ch: 154 145 132;
-  --rule-ch: 220 211 194;
-  --shadow-ch: 60 40 20;
+  --card-ch: 255 255 255;
+  --card-2-ch: 246 246 248;
+  --line-ch: 231 231 235;
+  --ink-ch: 24 24 27;
+  --ink-2-ch: 63 63 70;
+  --muted-ch: 98 96 107;
+  --faint-ch: 155 153 163;
+  --shadow-ch: 30 20 40;
   color-scheme: light;
 }
 
 html.dark {
-  --paper-ch: 21 20 15;
-  --paper-2-ch: 15 14 11;
-  --paper-3-ch: 30 28 23;
-  --sheet-ch: 255 255 255;
-  --ink-ch: 237 231 218;
-  --ink-2-ch: 199 191 176;
-  --muted-ch: 153 143 128;
-  --faint-ch: 107 99 87;
-  --rule-ch: 50 46 39;
+  --card-ch: 24 24 28;
+  --card-2-ch: 32 32 38;
+  --line-ch: 44 44 52;
+  --ink-ch: 244 244 245;
+  --ink-2-ch: 212 212 216;
+  --muted-ch: 161 161 170;
+  --faint-ch: 113 113 122;
   --shadow-ch: 0 0 0;
   color-scheme: dark;
+}
+
+/* Acento de color: canales RGB por acento y modo (ver `src/lib/accent.ts`,
+   única fuente de verdad de los tonos). El rojo es el defecto (sin
+   `data-accent` también vale). `tailwind.config.js` los mapea a
+   `accent`, `accent-text`, `accent-solid` y `on-accent` con opacidad.
+   Cada acento trae su lienzo: `canvas`, `canvas-2` (hover/selección
+   sobre el lienzo) y `canvas-line` (filetes sobre el lienzo). */
+:root,
+:root[data-accent="red"] {
+  --accent-ch: 222 56 48;
+  --accent-text-ch: 179 39 30;
+  --accent-solid-ch: 198 40 40;
+  --on-accent-ch: 255 255 255;
+  --canvas-ch: 245 228 223;
+  --canvas-2-ch: 236 211 204;
+  --canvas-line-ch: 228 198 190;
+}
+
+:root[data-accent="blue"] {
+  --accent-ch: 0 113 188;
+  --accent-text-ch: 0 95 158;
+  --accent-solid-ch: 0 113 188;
+  --on-accent-ch: 255 255 255;
+  --canvas-ch: 226 234 244;
+  --canvas-2-ch: 208 221 237;
+  --canvas-line-ch: 194 209 229;
+}
+
+:root[data-accent="amber"] {
+  --accent-ch: 251 176 59;
+  --accent-text-ch: 154 74 8;
+  --accent-solid-ch: 251 176 59;
+  --on-accent-ch: 31 41 55;
+  --canvas-ch: 244 234 215;
+  --canvas-2-ch: 234 219 192;
+  --canvas-line-ch: 224 206 176;
+}
+
+:root[data-accent="catppuccin"] {
+  --accent-ch: 136 57 239;
+  --accent-text-ch: 116 40 217;
+  --accent-solid-ch: 136 57 239;
+  --on-accent-ch: 255 255 255;
+  --canvas-ch: 235 228 247;
+  --canvas-2-ch: 221 211 241;
+  --canvas-line-ch: 209 196 234;
+}
+
+html.dark:root[data-accent="red"] {
+  --accent-ch: 222 56 48;
+  --accent-text-ch: 255 138 128;
+  --accent-solid-ch: 198 40 40;
+  --on-accent-ch: 255 255 255;
+  --canvas-ch: 29 19 18;
+  --canvas-2-ch: 48 30 28;
+  --canvas-line-ch: 60 39 36;
+}
+
+html.dark:root[data-accent="blue"] {
+  --accent-ch: 0 113 188;
+  --accent-text-ch: 79 163 227;
+  --accent-solid-ch: 0 113 188;
+  --on-accent-ch: 255 255 255;
+  --canvas-ch: 15 22 31;
+  --canvas-2-ch: 27 38 53;
+  --canvas-line-ch: 37 50 68;
+}
+
+html.dark:root[data-accent="amber"] {
+  --accent-ch: 251 176 59;
+  --accent-text-ch: 251 176 59;
+  --accent-solid-ch: 251 176 59;
+  --on-accent-ch: 31 41 55;
+  --canvas-ch: 28 23 15;
+  --canvas-2-ch: 45 37 24;
+  --canvas-line-ch: 58 47 31;
+}
+
+html.dark:root[data-accent="catppuccin"] {
+  --accent-ch: 203 166 247;
+  --accent-text-ch: 203 166 247;
+  --accent-solid-ch: 203 166 247;
+  --on-accent-ch: 17 24 39;
+  --canvas-ch: 23 19 31;
+  --canvas-2-ch: 38 31 51;
+  --canvas-line-ch: 50 41 66;
 }
 
 @layer base {
@@ -50,7 +131,7 @@ html.dark {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    font-optical-sizing: auto;
+    font-feature-settings: "cv11", "ss03";
     /* La ventana de la app nunca rebota ni hace scroll como documento
        (en macOS el gesto del trackpad podía acabar moviendo la app). */
     overscroll-behavior: none;
@@ -58,15 +139,15 @@ html.dark {
 
   body {
     overscroll-behavior: none;
-    @apply bg-paper font-sans text-ink;
+    @apply bg-canvas font-sans text-ink transition-colors duration-300;
   }
 
   ::selection {
-    background: rgb(var(--accent-ch) / 0.22);
+    background: rgb(var(--accent-ch) / 0.25);
   }
 
   :focus-visible {
-    outline: 2px solid rgb(var(--accent-text-ch) / 0.7);
+    outline: 2px solid rgb(var(--accent-text-ch) / 0.75);
     outline-offset: 1px;
   }
 
@@ -84,60 +165,93 @@ html.dark {
   select:focus-visible,
   textarea:focus-visible {
     outline: none;
-    border-color: rgb(var(--accent-text-ch) / 0.7);
-    box-shadow: 0 0 0 3px rgb(var(--accent-ch) / 0.14);
+    border-color: rgb(var(--accent-text-ch) / 0.6);
+    box-shadow: 0 0 0 4px rgb(var(--accent-ch) / 0.16);
   }
 
   kbd {
-    @apply font-mono;
+    @apply font-sans;
   }
 }
 
 @layer components {
-  /* Botón de icono: discreto, sin relleno hasta el hover. */
+  /* Botón de icono: discreto; sobre el lienzo o dentro de la tarjeta. */
   .icon-btn {
-    @apply inline-flex items-center justify-center rounded p-1.5 text-muted transition-colors duration-150 ease-smooth hover:bg-ink/[0.06] hover:text-ink active:scale-95 disabled:pointer-events-none disabled:opacity-30;
+    @apply inline-flex items-center justify-center rounded-lg p-1.5 text-muted transition-colors duration-150 ease-smooth hover:bg-ink/[0.07] hover:text-ink active:scale-95 disabled:pointer-events-none disabled:opacity-30;
   }
 
-  /* Botón secundario: filete de tinta, etiqueta en mono. */
+  /* Botón secundario: tarjeta con borde suave. */
   .btn {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-sm border border-ink/25 bg-transparent px-3 py-1.5 font-mono text-xs font-medium tracking-wide text-ink transition-all duration-150 ease-smooth hover:border-ink hover:bg-ink/[0.04] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border border-line bg-card px-3 py-1.5 text-[13px] font-medium text-ink-2 shadow-soft transition-all duration-150 ease-smooth hover:border-ink/20 hover:text-ink active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
   }
 
-  /* Botón primario: tinta del acento. */
+  /* Botón primario: el acento, con brillo interior. */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-sm border border-accent-solid bg-accent-solid px-3 py-1.5 font-mono text-xs font-medium tracking-wide text-accent-on shadow-[inset_0_-2px_0_rgb(0_0_0/0.14)] transition-all duration-150 ease-smooth hover:brightness-110 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-accent-solid px-3 py-1.5 text-[13px] font-semibold text-accent-on shadow-[inset_0_1px_0_rgb(255_255_255/0.22),0_1px_2px_rgb(0_0_0/0.15),0_4px_12px_-4px_rgb(var(--accent-ch)/0.6)] transition-all duration-150 ease-smooth hover:brightness-110 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
   }
 
   /* Botón de peligro (desinstalar, restablecer). */
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-sm border border-red-700 bg-red-700 px-3 py-1.5 font-mono text-xs font-medium tracking-wide text-white transition-all duration-150 hover:bg-red-600 active:scale-[0.98] disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-[13px] font-semibold text-white shadow-soft transition-all duration-150 hover:bg-red-500 active:scale-[0.98] disabled:opacity-50;
   }
 
   /* Campo de texto. */
   .field {
-    @apply rounded-sm border border-rule bg-paper-3 px-2.5 py-1.5 text-sm text-ink placeholder:text-faint;
+    @apply rounded-lg border border-line bg-card px-3 py-1.5 text-sm text-ink placeholder:text-faint;
   }
 
-  /* Etiqueta tipo índice: mono, versalitas, espaciada. */
+  /* Etiqueta de sección. */
   .label {
-    @apply font-mono text-[10.5px] font-medium uppercase tracking-[0.09em] text-muted;
+    @apply text-[11px] font-semibold uppercase tracking-[0.07em] text-muted;
   }
 
   /* Tecla. */
   .kbd {
-    @apply inline-block min-w-[1.5rem] rounded-[3px] border border-b-2 border-rule bg-paper-3 px-1.5 py-px text-center font-mono text-[11px] font-medium leading-[1.45] text-ink-2;
+    @apply inline-flex h-[20px] min-w-[20px] items-center justify-center rounded-md border border-line bg-card px-1.5 font-sans text-[11px] font-medium text-muted shadow-[inset_0_-1px_0_rgb(var(--line-ch))];
   }
 
-  /* Velo de los diálogos modales: papel tintado, sin cristal. */
+  /* Velo de los diálogos modales: teñido por el lienzo, con desenfoque. */
   .backdrop {
-    @apply fixed inset-0 flex animate-fade-in items-start justify-center bg-[rgb(var(--shadow-ch)/0.18)] p-4 dark:bg-black/50;
+    @apply fixed inset-0 flex animate-fade-in items-start justify-center bg-[rgb(var(--canvas-ch)/0.55)] p-4 backdrop-blur-[6px] dark:bg-black/45;
   }
 
-  /* Superficie flotante (paleta, ajustes, menús). */
+  /* Superficie flotante (paleta, ajustes). */
   .surface {
-    @apply animate-pop-in rounded-md border border-rule bg-paper-3 shadow-float;
+    @apply animate-pop-in rounded-2xl border border-line bg-card shadow-pop;
   }
+
+  /* Pestaña activa conectada a la tarjeta: esquinas cóncavas en la base
+     que funden la pestaña con el contenido. */
+  .tab-connected::before,
+  .tab-connected::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    width: 10px;
+    height: 10px;
+    pointer-events: none;
+  }
+
+  .tab-connected::before {
+    left: -10px;
+    background: radial-gradient(circle at 0 0, transparent 9.5px, rgb(var(--card-ch)) 10px);
+  }
+
+  .tab-connected::after {
+    right: -10px;
+    background: radial-gradient(circle at 100% 0, transparent 9.5px, rgb(var(--card-ch)) 10px);
+  }
+}
+
+/* Cursor del logo (`_`) que parpadea en la portada. */
+@keyframes caret-blink {
+  0%, 45% { opacity: 1; }
+  50%, 95% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.caret-blink {
+  animation: caret-blink 1.1s steps(1) infinite;
 }
 
 /* Movimiento reducido: sin animaciones ni transiciones decorativas. */
@@ -151,7 +265,7 @@ html.dark {
   }
 }
 
-/* Scrollbars finas, del color de la tinta. */
+/* Scrollbars finas y discretas. */
 * {
   scrollbar-width: thin;
   scrollbar-color: rgb(var(--ink-ch) / 0.2) transparent;
@@ -179,67 +293,6 @@ html.dark {
 
 *::-webkit-scrollbar-corner {
   background: transparent;
-}
-
-/* Acento de color: canales RGB por acento y modo (ver `src/lib/accent.ts`,
-   única fuente de verdad de los tonos). El rojo es el defecto (sin
-   `data-accent` también vale). `tailwind.config.js` los mapea a
-   `accent`, `accent-text`, `accent-solid` y `on-accent` con opacidad. */
-:root,
-:root[data-accent="red"] {
-  --accent-ch: 222 56 48;
-  --accent-text-ch: 179 39 30;
-  --accent-solid-ch: 198 40 40;
-  --on-accent-ch: 255 255 255;
-}
-
-:root[data-accent="blue"] {
-  --accent-ch: 0 113 188;
-  --accent-text-ch: 0 95 158;
-  --accent-solid-ch: 0 113 188;
-  --on-accent-ch: 255 255 255;
-}
-
-:root[data-accent="amber"] {
-  --accent-ch: 251 176 59;
-  --accent-text-ch: 154 74 8;
-  --accent-solid-ch: 251 176 59;
-  --on-accent-ch: 31 41 55;
-}
-
-:root[data-accent="catppuccin"] {
-  --accent-ch: 136 57 239;
-  --accent-text-ch: 116 40 217;
-  --accent-solid-ch: 136 57 239;
-  --on-accent-ch: 255 255 255;
-}
-
-html.dark:root[data-accent="red"] {
-  --accent-ch: 222 56 48;
-  --accent-text-ch: 255 138 128;
-  --accent-solid-ch: 198 40 40;
-  --on-accent-ch: 255 255 255;
-}
-
-html.dark:root[data-accent="blue"] {
-  --accent-ch: 0 113 188;
-  --accent-text-ch: 79 163 227;
-  --accent-solid-ch: 0 113 188;
-  --on-accent-ch: 255 255 255;
-}
-
-html.dark:root[data-accent="amber"] {
-  --accent-ch: 251 176 59;
-  --accent-text-ch: 251 176 59;
-  --accent-solid-ch: 251 176 59;
-  --on-accent-ch: 31 41 55;
-}
-
-html.dark:root[data-accent="catppuccin"] {
-  --accent-ch: 203 166 247;
-  --accent-text-ch: 203 166 247;
-  --accent-solid-ch: 203 166 247;
-  --on-accent-ch: 17 24 39;
 }
 
 /* Ajustes → Reducir movimiento: sin animaciones ni transiciones. */

@@ -32,7 +32,7 @@ const IDLE_OP: FeedOp = {
   done: false,
 };
 
-const GRID = "grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(270px,1fr))]";
+const GRID = "grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]";
 
 export function CatalogView() {
   const status = useCatalog((s) => s.status);
@@ -117,17 +117,21 @@ export function CatalogView() {
       <div className="min-h-0 flex-1 overflow-y-auto">
         {/* Cabecera */}
         <header>
-          <div className="mx-auto max-w-6xl px-10 pb-6 pt-10">
-            <div className="flex items-end gap-6 border-b-2 border-ink pb-5">
+          <div className="mx-auto max-w-6xl px-10 pb-5 pt-9">
+            <div className="flex items-end gap-6">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent-solid text-accent-on shadow-[inset_0_1px_0_rgb(255_255_255/0.25),0_8px_20px_-8px_rgb(var(--accent-ch)/0.7)]">
+                <CatalogIcon size={26} />
+              </div>
               <div className="min-w-0 flex-1">
-                <p className="label flex items-center gap-2 text-accent-text">
-                  <CatalogIcon size={13} />
-                  {status && status.count > 0
-                    ? tn(lang, status.count, "catalog.entriesOne", "catalog.entriesMany", { n: status.count })
-                    : t("catalog.title")}
-                </p>
-                <h2 className="mt-3 text-[2.6rem] font-[380] leading-none tracking-[-0.025em]">{t("catalog.title")}</h2>
-                <p className="mt-2.5 max-w-xl text-[16px] italic text-ink-2">{t("catalog.subtitle")}</p>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h2 className="font-display text-[34px] font-bold leading-none tracking-[-0.03em]">{t("catalog.title")}</h2>
+                  {status && status.count > 0 && (
+                    <span className="rounded-full bg-accent/[0.12] px-2.5 py-0.5 text-[12px] font-semibold tabular-nums text-accent-text">
+                      {tn(lang, status.count, "catalog.entriesOne", "catalog.entriesMany", { n: status.count })}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1.5 max-w-xl text-[14.5px] text-muted">{t("catalog.subtitle")}</p>
               </div>
               <button
                 onClick={() => void refresh()}
@@ -141,11 +145,11 @@ export function CatalogView() {
             </div>
 
             {/* Fuente (repo de feeds) */}
-            <div className="mt-3 font-mono text-[11px]">
+            <div className="mt-5 text-[12.5px]">
               {!showRepoEditor ? (
                 <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-muted">
                   <span>{t("catalog.source")}</span>
-                  <span className="font-medium text-ink">
+                  <span className="rounded-md bg-card-2 px-1.5 py-0.5 font-mono text-[11.5px] font-medium text-ink ring-1 ring-line">
                     {status?.repo}
                   </span>
                   <span>· {t("catalog.updated", { date: formatDateTime(lang, status?.fetched_at ?? null) })}</span>
@@ -154,16 +158,15 @@ export function CatalogView() {
                   )}
                   <button
                     onClick={() => setEditingRepo(true)}
-                    className="ml-1 font-medium text-accent-text underline decoration-accent-text/30 underline-offset-4 hover:decoration-accent-text"
+                    className="ml-1 font-semibold text-accent-text hover:underline"
                   >
                     {t("catalog.changeSource")}
                   </button>
                 </p>
               ) : (
-                <div className="relative mt-2 max-w-xl animate-fade-in border border-rule bg-paper-3 p-4 font-sans">
-                  <span aria-hidden className="absolute -inset-y-px -left-px w-[3px] bg-accent" />
+                <div className="max-w-xl animate-fade-in rounded-2xl border border-accent/25 bg-accent/[0.05] p-4">
                   <div className="flex items-center justify-between">
-                    <p className="label">{t("catalog.repoLabel")}</p>
+                    <p className="text-[13.5px] font-semibold text-ink">{t("catalog.repoLabel")}</p>
                     {status?.repo && (
                       <button
                         onClick={() => setEditingRepo(false)}
@@ -174,7 +177,7 @@ export function CatalogView() {
                       </button>
                     )}
                   </div>
-                  {!status?.repo && <p className="mt-1.5 text-[14.5px] italic text-ink-2">{t("catalog.setupHelp")}</p>}
+                  {!status?.repo && <p className="mt-1 text-[13px] text-muted">{t("catalog.setupHelp")}</p>}
                   <form
                     className="mt-2 flex gap-2"
                     onSubmit={(e) => {
@@ -201,16 +204,16 @@ export function CatalogView() {
         </header>
 
         {/* Búsqueda y filtros (fijos al hacer scroll) */}
-        <div className="sticky top-0 z-10 bg-paper/95">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-end gap-x-8 gap-y-3 border-b border-rule px-10 pb-0 pt-3">
-            <label className="relative mb-2.5 min-w-[220px] flex-1">
-              <SearchIcon size={16} className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 text-muted" />
+        <div className="sticky top-0 z-10 border-b border-line bg-card/90 backdrop-blur-md">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-10 py-3">
+            <label className="relative min-w-[220px] flex-1">
+              <SearchIcon size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t("catalog.searchPlaceholder")}
                 aria-label={t("catalog.searchLabel")}
-                className="w-full border-0 border-b border-transparent bg-transparent py-1.5 pl-7 pr-8 text-[16px] text-ink outline-none placeholder:italic placeholder:text-faint focus-visible:shadow-none"
+                className="field w-full rounded-xl bg-card-2 py-2 pl-10 pr-8"
               />
               {query !== "" && (
                 <button
@@ -223,7 +226,7 @@ export function CatalogView() {
                 </button>
               )}
             </label>
-            <div role="radiogroup" aria-label={t("catalog.filterLabel")} className="-mb-px flex gap-5">
+            <div role="radiogroup" aria-label={t("catalog.filterLabel")} className="flex gap-0.5 rounded-xl bg-card-2 p-1 ring-1 ring-line">
               {FILTERS.map(({ value, key }) => {
                 const on = filter === value;
                 return (
@@ -232,16 +235,16 @@ export function CatalogView() {
                     role="radio"
                     aria-checked={on}
                     onClick={() => setFilter(value)}
-                    className={`flex items-baseline gap-1.5 border-b-2 pb-2.5 pt-1 text-[14.5px] transition-colors duration-150 ease-smooth ${
+                    className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12.5px] transition-all duration-150 ease-smooth ${
                       on
-                        ? "border-accent text-ink"
-                        : "border-transparent text-muted hover:text-ink"
+                        ? "bg-card font-semibold text-ink shadow-soft ring-1 ring-line"
+                        : "font-medium text-muted hover:text-ink"
                     }`}
                   >
                     {t(key)}
                     <span
-                      className={`font-mono text-[10.5px] tabular-nums ${
-                        on ? "text-accent-text" : "text-faint"
+                      className={`rounded-full px-1.5 text-[10.5px] font-semibold tabular-nums leading-4 ${
+                        on ? "bg-accent/15 text-accent-text" : "bg-ink/[0.06] text-faint"
                       }`}
                     >
                       {counts[value]}
@@ -258,7 +261,7 @@ export function CatalogView() {
           {loading ? (
             <ul className={GRID} aria-busy="true" aria-label={t("catalog.loading")}>
               {Array.from({ length: 9 }, (_, i) => (
-                <li key={i} className="h-[124px] animate-pulse rounded-[3px] border border-rule bg-paper-3" />
+                <li key={i} className="h-[132px] animate-pulse rounded-2xl bg-card-2" />
               ))}
             </ul>
           ) : error !== null && entries.length === 0 ? (
@@ -279,10 +282,9 @@ export function CatalogView() {
               {sections.map((s) => (
                 <section key={s.key ?? "list"}>
                   {s.key && (
-                    <h3 className="label mb-4 flex items-center gap-2.5">
+                    <h3 className="mb-3 flex items-center gap-2 font-display text-[17px] font-bold tracking-[-0.02em]">
                       {t(s.key)}
-                      <span className="tabular-nums text-faint">{s.rows.length}</span>
-                      <span className="h-px flex-1 bg-rule" />
+                      <span className="text-[12.5px] font-semibold tabular-nums text-faint">{s.rows.length}</span>
                     </h3>
                   )}
                   <ul className={GRID}>{s.rows.map(renderRow)}</ul>
@@ -304,8 +306,10 @@ export function CatalogView() {
 function EmptyState({ text }: { text: string }) {
   return (
     <div className="flex flex-col items-center py-16 text-center">
-      <CatalogIcon size={28} className="text-faint" />
-      <p className="mt-4 max-w-sm text-[17px] italic text-ink-2">{text}</p>
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10 text-accent-text">
+        <CatalogIcon size={26} />
+      </div>
+      <p className="mt-4 max-w-sm text-[14.5px] text-muted">{text}</p>
     </div>
   );
 }

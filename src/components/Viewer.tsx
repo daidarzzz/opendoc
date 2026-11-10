@@ -534,12 +534,12 @@ export function Viewer() {
   return (
     <main ref={attachWheel} className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" role="tabpanel" id="viewer-panel" aria-label={t("viewer.viewer")}>
       {!activeEntry || docsetState !== "ok" ? (
-        <div className="flex flex-1 flex-col items-center justify-center p-8">
+        <div className={`flex min-h-0 flex-1 flex-col items-center justify-center ${activeEntry ? "p-8" : ""}`}>
           {!activeEntry ? (
             <Welcome docCount={docsets.length} />
           ) : docsetState === "pending" ? (
             <div className="flex max-w-md flex-col items-center gap-4 text-center">
-              <p className="text-[17px] italic text-ink-2">
+              <p className="text-[15px] text-ink-2">
                 {t("viewer.pendingTarix")}
               </p>
               <button
@@ -555,7 +555,7 @@ export function Viewer() {
               </button>
             </div>
           ) : (
-            <p className="max-w-md text-center text-[17px] italic text-ink-2">
+            <p className="max-w-md text-center text-[15px] text-ink-2">
               {t("viewer.docsetMissing")}
             </p>
           )}
@@ -564,7 +564,7 @@ export function Viewer() {
       ) : (
         <>
           {frontFrame === null && (
-            <p className="animate-fade-in px-8 py-6 text-[15px] italic text-muted">{t("viewer.loading", { title: activeTitle })}</p>
+            <p className="animate-fade-in px-8 py-6 text-[14px] text-muted">{t("viewer.loading", { title: activeTitle })}</p>
           )}
           {/* Los iframes de reserva van `invisible` + `inert`: fuera del
               hit-testing de verdad. Con solo opacity-0/pointer-events-none,
@@ -583,7 +583,7 @@ export function Viewer() {
               scrolling="yes"
               aria-hidden={frontFrame !== index}
               inert={frontFrame !== index}
-              className={`h-full min-h-0 w-full flex-1 border-0 bg-sheet transition-[opacity,visibility] duration-150 ease-out motion-reduce:transition-none ${frontFrame === index ? `visible opacity-100 ${transitioning ? "pointer-events-none" : ""}` : "invisible absolute inset-0 pointer-events-none opacity-0"}`}
+              className={`h-full min-h-0 w-full flex-1 border-0 bg-white transition-[opacity,visibility] duration-150 ease-out motion-reduce:transition-none ${frontFrame === index ? `visible opacity-100 ${transitioning ? "pointer-events-none" : ""}` : "invisible absolute inset-0 pointer-events-none opacity-0"}`}
               onLoad={() => onIframeLoad(index, frameUrls[index], frameVersions[index])}
             />
           ))}
@@ -592,7 +592,7 @@ export function Viewer() {
           {zoomToast && (
             <div
               aria-live="polite"
-              className="pointer-events-none absolute bottom-4 right-4 z-20 animate-pop-in rounded-sm border border-rule bg-paper-3 px-3 py-1.5 font-mono text-[11px] font-medium tabular-nums text-ink-2 shadow-float"
+              className="pointer-events-none absolute bottom-4 right-4 z-20 animate-pop-in rounded-full bg-ink px-3.5 py-1.5 text-[12px] font-semibold tabular-nums text-card shadow-float"
             >
               {t("zoom.toast", { pct: formatZoom(zoomLevel) })}
             </div>
@@ -619,7 +619,7 @@ function FolderPrompt({
     <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
       {dirMissing ? (
         <>
-          <p className="max-w-md text-[17px] italic text-ink-2">
+          <p className="max-w-md text-[15px] text-ink-2">
             {t("viewer.folderGone")}
             {savedDir ? `: ${savedDir}` : ""} {t("settings.diskHint")}
           </p>
@@ -632,7 +632,7 @@ function FolderPrompt({
         </>
       ) : (
         <>
-          <p className="max-w-md text-[17px] italic text-ink-2">
+          <p className="max-w-md text-[15px] text-ink-2">
             {t("viewer.pickFolder")}
           </p>
           <button

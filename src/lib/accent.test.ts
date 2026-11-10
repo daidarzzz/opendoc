@@ -7,6 +7,7 @@ import {
   ACCENTS,
   ACCENT_HEX,
   APP_BG,
+  CANVAS_HEX,
   DEFAULT_ACCENT,
   contrastRatio,
   hexToChannels,
@@ -35,6 +36,20 @@ describe("tabla de acentos", () => {
         expect(
           ratio,
           `${accent}/${mode}: text ${tones.text} sobre ${APP_BG[mode]} = ${ratio.toFixed(2)}`,
+        ).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
+  it("texto >= 4.5:1 sobre el lienzo teñido de su acento", () => {
+    for (const accent of ACCENTS) {
+      for (const mode of ["light", "dark"] as const) {
+        const text = ACCENT_HEX[accent][mode].text;
+        const canvas = CANVAS_HEX[accent][mode];
+        const ratio = contrastRatio(text, canvas);
+        expect(
+          ratio,
+          `${accent}/${mode}: text ${text} sobre lienzo ${canvas} = ${ratio.toFixed(2)}`,
         ).toBeGreaterThanOrEqual(4.5);
       }
     }

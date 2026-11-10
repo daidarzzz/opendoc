@@ -9,7 +9,7 @@ export function ErrorDetails({ error }: { error: unknown }) {
   const info = toAppError(error);
   if (!info) return null;
   return (
-    <div className="text-[14px] text-red-700 dark:text-red-400">
+    <div className="text-[13px] text-red-700 dark:text-red-400">
       <p>{errorTitle(lang, info)}</p>
       {info.detail !== "" && (
         <details className="mt-1">

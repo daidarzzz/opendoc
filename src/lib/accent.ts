@@ -48,10 +48,22 @@ export const ACCENT_HEX: Record<Accent, { light: AccentTones; dark: AccentTones 
   },
 };
 
-/** Fondo de la app por modo: papel (`--paper` en `index.css`, `bg-paper`). */
+/** Fondo de la tarjeta de contenido por modo (`--card` en `index.css`). */
 export const APP_BG: { light: string; dark: string } = {
-  light: "#F5F1E8",
-  dark: "#15140F",
+  light: "#FFFFFF",
+  dark: "#18181C",
+};
+
+/**
+ * Lienzo de la ventana teñido por el acento (`--canvas` en `index.css`):
+ * barra lateral y pestañas viven sobre él. El texto del acento también
+ * debe contrastar aquí (lo vigila `accent.test.ts`).
+ */
+export const CANVAS_HEX: Record<Accent, { light: string; dark: string }> = {
+  red: { light: "#F5E4DF", dark: "#1D1312" },
+  blue: { light: "#E2EAF4", dark: "#0F161F" },
+  amber: { light: "#F4EAD7", dark: "#1C170F" },
+  catppuccin: { light: "#EBE4F7", dark: "#17131F" },
 };
 
 /** Cualquier valor desconocido cae al rojo (lectura tolerante por campo). */

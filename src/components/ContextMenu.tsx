@@ -141,11 +141,11 @@ export function ContextMenu() {
       onKeyDown={onKeyDown}
       onContextMenu={(e) => e.preventDefault()}
       style={{ left: pos?.left ?? menu.x, top: pos?.top ?? menu.y, visibility: pos ? "visible" : "hidden" }}
-      className="fixed z-[60] min-w-[14rem] max-w-[20rem] origin-top-left animate-menu-in select-none rounded-md border border-rule bg-paper-3 p-1 text-[14px] shadow-float outline-none"
+      className="fixed z-[60] min-w-[14rem] max-w-[20rem] origin-top-left animate-menu-in select-none rounded-xl border border-line bg-card p-1.5 text-[13px] shadow-pop outline-none"
     >
       {menu.entries.map((entry, i) => {
         if (entry.kind === "separator") {
-          return <div key={entry.id} role="separator" className="mx-2.5 my-1 h-px bg-rule" />;
+          return <div key={entry.id} role="separator" className="mx-2 my-1 h-px bg-line" />;
         }
         if (entry.kind === "zoom") {
           return <ZoomRow key={entry.id} />;
@@ -161,12 +161,12 @@ export function ContextMenu() {
             onPointerEnter={() => setActive(entry.disabled ? -1 : i)}
             onPointerLeave={() => setActive(-1)}
             onClick={() => choose(entry)}
-            className="group relative flex w-full items-center gap-2.5 rounded-sm px-2.5 py-[5px] text-left text-ink-2 transition-colors duration-75 disabled:opacity-40 data-[active=true]:bg-ink/[0.06] data-[active=true]:text-ink"
+            className="group relative flex w-full items-center gap-2.5 rounded-lg px-2.5 py-[6px] text-left text-ink-2 transition-colors duration-75 disabled:opacity-40 data-[active=true]:bg-accent/[0.1] data-[active=true]:text-ink"
           >
             {iconFor(entry.icon)}
             <span className="min-w-0 flex-1 truncate">{entry.label}</span>
             {entry.hint && (
-              <span className="shrink-0 pl-4 font-mono text-[10.5px] text-faint">{entry.hint}</span>
+              <span className="shrink-0 pl-4 text-[11px] text-faint">{entry.hint}</span>
             )}
           </button>
         );
@@ -179,12 +179,12 @@ const ZoomRow = memo(function ZoomRow() {
   const level = useZoom((s) => s.level);
   const { t } = useT();
   const btn =
-    "flex h-6 w-6 items-center justify-center rounded-sm text-muted transition-colors hover:bg-ink/[0.07] hover:text-ink active:scale-95";
+    "flex h-6 w-6 items-center justify-center rounded-md text-muted transition-colors hover:bg-ink/[0.07] hover:text-ink active:scale-95";
   return (
     <div className="flex items-center gap-2.5 px-2.5 py-1 text-ink-2">
       <ZoomIcon size={15} className="text-faint" />
       <span className="flex-1">{t("menu.zoom")}</span>
-      <div className="flex items-center gap-0.5 rounded-sm border border-rule p-0.5">
+      <div className="flex items-center gap-0.5 rounded-lg bg-card-2 p-0.5 ring-1 ring-line">
         <button type="button" aria-label={t("menu.zoomOut")} title={t("menu.zoomOut")} className={btn} onClick={() => useZoom.getState().zoomOut()}>
           <MinusIcon size={13} strokeWidth={2.5} />
         </button>
@@ -193,7 +193,7 @@ const ZoomRow = memo(function ZoomRow() {
           aria-label={t("menu.zoomReset")}
           title={t("menu.zoomReset")}
           onClick={() => useZoom.getState().reset()}
-          className="min-w-[3rem] rounded-sm px-1 text-center font-mono text-[11px] font-medium tabular-nums text-ink-2 transition-colors hover:bg-ink/[0.07]"
+          className="min-w-[3rem] rounded-md px-1 text-center text-[12px] font-semibold tabular-nums text-ink-2 transition-colors hover:bg-ink/[0.07]"
         >
           {formatZoom(level)}
         </button>

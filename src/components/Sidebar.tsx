@@ -1,6 +1,6 @@
-// Barra lateral («el índice»): marca, acceso a la búsqueda, la biblioteca
-// (árbol de navegación), tarix pendientes y pie con catálogo y versión.
-// Los ajustes viven en su propio panel (SettingsDialog), que se abre desde aquí.
+// Barra lateral sobre el lienzo teñido: marca, búsqueda (abre la paleta),
+// biblioteca (árbol de navegación), tarix pendientes y pie con catálogo y
+// ajustes. Los ajustes viven en su propio panel (SettingsDialog).
 import { platform } from "@tauri-apps/plugin-os";
 import { BrowseTree } from "./BrowseTree";
 import { AppLogo } from "./AppLogo";
@@ -28,67 +28,58 @@ export function Sidebar({
   collapsed: boolean;
   /** Ancho del contenido interno (fijo para que la animación recorte, no aplaste). */
   expandedWidth: number;
-  /** Ocultar el panel (botón junto a Ajustes). */
+  /** Ocultar el panel (botón junto a la marca). */
   onCollapse: () => void;
   /** Transición de ancho activa (solo al plegar/desplegar, nunca al arrastrar). */
   animate: boolean;
 }) {
   const { t } = useT();
   const { docsets, pending, extractingIds, extract } = useDocsets();
+  const catalogOpen = useTabs((s) => s.tabs.find((tab) => tab.id === s.activeId)?.type === "catalog");
   const mod = platform() === "macos" ? "⌘" : "Ctrl";
 
   return (
     <aside
       style={collapsed ? { width: 0, flexBasis: 0 } : style}
       inert={collapsed}
-      className={`flex h-full shrink-0 overflow-hidden border-r ${animate ? "transition-[width,flex-basis] duration-300 ease-smooth" : ""} ${collapsed ? "border-transparent" : "border-rule bg-paper-2"}`}
+      className={`flex h-full shrink-0 overflow-hidden ${animate ? "transition-[width,flex-basis] duration-300 ease-smooth" : ""}`}
     >
       <div
         style={{ width: expandedWidth }}
         className={`flex h-full min-w-0 shrink-0 flex-col transition-opacity duration-200 ${collapsed ? "opacity-0" : "opacity-100"}`}
       >
-        <div className="flex items-center justify-between pb-3 pl-4 pr-2.5 pt-3.5">
-          <h1 className="flex items-center gap-2.5 text-[17px] font-medium tracking-[-0.01em]">
-            <AppLogo size={20} />
+        <div className="flex items-center justify-between pb-3 pl-4 pr-2 pt-3">
+          <h1 className="flex items-center gap-2 font-display text-[17px] font-bold tracking-[-0.02em]">
+            <AppLogo size={22} />
             OpenDoc
           </h1>
-          <div className="flex items-center">
-            <button
-              onClick={() => useSettingsUi.getState().show()}
-              title={t("settings.title")}
-              aria-label={t("settings.title")}
-              className="icon-btn"
-            >
-              <SettingsIcon size={17} />
-            </button>
-            <button
-              onClick={onCollapse}
-              title={t("settings.collapseSidebar")}
-              aria-label={t("settings.collapseSidebar")}
-              className="icon-btn"
-            >
-              <PanelToggleIcon direction="left" />
-            </button>
-          </div>
+          <button
+            onClick={onCollapse}
+            title={t("settings.collapseSidebar")}
+            aria-label={t("settings.collapseSidebar")}
+            className="icon-btn"
+          >
+            <PanelToggleIcon direction="left" />
+          </button>
         </div>
 
         <button
           type="button"
           onClick={() => usePalette.getState().setOpen(true)}
           aria-label={t("welcome.searchDocs", { mod })}
-          className="group mx-4 flex items-center gap-2 border-b border-ink/20 pb-2 pt-1 text-left transition-colors duration-150 hover:border-ink/60"
+          className="group mx-3 flex items-center gap-2 rounded-xl bg-card/70 px-3 py-2 text-left shadow-soft ring-1 ring-canvas-line transition-all duration-150 hover:bg-card hover:shadow-float"
         >
-          <SearchIcon size={14} className="shrink-0 text-faint transition-colors group-hover:text-ink-2" />
-          <span className="min-w-0 flex-1 truncate text-[14px] italic text-muted group-hover:text-ink-2">
-            {t("welcome.search")}
-          </span>
-          <kbd className="shrink-0 font-mono text-[10.5px] text-faint">{mod} K</kbd>
+          <SearchIcon size={15} className="shrink-0 text-muted transition-colors group-hover:text-accent-text" />
+          <span className="min-w-0 flex-1 truncate text-[13px] text-muted">{t("welcome.search")}</span>
+          <kbd className="kbd h-[18px] shrink-0 px-1 text-[10px]">{mod} K</kbd>
         </button>
 
-        <div className="flex items-baseline justify-between px-4 pb-1.5 pt-6">
+        <div className="flex items-center justify-between px-4 pb-1 pt-5">
           <span className="label">{t("sidebar.library")}</span>
           {docsets.length > 0 && (
-            <span className="font-mono text-[10.5px] tabular-nums text-faint">{docsets.length}</span>
+            <span className="rounded-full bg-canvas-2 px-1.5 text-[10.5px] font-semibold tabular-nums leading-[18px] text-muted">
+              {docsets.length}
+            </span>
           )}
         </div>
 
@@ -96,14 +87,14 @@ export function Sidebar({
           <BrowseTree />
           {pending.length > 0 && (
             <>
-              <p className="label px-2 pb-1.5 pt-4">{t("settings.pendingTarix")}</p>
-              <ul className="space-y-px pb-2">
+              <p className="label px-2 pb-1 pt-4">{t("settings.pendingTarix")}</p>
+              <ul className="space-y-0.5 pb-2">
                 {pending.map((p) => {
                   const busy = extractingIds.includes(p.id);
                   return (
                     <li
                       key={p.id}
-                      className="flex items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-[14px] text-ink-2 transition-colors hover:bg-ink/[0.04]"
+                      className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-[13px] text-ink-2 transition-colors hover:bg-canvas-2"
                     >
                       <span className="flex min-w-0 items-center gap-2">
                         <DocsetIcon icon={p.icon} name={p.name} hint={p.id} />
@@ -112,7 +103,7 @@ export function Sidebar({
                       <button
                         onClick={() => void extract(p.id)}
                         disabled={busy}
-                        className="btn shrink-0 px-2 py-0.5 text-[10.5px]"
+                        className="btn shrink-0 px-2 py-0.5 text-[11px]"
                       >
                         {busy ? t("settings.extracting") : t("common.install")}
                       </button>
@@ -124,16 +115,26 @@ export function Sidebar({
           )}
         </nav>
 
-        <div className="flex items-center justify-between border-t border-rule py-2 pl-2 pr-4">
+        <div className="flex items-center gap-1 px-2 pb-2.5 pt-2">
           <button
             type="button"
             onClick={() => useTabs.getState().openCatalogTab()}
-            className="flex items-center gap-2 rounded-sm px-2 py-1 text-[13.5px] text-ink-2 transition-colors hover:bg-ink/[0.05] hover:text-ink"
+            className={`flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition-colors ${
+              catalogOpen ? "bg-card text-ink shadow-soft" : "text-ink-2 hover:bg-canvas-2 hover:text-ink"
+            }`}
           >
-            <CatalogIcon size={14} className="text-muted" />
-            {t("catalog.title")}
+            <CatalogIcon size={15} className="text-accent-text" />
+            <span className="truncate">{t("catalog.title")}</span>
           </button>
-          <span className="font-mono text-[10.5px] text-faint">v{version}</span>
+          <span className="px-1 font-mono text-[10px] text-faint">v{version}</span>
+          <button
+            onClick={() => useSettingsUi.getState().show()}
+            title={t("settings.title")}
+            aria-label={t("settings.title")}
+            className="icon-btn"
+          >
+            <SettingsIcon size={17} />
+          </button>
         </div>
       </div>
     </aside>

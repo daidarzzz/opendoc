@@ -74,23 +74,25 @@ const TabButton = memo(function TabButton({
           onActivate();
         }
       }}
-      className={`group relative flex h-[34px] w-48 min-w-[6.5rem] shrink select-none touch-none cursor-default items-center gap-2 rounded-t-[5px] border-x border-t pl-3 pr-1.5 text-[13.5px] transition-colors duration-150 ease-smooth ${
+      className={`group relative flex h-[34px] w-52 min-w-[7rem] shrink select-none touch-none cursor-default items-center gap-2 rounded-t-[10px] pl-3 pr-1.5 text-[13px] transition-colors duration-150 ease-smooth ${
         selected
-          ? "z-[1] border-rule bg-paper text-ink"
-          : "border-transparent text-muted hover:bg-ink/[0.04] hover:text-ink"
-      } ${dragging ? "z-10 border-rule bg-paper-3 shadow-float" : ""} ${unavailable ? "opacity-50" : ""}`}
+          ? "tab-connected z-[1] bg-card font-medium text-ink"
+          : "text-muted hover:text-ink"
+      } ${dragging ? "z-10 rounded-[10px] bg-card shadow-float" : ""} ${unavailable ? "opacity-50" : ""}`}
     >
-      {selected && (
-        <span aria-hidden className="pointer-events-none absolute -inset-x-px -top-px h-[2px] rounded-t-[5px] bg-accent" />
+      {!selected && !dragging && (
+        <span aria-hidden className="pointer-events-none absolute inset-x-1 bottom-1 top-1 rounded-lg transition-colors duration-150 group-hover:bg-canvas-2" />
       )}
-      {isNew ? (
-        <AppLogo size={14} />
-      ) : isCatalog ? (
-        <CatalogIcon size={14} />
-      ) : (
-        <DocsetIcon icon={icon} name={docName} size={14} />
-      )}
-      <span className="flex-1 truncate">{title}</span>
+      <span className="relative flex shrink-0">
+        {isNew ? (
+          <AppLogo size={15} />
+        ) : isCatalog ? (
+          <CatalogIcon size={15} className="text-accent-text" />
+        ) : (
+          <DocsetIcon icon={icon} name={docName} size={15} />
+        )}
+      </span>
+      <span className="relative flex-1 truncate">{title}</span>
       <button
         aria-label={closeLabel}
         tabIndex={-1}
@@ -98,7 +100,7 @@ const TabButton = memo(function TabButton({
           e.stopPropagation();
           onClose();
         }}
-        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-sm text-faint transition-all duration-150 hover:bg-ink/[0.08] hover:text-ink ${
+        className={`relative flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-faint transition-all duration-150 hover:bg-ink/[0.08] hover:text-ink ${
           selected ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
         }`}
       >
@@ -268,8 +270,8 @@ export function TabsBar({
   };
 
   return (
-    <div className="flex items-end gap-1 border-b border-rule bg-paper-2 px-2 pt-[7px]">
-      <div className="mb-[5px] mr-1 flex items-center">
+    <div className="flex items-end gap-1 pl-1 pr-2 pt-2">
+      <div className="mb-1 mr-2 flex items-center">
         {sidebarCollapsed && (
           <button
             aria-label={tr("settings.expandSidebar")}
@@ -299,7 +301,7 @@ export function TabsBar({
           <ChevronIcon direction="right" size={17} />
         </button>
       </div>
-      <div role="tablist" aria-label={tr("tabs.list")} onKeyDown={onListKeyDown} className="-mb-px flex min-w-0 flex-1 items-end gap-px overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div role="tablist" aria-label={tr("tabs.list")} onKeyDown={onListKeyDown} className="flex min-w-0 flex-1 items-end gap-1 overflow-x-auto px-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {tabs.map((t) => {
           const isCatalogTab = t.type === "catalog";
           const m = meta.get(t.docsetId);
@@ -356,7 +358,7 @@ export function TabsBar({
           newTab();
           usePalette.getState().setOpen(true);
         }}
-        className="icon-btn mb-[5px]"
+        className="icon-btn mb-1"
       >
         <PlusIcon size={16} />
       </button>
