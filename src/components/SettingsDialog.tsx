@@ -9,8 +9,10 @@ import {
   BookIcon,
   CheckIcon,
   CloseIcon,
+  DownloadIcon,
   ExternalIcon,
   FolderIcon,
+  HomeIcon,
   InfoIcon,
   KeyboardIcon,
   MinusIcon,
@@ -18,12 +20,14 @@ import {
   PlusIcon,
   RefreshIcon,
   SlidersIcon,
+  TrashIcon,
 } from "./Icons";
 import { useT } from "../hooks/useT";
 import { LANGUAGE_NAMES, type I18nKey } from "../lib/i18n";
 import { ACCENTS, ACCENT_HEX, CANVAS_HEX } from "../lib/accent";
-import { getSettings, setRestoreTabs } from "../lib/commands";
-import { PALETTE_LIMITS } from "../lib/prefs";
+import { checkForUpdate, getSettings, installUpdate, relaunchApp, setRestoreTabs } from "../lib/commands";
+import { HOME_SECTIONS, PALETTE_LIMITS, type HomePrefs } from "../lib/prefs";
+import { useRecent } from "../store/recent";
 import { CARD_HEX, DESIGNS, canvasHex, type Design } from "../lib/design";
 import { setSessionEnabled } from "../lib/sessionSync";
 import { formatZoom, ZOOM_DEFAULT, ZOOM_MAX, ZOOM_MIN } from "../lib/zoom";
@@ -51,6 +55,7 @@ function modifierKeys(): { MOD: string; ALT: string; SHIFT: string } {
 const SECTIONS: { id: SettingsSection; icon: (p: { size?: number; className?: string }) => ReactNode }[] = [
   { id: "general", icon: SlidersIcon },
   { id: "appearance", icon: PaletteIcon },
+  { id: "home", icon: HomeIcon },
   { id: "reading", icon: BookIcon },
   { id: "docsets", icon: FolderIcon },
   { id: "shortcuts", icon: KeyboardIcon },
@@ -254,6 +259,118 @@ function ThemePreview({ mode, accent, design }: { mode: ThemeMode; accent: Accen
 // ---------------------------------------------------------------------------
 // Secciones
 
+const RELEASES_URL = "https://github.com/daidarzzz/opendoc/releases/latest";
+
+type UpdateState =
+  | { kind: "idle" }
+  | { kind: "checking" }
+  | { kind: "none" }
+  | { kind: "available"; version: string }
+  | { kind: "downloading"; version: string; pct: number | null }
+  | { kind: "restarting" }
+  | { kind: "check-failed" }
+  | { kind: "failed"; version: string };
+
+/** Último resultado (vive mientras la app está abierta: no se repite al reabrir Ajustes). */
+let lastUpdateState: UpdateState = { kind: "idle" };
+
+/** Fila discreta de actualizaciones: comprueba sola al abrir y actualiza con un clic. */
+function UpdateRow() {
+  const { t } = useT();
+  const [state, setStateRaw] = useState<UpdateState>(lastUpdateState);
+  const setState = (next: UpdateState): void => {
+    lastUpdateState = next;
+    setStateRaw(next);
+  };
+
+  const runCheck = (): void => {
+    setState({ kind: "checking" });
+    void (async () => {
+      try {
+        const info = await checkForUpdate();
+        setState(info ? { kind: "available", version: info.version } : { kind: "none" });
+      } catch {
+        setState({ kind: "check-failed" });
+      }
+    })();
+  };
+
+  useEffect(() => {
+    if (lastUpdateState.kind === "idle") runCheck();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const install = (version: string): void => {
+    setState({ kind: "downloading", version, pct: null });
+    void (async () => {
+      try {
+        await installUpdate((received, total) => {
+          setState({ kind: "downloading", version, pct: total ? Math.min(100, Math.round((received / total) * 100)) : null });
+        });
+        setState({ kind: "restarting" });
+        await relaunchApp();
+      } catch {
+        setState({ kind: "failed", version });
+      }
+    })();
+  };
+
+  const desc =
+    state.kind === "available" || state.kind === "downloading"
+      ? t("update.available", { version: state.version })
+      : state.kind === "none"
+        ? t("update.upToDate")
+        : state.kind === "check-failed"
+          ? t("update.checkFailed")
+          : state.kind === "failed"
+            ? t("update.failed")
+            : t("update.current", { version });
+
+  return (
+    <Row label={t("update.title")} desc={desc}>
+      <div className="flex items-center gap-2">
+        {state.kind === "available" && (
+          <button type="button" onClick={() => install(state.version)} className="btn-primary">
+            <DownloadIcon size={14} />
+            {t("update.install")}
+          </button>
+        )}
+        {state.kind === "downloading" && (
+          <div className="flex w-44 flex-col gap-1.5">
+            <span className="text-right text-[11.5px] font-medium tabular-nums text-muted">
+              {t("update.downloading", { pct: state.pct === null ? "" : `${state.pct} %` })}
+            </span>
+            <div className="h-1.5 overflow-hidden rounded-full bg-ink/[0.07]">
+              <div
+                className={`h-full rounded-full bg-accent transition-[width] duration-300 ${state.pct === null ? "w-1/3 animate-pulse" : ""}`}
+                style={state.pct === null ? undefined : { width: `${state.pct}%` }}
+              />
+            </div>
+          </div>
+        )}
+        {state.kind === "restarting" && <span className="text-[12.5px] text-muted">{t("update.restarting")}</span>}
+        {state.kind === "failed" && (
+          <a href={RELEASES_URL} className="btn">
+            <ExternalIcon size={13} />
+            {t("update.manual")}
+          </a>
+        )}
+        {state.kind === "none" && (
+          <span className="flex items-center gap-1.5 text-[12.5px] font-medium text-emerald-700 dark:text-emerald-300">
+            <CheckIcon size={14} />
+          </span>
+        )}
+        {(state.kind === "idle" || state.kind === "checking" || state.kind === "none" || state.kind === "check-failed") && (
+          <button type="button" onClick={runCheck} disabled={state.kind === "checking"} className="btn">
+            <RefreshIcon size={13} className={state.kind === "checking" ? "animate-spin" : ""} />
+            {state.kind === "checking" ? t("update.checking") : t("update.check")}
+          </button>
+        )}
+      </div>
+    </Row>
+  );
+}
+
 function GeneralSection() {
   const { t, lang } = useT();
   const setLang = useLang((s) => s.setLang);
@@ -303,6 +420,9 @@ function GeneralSection() {
             onChange={(v) => usePrefs.getState().set("paletteLimit", v)}
           />
         </Row>
+      </Group>
+      <Group>
+        <UpdateRow />
       </Group>
     </div>
   );
@@ -448,10 +568,74 @@ function AppearanceSection() {
   );
 }
 
+const HOME_KEYS: Record<keyof HomePrefs, { label: I18nKey; desc: I18nKey }> = {
+  greeting: { label: "settings.home.greeting", desc: "settings.home.greetingDesc" },
+  search: { label: "settings.home.search", desc: "settings.home.searchDesc" },
+  filters: { label: "settings.home.filters", desc: "settings.home.filtersDesc" },
+  recent: { label: "settings.home.recent", desc: "settings.home.recentDesc" },
+  library: { label: "settings.home.library", desc: "settings.home.libraryDesc" },
+  shortcuts: { label: "settings.home.shortcuts", desc: "settings.home.shortcutsDesc" },
+};
+
+function HomeSection() {
+  const { t } = useT();
+  const home = usePrefs((s) => s.home);
+  const recentCount = useRecent((s) => s.pages.length);
+  const [cleared, setCleared] = useState(false);
+
+  useEffect(() => {
+    if (!cleared) return;
+    const id = window.setTimeout(() => setCleared(false), 2000);
+    return () => window.clearTimeout(id);
+  }, [cleared]);
+
+  return (
+    <div className="space-y-6">
+      <Group title={t("settings.home.sections")}>
+        {HOME_SECTIONS.map((key) => (
+          <Row key={key} label={t(HOME_KEYS[key].label)} desc={t(HOME_KEYS[key].desc)}>
+            <Switch
+              checked={home[key]}
+              onChange={(v) => usePrefs.getState().set("home", { ...usePrefs.getState().home, [key]: v })}
+              label={t(HOME_KEYS[key].label)}
+            />
+          </Row>
+        ))}
+      </Group>
+      <Group title={t("settings.home.history")}>
+        <Row label={t("settings.home.clear")} desc={t("settings.home.clearDesc")}>
+          <button
+            type="button"
+            disabled={recentCount === 0 && !cleared}
+            onClick={() => {
+              useRecent.getState().clear();
+              setCleared(true);
+            }}
+            className="btn"
+          >
+            {cleared ? (
+              <>
+                <CheckIcon size={14} className="text-accent-text" />
+                {t("settings.home.cleared")}
+              </>
+            ) : (
+              <>
+                <TrashIcon size={14} />
+                {t("settings.home.clearAction")}
+              </>
+            )}
+          </button>
+        </Row>
+      </Group>
+    </div>
+  );
+}
+
 function ReadingSection() {
   const { t } = useT();
   const smoothScroll = usePrefs((s) => s.smoothScroll);
   const linkPrefetch = usePrefs((s) => s.linkPrefetch);
+  const toc = usePrefs((s) => s.toc);
   const zoom = useZoom((s) => s.level);
   const stepBtn =
     "flex h-7 w-7 items-center justify-center rounded-lg text-muted transition-colors hover:bg-card hover:text-ink disabled:pointer-events-none disabled:opacity-30";
@@ -504,6 +688,9 @@ function ReadingSection() {
               <RefreshIcon size={15} />
             </button>
           </div>
+        </Row>
+        <Row label={t("settings.toc")} desc={t("settings.tocDesc")}>
+          <Switch checked={toc} onChange={(v) => usePrefs.getState().set("toc", v)} label={t("settings.toc")} />
         </Row>
         <Row label={t("settings.linkPrefetch")} desc={t("settings.linkPrefetchDesc")}>
           <Switch
@@ -762,6 +949,7 @@ function AboutSection() {
 const NAV_KEY: Record<SettingsSection, I18nKey> = {
   general: "settings.nav.general",
   appearance: "settings.nav.appearance",
+  home: "settings.nav.home",
   reading: "settings.nav.reading",
   docsets: "settings.nav.docsets",
   shortcuts: "settings.nav.shortcuts",
@@ -771,6 +959,7 @@ const NAV_KEY: Record<SettingsSection, I18nKey> = {
 const DESC_KEY: Record<SettingsSection, I18nKey> = {
   general: "settings.desc.general",
   appearance: "settings.desc.appearance",
+  home: "settings.desc.home",
   reading: "settings.desc.reading",
   docsets: "settings.desc.docsets",
   shortcuts: "settings.desc.shortcuts",
@@ -847,6 +1036,7 @@ export function SettingsDialog() {
           <div key={section} className="min-h-0 flex-1 animate-rise-in overflow-y-auto px-8 pb-8">
             {section === "general" && <GeneralSection />}
             {section === "appearance" && <AppearanceSection />}
+            {section === "home" && <HomeSection />}
             {section === "reading" && <ReadingSection />}
             {section === "docsets" && <DocsetsSection />}
             {section === "shortcuts" && <ShortcutsSection />}

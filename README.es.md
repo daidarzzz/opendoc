@@ -35,6 +35,9 @@ Aunque Zeal es una herramienta consolidada en la comunidad, su interfaz en C++/Q
 - **Protocolo de visor seguro (`opendoc://`):** Sirve los archivos locales previniendo cualquier acceso indebido fuera de `Documents/` (`..`, symlinks, unidades de disco o secuencias con doble codificación percent). Sirve las páginas fuera del hilo de UI y en paralelo; el scroll del trackpad es nativo y se reenvía al iframe cuando WebKit lo entrega a la app.
 - **Buscar en la página (`Ctrl/Cmd+F`):** Barra de búsqueda flotante propia de OpenDoc en lugar de la del webview: resalta todas las coincidencias, muestra `3 de 12` y se recorre con `Intro` / `Mayús+Intro`.
 - **Zoom de los docsets:** `Ctrl/Cmd+rueda del ratón`, `Ctrl/Cmd +`/`-`/`0` o desde el menú contextual. El nivel es común a todos los docsets y se recuerda entre sesiones.
+- **Índice de la página:** Una guía discreta de rayitas en el borde derecho del visor representa los encabezados (h1–h4) y marca la sección que estás leyendo. Al pasar el ratón se despliega el índice para saltar a cualquier parte. Opcional (Ajustes → Lectura).
+- **Seguir leyendo:** La pestaña de inicio muestra las últimas páginas que visitaste, con tiempos relativos. Con clic central se abren en otra pestaña; el historial se borra en Ajustes → Inicio.
+- **Inicio configurable:** Ajustes → Inicio activa o desactiva cada parte de la pestaña de inicio (saludo, barra de búsqueda, filtros por docset, seguir leyendo, biblioteca y atajos), hasta dejarla completamente limpia.
 - **Desplazamiento suave:** El scroll con la rueda del ratón dentro de los docsets se anima con suavizado (el trackpad sigue siendo nativo). Activado por defecto; se puede desactivar en Ajustes.
 - **Menú contextual propio:** El clic derecho del navegador se sustituye por un menú minimalista de OpenDoc: copiar, buscar la selección en OpenDoc o en la página, abrir enlaces en pestaña nueva, atrás/adelante, seleccionar todo y zoom dentro de los docsets; acciones de pestaña (cerrar, cerrar las demás, reabrir) sobre las pestañas; cortar/copiar/pegar en los campos de texto.
 - **Protección de enlaces externos:** Los hipervínculos externos (`http://`, `https://`, `mailto:`) se abren automáticamente en el navegador web del sistema operativo en lugar de navegar dentro de la ventana de la aplicación.
@@ -111,6 +114,10 @@ npm run tauri build
 
 Los binarios compilados se generan en `src-tauri/target/release/` y los instaladores empaquetados (.exe, .msi, .dmg, .deb, .AppImage) en `src-tauri/target/release/bundle/`.
 
+### 4. Actualizaciones desde la app
+
+Ajustes → General comprueba la última release de GitHub (`latest.json`) e instala la actualización firmada con un clic, y luego reinicia. Las releases de CI firman sus paquetes de actualización: el workflow necesita los secretos del repositorio `TAURI_SIGNING_PRIVATE_KEY` (el contenido de la clave privada cuya mitad pública está en `src-tauri/tauri.conf.json`) y `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (vacío si la clave no tiene contraseña). Las compilaciones locales no necesitan la clave: los artefactos del actualizador solo se activan en CI mediante `src-tauri/tauri.release.conf.json`. La instalación automática funciona con los instaladores de Windows, la app de macOS y el AppImage de Linux; las instalaciones `.deb`/`.rpm` reciben un enlace para descargar la versión nueva.
+
 ---
 
 ## Desarrollo y Pruebas
@@ -118,7 +125,7 @@ Los binarios compilados se generan en `src-tauri/target/release/` y los instalad
 Antes de dar por completado un cambio, ejecuta la batería de pruebas, linters y comprobaciones de tipo:
 
 ```bash
-# Pruebas de frontend (Vitest: 149 tests sobre stores, sync de sesión, i18n, etc.)
+# Pruebas de frontend (Vitest: 161 tests sobre stores, sync de sesión, i18n, etc.)
 npm test
 
 # Comprobación de tipos de TypeScript
@@ -163,7 +170,7 @@ Asegúrate de volver a comentar el bloque de patch antes de realizar un commit.
 
 - [x] **v0.1 (MVP):** Escaneo de docsets, lectura de índices SQLite (estándar y Core Data), búsqueda difusa en memoria, Paleta de Comandos, visor seguro `opendoc://`, ajustes y temas.
 - [x] **v0.2 (Uso diario):** Pestañas con historial independiente, sesiones persistentes entre reinicios, explorador por tipos de símbolo, filtros por prefijo y gestor de catálogo (descarga, instalación, actualización y desinstalación).
-- [ ] **v0.3 (Mejoras):** Favoritos y marcadores, tabla de contenidos (TOC) contextual y cancelación interactiva de extracciones.
+- [ ] **v0.3 (Mejoras):** ~~Tabla de contenidos (TOC) contextual~~ (hecho: índice de la página), ~~páginas recientes~~ (hecho: seguir leyendo), ~~actualizaciones desde la app~~ (hecho), favoritos y marcadores, y cancelación interactiva de extracciones.
 - [ ] **v1.0 (Refinamiento final):** Temas CSS personalizados por docset, resaltado de sintaxis avanzado, ejecución de instancia única y pruebas de estrés con colecciones masivas de documentación (más de 20 docsets).
 
 Para profundizar en el diseño del sistema, consulta [`SPEC.md`](./SPEC.md). La guía operativa para agentes y colaboradores se encuentra en [`AGENTS.md`](./AGENTS.md).

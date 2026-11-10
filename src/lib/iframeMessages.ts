@@ -299,6 +299,55 @@ export function validateFindResultMessage(
   return { total: tot, current: cur };
 }
 
+/** Máximo de encabezados que se aceptan en el índice de una página. */
+export const MAX_TOC_ITEMS = 200;
+/** Máximo de texto por encabezado. */
+export const MAX_TOC_TEXT = 160;
+
+export interface TocItem {
+  text: string;
+  /** 1..4 (h1..h4). */
+  level: number;
+}
+
+/**
+ * Mensaje `opendoc-toc`: lista acotada de encabezados con texto no vacío
+ * (recortado) y nivel 1..4. Cualquier elemento inválido invalida el mensaje.
+ */
+export function validateTocMessage(data: unknown, trustedSource: boolean): TocItem[] | null {
+  if (!trustedSource) return null;
+  if (typeof data !== "object" || data === null) return null;
+  const rec = data as Record<string, unknown>;
+  if (rec["type"] !== "opendoc-toc") return null;
+  const items = rec["items"];
+  if (!Array.isArray(items) || items.length > MAX_TOC_ITEMS) return null;
+  const out: TocItem[] = [];
+  for (const it of items) {
+    if (typeof it !== "object" || it === null) return null;
+    const r = it as Record<string, unknown>;
+    const text = r["text"];
+    const level = r["level"];
+    if (typeof text !== "string" || !Number.isInteger(level)) return null;
+    const lv = level as number;
+    const clean = text.replace(/\s+/g, " ").trim().slice(0, MAX_TOC_TEXT);
+    if (clean === "" || lv < 1 || lv > 4) return null;
+    out.push({ text: clean, level: lv });
+  }
+  return out;
+}
+
+/** Mensaje `opendoc-toc-active`: índice entero dentro del máximo. */
+export function validateTocActiveMessage(data: unknown, trustedSource: boolean): number | null {
+  if (!trustedSource) return null;
+  if (typeof data !== "object" || data === null) return null;
+  const rec = data as Record<string, unknown>;
+  if (rec["type"] !== "opendoc-toc-active") return null;
+  const index = rec["index"];
+  if (!Number.isInteger(index)) return null;
+  const i = index as number;
+  return i >= 0 && i < MAX_TOC_ITEMS ? i : null;
+}
+
 /**
  * Tasa genérica: como máximo `max` eventos por ventana. Devuelve si pasa
  * y la lista podada (pura, testeable).

@@ -77,7 +77,7 @@ graph TD
 - **`protocol/`**:
   - Manejador asíncrono del esquema `opendoc://` (en Windows expuesto como `http://opendoc.localhost`): cada petición se sirve en un hilo bloqueante (`spawn_blocking`) y el candado de estado solo se toma para copiar el docset pedido, de modo que los recursos de una página se leen en paralelo sin frenar el hilo de UI.
   - Resolución segura de ficheros dentro de `Documents/`.
-  - Inyección en respuestas HTML del estilo forzado claro (`THEME_STYLE`), script de comunicación y atajos (`THEME_SCRIPT`), y normalizador de eventos de rueda/trackpad (`THEME_WHEEL_SCRIPT`).
+  - Inyección en respuestas HTML del estilo forzado claro (`THEME_STYLE`), script de comunicación y atajos (`THEME_SCRIPT`), normalizador de eventos de rueda/trackpad (`THEME_WHEEL_SCRIPT`) e índice de la página (`TOC_SCRIPT`: envía `opendoc-toc {items:[{text, level}]}` con los h1–h4 visibles, máx. 200, y `opendoc-toc-active {index}` con el scroll; obedece `opendoc-toc-go {index}`; validado con `validateTocMessage` / `validateTocActiveMessage`).
 - **`navigation.rs`**:
   - Función pura `nav_decision` que autoriza URLs internas (`opendoc`, `localhost`, esquemas de Tauri) y reenvía enlaces externos (`http`, `https`, `mailto`) al navegador del sistema a través de `tauri-plugin-opener`.
 - **`session/`**:
@@ -103,7 +103,7 @@ graph TD
   - `FindBar.tsx`: barra flotante de búsqueda en la página (`Ctrl/Cmd+F`).
   - `SettingsDialog.tsx`: panel de Ajustes (`Ctrl/Cmd+,` o el engranaje de la barra lateral) con secciones General, Apariencia, Lectura, Docsets, Atajos y Acerca de. Con el panel abierto no actúa ningún otro atajo global.
 - **`store/`**:
-  - Stores de Zustand: `docsets`, `tabs`, `palette`, `catalog`, `browse`, `theme`, `accent`, `lang`, `contextMenu`, `find`, `settingsUi` (apertura y sección del panel de Ajustes), `zoom` y `prefs` (estos dos últimos persistidos en `localStorage`; `prefs` guarda en `opendoc.prefs` el desplazamiento suave, la precarga de enlaces, reducir movimiento, el límite de resultados de la paleta y el estilo visual (`design`, aplicado como `data-design` en `<html>` al importar, sin parpadeo)).
+  - Stores de Zustand: `docsets`, `tabs`, `palette`, `catalog`, `browse`, `theme`, `accent`, `lang`, `contextMenu`, `find`, `settingsUi` (apertura y sección del panel de Ajustes), `zoom` y `prefs` (estos dos últimos persistidos en `localStorage`; `prefs` guarda en `opendoc.prefs` el desplazamiento suave, la precarga de enlaces, reducir movimiento, el límite de resultados de la paleta el estilo visual (`design`, aplicado como `data-design` en `<html>` al importar, sin parpadeo), el índice de la página (`toc`) y las secciones visibles del inicio (`home`)).
 - **`lib/`**:
   - `commands.ts`: funciones envolventes tipadas sobre `invoke()`, `listen()` y diálogos nativos.
   - `types.ts`: tipos TypeScript espejo de los modelos de Rust.
@@ -112,6 +112,7 @@ graph TD
   - `iframeMessages.ts`: validadores exhaustivos de los mensajes recibidos desde los iframes.
   - `accent.ts`: tokens CSS para los 4 acentos de color con contraste WCAG garantizado sobre la tarjeta (`APP_BG`) y sobre el lienzo teñido de cada acento (`CANVAS_HEX`).
   - `design.ts`: estilos de interfaz (`color`, `paper`, `classic`) con lectura tolerante y tonos de tarjeta y lienzo por estilo, acento y modo; `design.test.ts` comprueba el contraste del texto del acento en las 24 combinaciones. Los estilos solo redefinen variables (`[data-design]` en `index.css`: superficies, `--font-sans`/`--font-display`/`--font-mono`, `--display-weight`, `--radius-scale`, `--tab-r`); la estructura es común.
+  - `recent.ts`: historial de lectura para «Seguir leyendo» (una entrada por URL sin ancla, máx. 40, título provisional que no pisa el confirmado, tiempos relativos) en `localStorage` (`opendoc.recent`); el store `recent` se alimenta solo de la entrada actual de la pestaña activa.
   - `kindGlyph.ts`: familia visual de cada tipo de entrada de Dash (tipo, invocable, miembro, módulo, constante, documento; incluye abreviaturas Core Data como `instm` o `cl`) y su letra, para el componente `KindGlyph`.
   - `index.css` + `tailwind.config.js`: sistema de diseño. Lienzo por acento y modo (`--canvas`, `--canvas-2`, `--canvas-line`), tarjeta neutra (`--card`, `--card-2`, `--line`) y tinta (`--ink`, `--ink-2`, `--muted`, `--faint`), redefinidos en `html.dark`; utilidades `bg-canvas`, `bg-card`, `text-ink`, `border-line`, etc. Componentes base `.btn`, `.btn-primary`, `.btn-danger`, `.icon-btn`, `.field`, `.label`, `.kbd`, `.surface`, `.backdrop` y `.tab-connected` (pestaña activa fundida con la tarjeta). Tipografías empaquetadas con Fontsource (`@fontsource-variable/bricolage-grotesque`, `@fontsource-variable/inter`, `@fontsource-variable/jetbrains-mono`): nada se pide a la red.
   - `zoom.ts`: pasos de zoom de los docsets (50 %–300 %) y su formato.
@@ -257,12 +258,13 @@ El repositorio implementa una batería integral de pruebas en frontend y backend
    - `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings` (cero advertencias permitidas).
    - `cargo fmt --manifest-path src-tauri/Cargo.toml -- --check` (formato estricto según `rustfmt`).
 2. **Frontend**:
-   - `npm test` (149 tests ejecutados con Vitest: pruebas de historial, validación de mensajes postMessage, i18n, contraste de acentos, stores y serialización de sesión).
+   - `npm test` (161 tests ejecutados con Vitest: pruebas de historial, validación de mensajes postMessage, i18n, contraste de acentos, stores y serialización de sesión).
    - `npx tsc --noEmit` (comprobación estricta de tipos de TypeScript).
 3. **Flujo de Integración Continua (`.github/workflows/release.yml`)**:
    - El trabajo `check` corre en cada push y pull request hacia `master`, validando `npm ci`, `cargo test`, `cargo clippy`, `cargo fmt`, `npx tsc --noEmit` y `npm test`.
    - El trabajo `verify-version` comprueba la coherencia exacta entre la versión de `package.json`, `src-tauri/Cargo.toml` y `src-tauri/tauri.conf.json`.
-   - La compilación de artefactos para Windows (.exe, .msi), macOS (.dmg ARM64 e Intel) y Linux (.deb, .AppImage, .rpm) se ejecuta automáticamente ante tags de versión (`v*`).
+   - La compilación de artefactos para Windows (.exe, .msi), macOS (.dmg ARM64 e Intel) y Linux (.deb, .AppImage, .rpm) se ejecuta automáticamente ante tags de versión (`v*`). Con `--config src-tauri/tauri.release.conf.json` se generan además los paquetes firmados del actualizador y `latest.json` (secretos `TAURI_SIGNING_PRIVATE_KEY` y `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`).
+4. **Actualizaciones**: `tauri-plugin-updater` (clave pública y endpoint `releases/latest/download/latest.json` en `tauri.conf.json`) y `tauri-plugin-process` para reiniciar. El frontend los usa solo a través de `checkForUpdate`, `installUpdate` y `relaunchApp` de `commands.ts`.
 
 ---
 

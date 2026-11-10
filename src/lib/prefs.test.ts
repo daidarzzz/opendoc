@@ -14,8 +14,21 @@ describe("prefs", () => {
   });
 
   it("conserva valores válidos", () => {
-    const p = { smoothScroll: false, linkPrefetch: false, reduceMotion: true, paletteLimit: 100, design: "paper" };
+    const p = {
+      smoothScroll: false,
+      linkPrefetch: false,
+      reduceMotion: true,
+      paletteLimit: 100,
+      design: "paper",
+      toc: false,
+      home: { greeting: false, search: true, filters: false, recent: true, library: false, shortcuts: true },
+    };
     expect(normalizePrefs(p)).toEqual(p);
+  });
+
+  it("completa las secciones de inicio que falten o sean basura", () => {
+    const p = normalizePrefs({ home: { recent: false, library: "no" } });
+    expect(p.home).toEqual({ ...DEFAULT_PREFS.home, recent: false });
   });
 
   it("guarda y carga, tolerando JSON roto o storage ausente", () => {

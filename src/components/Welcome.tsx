@@ -3,8 +3,12 @@
 // como filtro, la biblioteca en mosaicos y los atajos de teclado.
 // Sin docsets: un estado vacío que lleva al catálogo o a elegir carpeta.
 import { platform } from "@tauri-apps/plugin-os";
+import { useMemo } from "react";
 import { useT } from "../hooks/useT";
 import { type I18nKey } from "../lib/i18n";
+import { relativeParts } from "../lib/recent";
+import { usePrefs } from "../store/prefs";
+import { useRecent } from "../store/recent";
 import { useDocsets } from "../store/docsets";
 import { usePalette } from "../store/palette";
 import { useTabs } from "../store/tabs";
@@ -33,11 +37,22 @@ export function Welcome({ docCount }: { docCount: number }) {
   const openHome = useTabs((s) => s.openHome);
   const docsets = useDocsets((s) => s.docsets);
   const choose = useDocsets((s) => s.choose);
-  const { t } = useT();
+  const { t, lang } = useT();
   // Símbolo del modificador según plataforma (macOS: ⌘).
   const mod = platform() === "macos" ? "⌘" : "Ctrl";
   const greeting = t(greetingKey(new Date().getHours()));
   const library = [...docsets].sort((a, b) => a.name.localeCompare(b.name));
+  const show = usePrefs((s) => s.home);
+  const pages = useRecent((s) => s.pages);
+  const byId = useMemo(() => new Map(docsets.map((d) => [d.id, d])), [docsets]);
+  // Solo páginas de docsets cargados; las 6 más recientes.
+  const recent = useMemo(() => pages.filter((p) => byId.has(p.docsetId)).slice(0, 6), [pages, byId]);
+  const rtf = useMemo(() => new Intl.RelativeTimeFormat(lang, { numeric: "auto" }), [lang]);
+  const ago = (at: number): string => {
+    const { value, unit } = relativeParts(at, Date.now());
+    return value === 0 ? t("welcome.justNow") : rtf.format(value, unit);
+  };
+  const nothing = !show.greeting && !show.search && !show.filters && !(show.recent && recent.length > 0) && !show.library && !show.shortcuts;
 
   const shortcuts: { keys: string[]; label: I18nKey }[] = [
     { keys: [mod, "K"], label: "welcome.search" },
@@ -76,17 +91,30 @@ export function Welcome({ docCount }: { docCount: number }) {
   return (
     <div className="flex min-h-0 w-full flex-1 overflow-y-auto">
       <div className="mx-auto w-full max-w-[46rem] animate-rise-in px-10 pb-12 pt-[min(12vh,6rem)]">
-        <p className="text-[13px] font-semibold text-accent-text">{greeting}</p>
-        <h1 className="mt-1 heading text-[44px] leading-[1.05] text-ink">
-          {t("welcome.title")}
-          <span className="caret-blink text-accent">_</span>
-        </h1>
+        {nothing && (
+          <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-center">
+            <span className="heading text-[28px] text-faint">
+              OpenDoc<span className="caret-blink text-accent">_</span>
+            </span>
+            <p className="text-[13px] text-faint">{t("welcome.quiet", { mod })}</p>
+          </div>
+        )}
+        {show.greeting && (
+          <div className="mb-7">
+            <p className="text-[13px] font-semibold text-accent-text">{greeting}</p>
+            <h1 className="mt-1 heading text-[44px] leading-[1.05] text-ink">
+              {t("welcome.title")}
+              <span className="caret-blink text-accent">_</span>
+            </h1>
+          </div>
+        )}
 
+        {show.search && (
         <button
           type="button"
           onClick={() => setOpen(true)}
           aria-label={t("welcome.searchDocs", { mod })}
-          className="group mt-7 flex h-14 w-full items-center gap-3 rounded-2xl border border-line bg-card-2 px-5 text-left transition-all duration-200 ease-smooth hover:border-accent/50 hover:bg-card hover:shadow-[0_0_0_4px_rgb(var(--accent-ch)/0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-text"
+          className="group flex h-14 w-full items-center gap-3 rounded-2xl border border-line bg-card-2 px-5 text-left transition-all duration-200 ease-smooth hover:border-accent/50 hover:bg-card hover:shadow-[0_0_0_4px_rgb(var(--accent-ch)/0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-text"
         >
           <SearchIcon size={19} className="shrink-0 text-muted transition-colors group-hover:text-accent-text" />
           <span className="min-w-0 flex-1 truncate text-[16px] text-faint">{t("palette.input")}</span>
@@ -95,9 +123,10 @@ export function Welcome({ docCount }: { docCount: number }) {
             <kbd className="kbd">K</kbd>
           </span>
         </button>
+        )}
 
-        {library.length > 0 && (
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        {show.filters && library.length > 0 && (
+          <div className={`flex flex-wrap items-center gap-1.5 ${show.search ? "mt-3" : ""}`}>
             <span className="mr-1 text-[12.5px] text-muted">{t("welcome.filterBy")}</span>
             {library.slice(0, 6).map((d) => {
               const key = (d.platform ?? d.id).toLowerCase();
@@ -117,7 +146,51 @@ export function Welcome({ docCount }: { docCount: number }) {
           </div>
         )}
 
-        <section className="mt-12" aria-label={t("sidebar.library")}>
+        {show.recent && recent.length > 0 && (
+          <section className="mt-12 first:mt-0" aria-label={t("welcome.recent")}>
+            <h2 className="mb-3 heading text-[19px]">{t("welcome.recent")}…</h2>
+            <ul className="grid gap-2.5 [grid-template-columns:repeat(auto-fill,minmax(210px,1fr))]">
+              {recent.map((p, i) => {
+                const d = byId.get(p.docsetId);
+                return (
+                  <li key={p.url} style={{ animationDelay: `${i * 40}ms` }} className="animate-rise-in">
+                    <button
+                      type="button"
+                      onClick={() => void useTabs.getState().openUrl(p.url, p.title)}
+                      onAuxClick={(e) => {
+                        if (e.button === 1) {
+                          e.preventDefault();
+                          void useTabs.getState().openUrl(p.url, p.title, { newTab: true });
+                        }
+                      }}
+                      onMouseDown={(e) => {
+                        if (e.button === 1) e.preventDefault();
+                      }}
+                      title={p.title}
+                      className="group relative flex h-full w-full items-start gap-3 overflow-hidden rounded-xl border border-line bg-card p-3 text-left transition-all duration-200 ease-smooth hover:-translate-y-0.5 hover:border-accent/30 hover:shadow-float"
+                    >
+                      <span aria-hidden className="absolute inset-y-0 left-0 w-[3px] origin-top scale-y-0 bg-accent transition-transform duration-300 ease-smooth group-hover:scale-y-100" />
+                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-card-2 ring-1 ring-line">
+                        <DocsetIcon icon={d?.icon ?? null} name={d?.name ?? p.docsetId} hint={p.docsetId} size={18} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="line-clamp-2 text-[13px] font-semibold leading-snug text-ink transition-colors group-hover:text-accent-text">
+                          {p.title}
+                        </span>
+                        <span className="mt-1 block truncate text-[11.5px] text-faint">
+                          {d?.name ?? p.docsetId} · {ago(p.at)}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+
+        {show.library && (
+        <section className="mt-12 first:mt-0" aria-label={t("sidebar.library")}>
           <div className="mb-3 flex items-baseline justify-between">
             <h2 className="flex items-baseline gap-2 heading text-[19px]">
               {t("sidebar.library")}
@@ -176,7 +249,9 @@ export function Welcome({ docCount }: { docCount: number }) {
             </li>
           </ul>
         </section>
+        )}
 
+        {show.shortcuts && (
         <ul className="mt-10 flex flex-wrap gap-x-5 gap-y-2 border-t border-line pt-5" aria-label={t("welcome.shortcuts")}>
           {shortcuts.map((s) => (
             <li key={s.label} className="flex items-center gap-1.5 text-[12.5px] text-muted">
@@ -191,6 +266,7 @@ export function Welcome({ docCount }: { docCount: number }) {
             </li>
           ))}
         </ul>
+        )}
       </div>
     </div>
   );

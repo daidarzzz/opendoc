@@ -201,6 +201,10 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Firma de las actualizaciones (Ajustes → General → Actualizaciones).
+          # La clave privada vive solo en los secretos del repositorio.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           # En tags sube al borrador de `create-release` (con releaseId el
           # resto de inputs de release se ignoran). En lanzamientos
@@ -209,7 +213,10 @@ jobs:
           releaseId: ${{ needs.create-release.outputs.release-id }}
           releaseDraft: true
           prerelease: false
-          args: ${{ matrix.args }}
+          # `tauri.release.conf.json` activa los artefactos firmados del
+          # actualizador (y `latest.json`) solo en CI: en local no hace falta
+          # la clave privada para compilar.
+          args: ${{ matrix.args }} --config src-tauri/tauri.release.conf.json
 
       - name: Upload installers (manual build only)
         if: github.event_name == 'workflow_dispatch'

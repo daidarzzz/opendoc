@@ -32,6 +32,10 @@ opendoc-core = { git = "https://github.com/daidarzzz/opendoc-core", tag = "v0.1.
 base64 = "0.22"
 tauri-plugin-os = "2"
 tauri-plugin-dialog = "2"
+# Actualizaciones firmadas desde las releases de GitHub (`latest.json`)
+# y reinicio tras instalar. Plugins oficiales de Tauri.
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 # Gestor de docsets (F1): HTTP bloqueante (en spawn_blocking, sin runtime
 # propio) con raíces webpki (sin depender del almacén del SO) y parse XML
 # de feeds estilo Kapeli. Justificación AGENTS.md: cliente estándar.

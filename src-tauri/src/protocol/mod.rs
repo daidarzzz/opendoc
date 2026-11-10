@@ -196,13 +196,31 @@ window.addEventListener("pointerdown",function(e){if(e.isTrusted&&e.button!==2)r
 window.addEventListener("contextmenu",function(e){e.preventDefault();if(!e.isTrusted)return;var s="";try{s=String(window.getSelection()||"");}catch(_){}var a=e.target&&e.target.closest?e.target.closest("a[href]"):null,u=null;if(a){try{var x=new URL(a.getAttribute("href"),location.href);if(x.origin===location.origin)u=x.toString();}catch(_){}}rep("opendoc-context",{x:e.clientX,y:e.clientY,selection:s.slice(0,10000),link:u});},true);
 })();</script>"#;
 
+/// Índice de la página: recopila los encabezados visibles (h1–h4, fuera de
+/// `nav`/`header`/`footer`) al cargar y los envía como
+/// `{type:"opendoc-toc", items:[{text, level}]}` (máx. 200, texto ≤160).
+/// Con el scroll avisa del encabezado en curso (`opendoc-toc-active`,
+/// `{index}`) y obedece `opendoc-toc-go {index}` del padre (desplaza con
+/// suavidad hasta él). El padre valida todo (contenido no fiable).
+pub const TOC_SCRIPT: &str = r#"<script>(function(){
+function rep(t,x){x=x||{};x.type=t;window.parent.postMessage(x,"*");}
+var hs=[],act=-1,raf=0;
+function collect(){var list=document.querySelectorAll("h1,h2,h3,h4");hs=[];var items=[];for(var i=0;i<list.length&&items.length<200;i++){var h=list[i];if(h.closest("nav,header,footer,[role=navigation]"))continue;var r=h.getBoundingClientRect();if(!r.width&&!r.height)continue;var tx=(h.textContent||"").replace(/\s+/g," ").replace(/[¶#]\s*$/,"").trim();if(!tx)continue;hs.push(h);items.push({text:tx.slice(0,160),level:Number(h.tagName.charAt(1))});}act=-1;rep("opendoc-toc",{items:items});spy();}
+function spy(){raf=0;if(!hs.length)return;var cur=0;for(var i=0;i<hs.length;i++){if(hs[i].getBoundingClientRect().top<=96)cur=i;else break;}var el=document.documentElement;if(window.innerHeight+(window.scrollY||0)>=el.scrollHeight-2)cur=hs.length-1;if(cur!==act){act=cur;rep("opendoc-toc-active",{index:cur});}}
+window.addEventListener("scroll",function(){if(!raf)raf=requestAnimationFrame(spy);},true);
+window.addEventListener("load",collect);
+window.addEventListener("message",function(e){if(e.source!==window.parent||!e.data)return;var d=e.data;if(d.type==="opendoc-toc-go"){var i=Number(d.index);if(Number.isInteger(i)&&i>=0&&i<hs.length)hs[i].scrollIntoView({behavior:"smooth",block:"start"});}else if(d.type==="opendoc-toc-request"){collect();}});
+})();</script>"#;
+
 /// BOM UTF-8 (se respeta al insertar al inicio).
 const UTF8_BOM: [u8; 3] = [0xEF, 0xBB, 0xBF];
 
 /// Inserta `THEME_STYLE + THEME_SCRIPT` en un HTML.
 pub fn inject_theme_support(html: &[u8]) -> Vec<u8> {
     let block =
-        format!("{THEME_STYLE}{ACTIONS_STYLE}{THEME_SCRIPT}{THEME_WHEEL_SCRIPT}{ACTIONS_SCRIPT}");
+        format!(
+            "{THEME_STYLE}{ACTIONS_STYLE}{THEME_SCRIPT}{THEME_WHEEL_SCRIPT}{ACTIONS_SCRIPT}{TOC_SCRIPT}"
+        );
     let bytes = block.as_bytes();
     if let Some(pos) = find_head_close(html) {
         let mut out = Vec::with_capacity(html.len() + bytes.len());
@@ -393,6 +411,12 @@ mod tests {
     #[test]
     fn non_html_untouched_and_script_shape() {
         // El script solo acepta forma exacta desde window.parent.
+        assert!(TOC_SCRIPT.contains("e.source!==window.parent"));
+        assert!(TOC_SCRIPT.contains("\"opendoc-toc\""));
+        assert!(TOC_SCRIPT.contains("\"opendoc-toc-active\""));
+        assert!(TOC_SCRIPT.contains("\"opendoc-toc-go\""));
+        assert!(TOC_SCRIPT.starts_with("<script>(function(){"));
+        assert!(TOC_SCRIPT.ends_with("})();</script>"));
         assert!(THEME_SCRIPT.contains("e.source!==window.parent"));
         assert!(THEME_SCRIPT.contains("\"opendoc-theme\""));
         assert!(THEME_SCRIPT.contains("data-opendoc-theme"));

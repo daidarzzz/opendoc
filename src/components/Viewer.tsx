@@ -19,6 +19,8 @@ import {
   rateAllow,
   validateContextMessage,
   validateFindResultMessage,
+  validateTocActiveMessage,
+  validateTocMessage,
   validateKeyMessage,
   validateNavigateMessage,
   validateNavMessage,
@@ -39,6 +41,8 @@ import { useZoom } from "../store/zoom";
 import { usePrefs } from "../store/prefs";
 import { CatalogView } from "./CatalogView";
 import { FindBar } from "./FindBar";
+import { PageToc } from "./PageToc";
+import { useToc } from "../store/toc";
 
 /** Envía al iframe el estado de búsqueda actual (o lo limpia). */
 function sendFind(win: Window, dir: -1 | 0 | 1): void {
@@ -113,6 +117,9 @@ export function Viewer() {
   const [frameUrls, setFrameUrls] = useState<(string | null)[]>(() => emptySlots<string | null>(null));
   const [frameVersions, setFrameVersions] = useState<number[]>(() => emptySlots(0));
   const [frontFrame, setFrontFrame] = useState<number | null>(null);
+  const showToc = usePrefs((s) => s.toc);
+  const tocItems = useToc((s) => (frontFrame === null ? undefined : s.byFrame[frontFrame]));
+  const tocActive = useToc((s) => (frontFrame === null ? 0 : (s.active[frontFrame] ?? 0)));
   const [transitioning, setTransitioning] = useState(false);
   const frames = useRef<(HTMLIFrameElement | null)[]>(emptySlots<HTMLIFrameElement | null>(null));
   /** Página que muestra de verdad cada slot (la reporta el propio iframe:
@@ -232,6 +239,7 @@ export function Viewer() {
     versions[index] += 1;
     frameVersionsRef.current = versions;
     loadedFrameUrls.current[index] = null;
+    useToc.getState().setItems(index, []); // El índice viejo no sobrevive a otra página.
     setFrameVersions(versions);
     setFrameUrls((current) => {
       const next = [...current];
@@ -318,6 +326,17 @@ export function Viewer() {
           return;
         }
         if (preloadedFrame.current?.index === sourceIndex) preloadedFrame.current = null;
+        return;
+      }
+      // Índice de la página: se guarda por iframe (también los de reserva).
+      if (type === "opendoc-toc") {
+        const items = validateTocMessage(data, true);
+        if (items) useToc.getState().setItems(sourceIndex, items);
+        return;
+      }
+      if (type === "opendoc-toc-active") {
+        const index = validateTocActiveMessage(data, true);
+        if (index !== null) useToc.getState().setActive(sourceIndex, index);
         return;
       }
       if (sourceIndex !== frontFrameRef.current) return;
@@ -588,6 +607,15 @@ export function Viewer() {
             />
           ))}
           <ErrorDetails error={tabError} />
+          {showToc && frontFrame !== null && tocItems && (
+            <PageToc
+              items={tocItems}
+              active={tocActive}
+              onGo={(index) =>
+                frames.current[frontFrame]?.contentWindow?.postMessage({ type: "opendoc-toc-go", index }, "*")
+              }
+            />
+          )}
           <FindBar />
           {zoomToast && (
             <div

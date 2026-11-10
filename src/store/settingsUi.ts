@@ -1,7 +1,7 @@
 // Apertura del panel de Ajustes (desde la barra lateral o Ctrl/Cmd+,).
 import { create } from "zustand";
 
-export type SettingsSection = "general" | "appearance" | "reading" | "docsets" | "shortcuts" | "about";
+export type SettingsSection = "general" | "appearance" | "home" | "reading" | "docsets" | "shortcuts" | "about";
 
 interface SettingsUiState {
   open: boolean;

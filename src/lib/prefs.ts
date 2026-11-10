@@ -6,6 +6,25 @@ import { DEFAULT_DESIGN, normalizeDesign, type Design } from "./design";
 export const PALETTE_LIMITS = [20, 50, 100] as const;
 export type PaletteLimit = (typeof PALETTE_LIMITS)[number];
 
+/** Secciones de la pestaña de inicio (todas visibles por defecto). */
+export interface HomePrefs {
+  greeting: boolean;
+  search: boolean;
+  filters: boolean;
+  recent: boolean;
+  library: boolean;
+  shortcuts: boolean;
+}
+
+export const HOME_SECTIONS: readonly (keyof HomePrefs)[] = [
+  "greeting",
+  "search",
+  "filters",
+  "recent",
+  "library",
+  "shortcuts",
+];
+
 export interface UiPrefs {
   /** Rueda del ratón animada dentro de los docsets. */
   smoothScroll: boolean;
@@ -17,6 +36,10 @@ export interface UiPrefs {
   paletteLimit: PaletteLimit;
   /** Estilo visual de la interfaz (ver `lib/design`). */
   design: Design;
+  /** Índice de encabezados de la página, al borde del visor. */
+  toc: boolean;
+  /** Qué se ve en la pestaña de inicio. */
+  home: HomePrefs;
 }
 
 export const DEFAULT_PREFS: UiPrefs = {
@@ -25,6 +48,8 @@ export const DEFAULT_PREFS: UiPrefs = {
   reduceMotion: false,
   paletteLimit: 20,
   design: DEFAULT_DESIGN,
+  toc: true,
+  home: { greeting: true, search: true, filters: true, recent: true, library: true, shortcuts: true },
 };
 
 const STORAGE_KEY = "opendoc.prefs";
@@ -44,7 +69,16 @@ export function normalizePrefs(raw: unknown): UiPrefs {
     reduceMotion: bool(r["reduceMotion"], DEFAULT_PREFS.reduceMotion),
     paletteLimit: limit ?? DEFAULT_PREFS.paletteLimit,
     design: normalizeDesign(r["design"]),
+    toc: bool(r["toc"], DEFAULT_PREFS.toc),
+    home: normalizeHome(r["home"]),
   };
+}
+
+function normalizeHome(raw: unknown): HomePrefs {
+  const r = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
+  const out = { ...DEFAULT_PREFS.home };
+  for (const k of HOME_SECTIONS) out[k] = bool(r[k], DEFAULT_PREFS.home[k]);
+  return out;
 }
 
 export function loadPrefsFrom(store: StringStorage | null | undefined): UiPrefs {

@@ -22,6 +22,8 @@ function pick(s: PrefsState): UiPrefs {
     reduceMotion: s.reduceMotion,
     paletteLimit: s.paletteLimit,
     design: s.design,
+    toc: s.toc,
+    home: s.home,
   };
 }
 

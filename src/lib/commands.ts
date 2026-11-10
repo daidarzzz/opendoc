@@ -5,6 +5,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open } from "@tauri-apps/plugin-dialog";
+import { relaunch } from "@tauri-apps/plugin-process";
+import { check, type Update } from "@tauri-apps/plugin-updater";
 import type {
   Accent,
   CatalogStatus,
@@ -23,6 +25,7 @@ import type {
   SessionData,
   Settings,
   ThemeMode,
+  UpdateInfo,
 } from "./types";
 
 /** Lista los docsets cargados (vacío hasta setDocsetsDir). */
@@ -215,4 +218,42 @@ export async function chooseFolder(): Promise<string | null> {
     return typeof first === "string" ? first : null;
   }
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Actualizaciones (plugin-updater): `latest.json` de la última release de
+// GitHub, paquetes firmados (clave pública en `tauri.conf.json`).
+
+let pendingUpdate: Update | null = null;
+
+/** Busca una versión nueva. `null` = ya es la última. */
+export async function checkForUpdate(): Promise<UpdateInfo | null> {
+  const update = await check();
+  pendingUpdate = update;
+  if (!update) return null;
+  return { version: update.version, notes: update.body ?? null, date: update.date ?? null };
+}
+
+/**
+ * Descarga e instala la versión encontrada por `checkForUpdate` e informa
+ * del progreso (`received`/`total` en bytes; `total` puede ser null).
+ */
+export async function installUpdate(onProgress: (received: number, total: number | null) => void): Promise<void> {
+  if (!pendingUpdate) throw new Error("no pending update");
+  let received = 0;
+  let total: number | null = null;
+  await pendingUpdate.downloadAndInstall((event) => {
+    if (event.event === "Started") {
+      total = event.data.contentLength ?? null;
+      onProgress(0, total);
+    } else if (event.event === "Progress") {
+      received += event.data.chunkLength;
+      onProgress(received, total);
+    }
+  });
+}
+
+/** Reinicia la app (tras instalar una actualización). */
+export async function relaunchApp(): Promise<void> {
+  await relaunch();
 }

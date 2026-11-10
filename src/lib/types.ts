@@ -266,3 +266,10 @@ export interface DocsetProgress {
   files: number;
   message: string | null;
 }
+
+/** Versión nueva disponible (plugin-updater, `latest.json` de la release). */
+export interface UpdateInfo {
+  version: string;
+  notes: string | null;
+  date: string | null;
+}

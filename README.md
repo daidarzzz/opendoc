@@ -35,6 +35,9 @@ While Zeal is a proven community tool, its Qt/C++ interface feels dated and offe
 - **Safe Viewer Protocol (`opendoc://`):** Serves local documentation files while preventing directory traversal (`..`, symlinks, drive letters, and percent-encoding attacks). Pages are served off the UI thread in parallel; trackpad scrolling stays native and is bridged across iframe boundaries when WebKit routes it to the app.
 - **Find in Page (`Ctrl/Cmd+F`):** OpenDoc's own floating find bar replaces the webview's: highlights every match, shows `3 of 12`, and moves with `Enter` / `Shift+Enter`.
 - **Docset Zoom:** `Ctrl/Cmd+mouse wheel`, `Ctrl/Cmd +`/`-`/`0` or the context menu. The level is shared across docsets and remembered between sessions.
+- **Page Outline:** A discreet rail of tick marks on the right edge of the viewer maps the page headings (h1–h4) and highlights the section you are reading. Hover it to open the outline and jump anywhere. Optional (Settings → Reading).
+- **Continue Reading:** The home tab lists the last pages you visited, with relative times. Middle-click opens one in a new tab; the history can be cleared in Settings → Home.
+- **Configurable Home:** Settings → Home toggles each part of the home tab (greeting, search bar, docset filters, continue reading, library and shortcuts), down to a completely quiet page.
 - **Smooth Scrolling:** Mouse-wheel scrolling inside docsets is animated with easing (trackpad input stays native). On by default; toggle it in Settings.
 - **Custom Context Menu:** The browser's right-click menu is replaced by a minimal OpenDoc menu: copy, search the selection in OpenDoc or in the page, open links in a new tab, back/forward, select all and zoom inside docsets; tab actions (close, close others, reopen) on tabs; cut/copy/paste in text fields.
 - **External Link Protection:** External hyperlinks (`http://`, `https://`, `mailto:`) automatically open in your operating system's default browser rather than navigating the viewer window.
@@ -111,6 +114,10 @@ npm run tauri build
 
 Compiled binaries land in `src-tauri/target/release/` and platform installers (.exe, .msi, .dmg, .deb, .AppImage) in `src-tauri/target/release/bundle/`.
 
+### 4. In-App Updates
+
+Settings → General checks the latest GitHub release (`latest.json`) and installs signed updates with one click, then restarts. Releases built by CI sign their update packages: the workflow needs the repository secrets `TAURI_SIGNING_PRIVATE_KEY` (the contents of the private key whose public half is in `src-tauri/tauri.conf.json`) and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (empty if the key has no password). Local builds don't need the key: the updater artifacts are only enabled in CI through `src-tauri/tauri.release.conf.json`. Automatic installs work with the Windows installers, the macOS app and the Linux AppImage; `.deb`/`.rpm` installs get a link to download the new version instead.
+
 ---
 
 ## Development & Testing
@@ -118,7 +125,7 @@ Compiled binaries land in `src-tauri/target/release/` and platform installers (.
 Before submitting changes, ensure all tests, linters, and typechecks pass:
 
 ```bash
-# Frontend tests (Vitest: 149 tests covering stores, session sync, i18n, etc.)
+# Frontend tests (Vitest: 161 tests covering stores, session sync, i18n, etc.)
 npm test
 
 # Frontend typechecking
@@ -163,7 +170,7 @@ Remember to comment the patch block back out before committing.
 
 - [x] **v0.1 (MVP):** Docset scanning, SQLite index parsing (standard & Core Data), in-memory fuzzy search, Command Palette, secure `opendoc://` viewer, settings, and themes.
 - [x] **v0.2 (Daily Driver):** Tabbed navigation with per-tab history, persistent sessions across restarts, symbol navigation by type, prefix filtering, and configurable catalog manager (download, install, update, and uninstall).
-- [ ] **v0.3 (Enhancements):** Bookmarks / favorites, in-page Table of Contents (TOC), and extraction cancellation.
+- [ ] **v0.3 (Enhancements):** ~~In-page Table of Contents (TOC)~~ (done: page outline), ~~recent pages~~ (done: continue reading), ~~in-app updates~~ (done), bookmarks / favorites and extraction cancellation.
 - [ ] **v1.0 (Refinements):** Custom per-docset dark CSS themes, refined syntax highlighting, single-instance enforcement, and stress validation across large docset libraries (20+ docsets).
 
 For deep architectural details, consult [`SPEC.md`](./SPEC.md). Operational guidance for AI agents and contributors is documented in [`AGENTS.md`](./AGENTS.md).

@@ -51,6 +51,8 @@ interface TabsState {
     opts?: OpenOpts,
   ) => Promise<void>;
   openHome: (docsetId: string, opts?: OpenOpts) => Promise<void>;
+  /** Abre una URL canónica `opendoc://` ya conocida (p. ej. «Seguir leyendo»). */
+  openUrl: (url: string, title: string, opts?: OpenOpts) => Promise<void>;
   activateTab: (id: string) => void;
   closeTab: (id: string) => void;
   /** Pestaña vacía nueva (bienvenida) y la activa. */
@@ -116,6 +118,26 @@ export const useTabs = create<TabsState>()((set, get) => {
             tabs: s.tabs.map((t) => (t.id === tab.id ? next : t)),
             error: null,
           };
+        });
+      } catch (e) {
+        set({ error: e });
+      }
+    },
+
+    openUrl: async (url, title, opts) => {
+      try {
+        await toViewerUrl(url); // Valida el formato (lanza si no es opendoc://).
+        const docsetId = docsetOf(url);
+        const item = { url, title };
+        set((s) => {
+          if (opts?.newTab) {
+            const r = appendTab(s.tabs, s.activeId, { ...tabWithEntry(docsetId, item) });
+            return { tabs: r.tabs, activeId: r.activeId, error: null };
+          }
+          const tab = s.tabs.find((t) => t.id === s.activeId);
+          if (!tab) return s;
+          const next = { ...navigateTab(tab, item), docsetId, type: "docset" as const };
+          return { tabs: s.tabs.map((t) => (t.id === tab.id ? next : t)), error: null };
         });
       } catch (e) {
         set({ error: e });
