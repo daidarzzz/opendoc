@@ -6,7 +6,7 @@
 
 OpenDoc reads the standard **docset** format (the same one created by Dash and used by Zeal), so you can point it at your existing docsets folder and start browsing immediately.
 
-> **Current version: v0.2.70.** OpenDoc includes tabbed browsing with persistent sessions, an in-memory fuzzy search engine, symbol navigation by type, customizable theme accents, and complete docset management from configurable feeds.
+> **Current version: v0.2.73.** OpenDoc includes tabbed browsing with persistent sessions, an in-memory fuzzy search engine, symbol navigation by type, three visual styles with customizable accents, a page outline, continue reading, in-app updates and complete docset management from configurable feeds.
 
 ---
 
