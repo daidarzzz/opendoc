@@ -14,7 +14,7 @@ OpenDoc es un visor y buscador de documentación offline rápido y moderno, escr
 
 Pilares de diseño:
 1. **Velocidad nativa**: arranque en milisegundos, consumo de RAM contenido (<80 MB en reposo) y búsqueda difusa en memoria interactiva (<50 ms en colecciones de más de 300.000 entradas).
-2. **Experiencia de usuario cuidada**: interfaz estilo VS Code / Obsidian con tema oscuro, claro y del sistema, 4 colores de acento dinámicos, navegación por pestañas con persistencia de sesión e historial, y Command Palette (`Ctrl+K` / `Cmd+K`).
+2. **Experiencia de usuario cuidada**: interfaz editorial de «papel y tinta» (Newsreader + IBM Plex Mono empaquetadas, filetes finos, acento como tinta directa) con tema oscuro, claro y del sistema, 4 colores de acento dinámicos, navegación por pestañas con persistencia de sesión e historial, y Command Palette (`Ctrl+K` / `Cmd+K`).
 3. **Compatibilidad amplia**: soporte para docsets clásicos con índices estándar SQLite (`searchIndex`), esquema Core Data (`ZTOKEN...`), lectura de `Info.plist`, extracción segura de docsets tarix y catálogo integrado configurable.
 4. **Seguridad rigurosa**: visualización en `<iframe>` aislado (`sandbox="allow-scripts"`), protocolo propio `opendoc://` con mitigación de path traversal y validación estricta de cualquier evento emitido por contenido externo.
 
@@ -110,7 +110,8 @@ graph TD
   - `i18n.ts`: diccionarios bilingües inglés/español con claves fuertemente tipadas.
   - `sessionSync.ts`: sincronización reactiva de estado con debounce hacia el backend y vuelco final en cierre.
   - `iframeMessages.ts`: validadores exhaustivos de los mensajes recibidos desde los iframes.
-  - `accent.ts`: tokens CSS para los 4 acentos de color con contraste WCAG garantizado.
+  - `accent.ts`: tokens CSS para los 4 acentos de color con contraste WCAG garantizado sobre el papel (`APP_BG`).
+  - `index.css` + `tailwind.config.js`: sistema de diseño de papel y tinta. Variables `--paper`, `--paper-2` (lomo: barra lateral y pestañas), `--paper-3` (superficies flotantes), `--sheet` (hoja del visor), `--ink`, `--ink-2`, `--muted`, `--faint` y `--rule`, redefinidas en `html.dark`; utilidades `bg-paper`, `text-ink`, `border-rule`, etc. Componentes base `.btn`, `.btn-primary`, `.btn-danger`, `.icon-btn`, `.field`, `.label`, `.kbd`, `.surface` y `.backdrop`. Tipografías empaquetadas con Fontsource (`@fontsource-variable/newsreader`, `@fontsource/ibm-plex-mono`): nada se pide a la red.
   - `zoom.ts`: pasos de zoom de los docsets (50 %–300 %) y su formato.
   - `langIcons.ts` + `langIcons.json`: tabla verificada nombre/id de docset → icono Devicon empaquetado en `src/assets/devicons/` (generado con `scripts/gen-devicons.mjs`, versión pineada, MIT), con lista de iconos que se invierten en tema oscuro y monograma de color como reserva. `DocsetIcon` usa: icono propio del docset → icono empaquetado → monograma.
   - `prefs.ts`: preferencias de interfaz (valores por defecto, normalización tolerante y carga/guardado en `localStorage`).
@@ -254,7 +255,7 @@ El repositorio implementa una batería integral de pruebas en frontend y backend
    - `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings` (cero advertencias permitidas).
    - `cargo fmt --manifest-path src-tauri/Cargo.toml -- --check` (formato estricto según `rustfmt`).
 2. **Frontend**:
-   - `npm test` (124 tests ejecutados con Vitest: pruebas de historial, validación de mensajes postMessage, i18n, contraste de acentos, stores y serialización de sesión).
+   - `npm test` (140 tests ejecutados con Vitest: pruebas de historial, validación de mensajes postMessage, i18n, contraste de acentos, stores y serialización de sesión).
    - `npx tsc --noEmit` (comprobación estricta de tipos de TypeScript).
 3. **Flujo de Integración Continua (`.github/workflows/release.yml`)**:
    - El trabajo `check` corre en cada push y pull request hacia `master`, validando `npm ci`, `cargo test`, `cargo clippy`, `cargo fmt`, `npx tsc --noEmit` y `npm test`.

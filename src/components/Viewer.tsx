@@ -538,8 +538,8 @@ export function Viewer() {
           {!activeEntry ? (
             <Welcome docCount={docsets.length} />
           ) : docsetState === "pending" ? (
-            <div className="flex flex-col items-center gap-2">
-              <p className="text-sm text-yellow-700 dark:text-yellow-300">
+            <div className="flex max-w-md flex-col items-center gap-4 text-center">
+              <p className="text-[17px] italic text-ink-2">
                 {t("viewer.pendingTarix")}
               </p>
               <button
@@ -555,7 +555,7 @@ export function Viewer() {
               </button>
             </div>
           ) : (
-            <p className="text-sm text-yellow-700 dark:text-yellow-300">
+            <p className="max-w-md text-center text-[17px] italic text-ink-2">
               {t("viewer.docsetMissing")}
             </p>
           )}
@@ -564,7 +564,7 @@ export function Viewer() {
       ) : (
         <>
           {frontFrame === null && (
-            <p className="animate-fade-in p-4 text-sm text-gray-500">{t("viewer.loading", { title: activeTitle })}</p>
+            <p className="animate-fade-in px-8 py-6 text-[15px] italic text-muted">{t("viewer.loading", { title: activeTitle })}</p>
           )}
           {/* Los iframes de reserva van `invisible` + `inert`: fuera del
               hit-testing de verdad. Con solo opacity-0/pointer-events-none,
@@ -583,7 +583,7 @@ export function Viewer() {
               scrolling="yes"
               aria-hidden={frontFrame !== index}
               inert={frontFrame !== index}
-              className={`h-full min-h-0 w-full flex-1 border-0 bg-white transition-[opacity,visibility] duration-150 ease-out motion-reduce:transition-none ${frontFrame === index ? `visible opacity-100 ${transitioning ? "pointer-events-none" : ""}` : "invisible absolute inset-0 pointer-events-none opacity-0"}`}
+              className={`h-full min-h-0 w-full flex-1 border-0 bg-sheet transition-[opacity,visibility] duration-150 ease-out motion-reduce:transition-none ${frontFrame === index ? `visible opacity-100 ${transitioning ? "pointer-events-none" : ""}` : "invisible absolute inset-0 pointer-events-none opacity-0"}`}
               onLoad={() => onIframeLoad(index, frameUrls[index], frameVersions[index])}
             />
           ))}
@@ -592,7 +592,7 @@ export function Viewer() {
           {zoomToast && (
             <div
               aria-live="polite"
-              className="pointer-events-none absolute bottom-4 right-4 z-20 animate-pop-in rounded-full border border-gray-200/80 bg-white/95 px-3 py-1 text-xs font-medium tabular-nums text-gray-600 shadow-float backdrop-blur-xl dark:border-white/10 dark:bg-gray-900/95 dark:text-gray-300"
+              className="pointer-events-none absolute bottom-4 right-4 z-20 animate-pop-in rounded-sm border border-rule bg-paper-3 px-3 py-1.5 font-mono text-[11px] font-medium tabular-nums text-ink-2 shadow-float"
             >
               {t("zoom.toast", { pct: formatZoom(zoomLevel) })}
             </div>
@@ -616,28 +616,28 @@ function FolderPrompt({
 }) {
   const { t } = useT();
   return (
-    <div className="flex flex-1 flex-col items-center justify-center p-8">
+    <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
       {dirMissing ? (
         <>
-          <p className="text-sm text-gray-500">
+          <p className="max-w-md text-[17px] italic text-ink-2">
             {t("viewer.folderGone")}
             {savedDir ? `: ${savedDir}` : ""} {t("settings.diskHint")}
           </p>
           <button
             onClick={() => void choose()}
-            className="btn-primary mt-4 px-4 py-2"
+            className="btn-primary mt-5 px-4 py-2"
           >
             {t("viewer.chooseAnother")}
           </button>
         </>
       ) : (
         <>
-          <p className="text-sm text-gray-500">
+          <p className="max-w-md text-[17px] italic text-ink-2">
             {t("viewer.pickFolder")}
           </p>
           <button
             onClick={() => void choose()}
-            className="btn-primary mt-4 px-4 py-2"
+            className="btn-primary mt-5 px-4 py-2"
           >
             {t("viewer.chooseFolder")}
           </button>

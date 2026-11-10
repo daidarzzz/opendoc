@@ -49,7 +49,8 @@ While Zeal is a proven community tool, its Qt/C++ interface feels dated and offe
 - **Tarix Support:** Detects docsets packaged as *tarix* (`tarix.tgz`), extracting them safely on demand into the app's cache directory without modifying your source docsets directory.
 
 ### Customization & Accessibility
-- **Themes (Light / Dark / System):** High-contrast UI theme switching. Docset contents always preserve their authentic light documentation styling to prevent broken inversion artifacts on code samples, tables, and diagrams.
+- **Paper & Ink Design:** An editorial interface inspired by printed technical manuals: warm paper surfaces, ink-colored text, hairline rules and the accent used as a spot color. Typeset in Newsreader and IBM Plex Mono, both bundled so the app stays fully offline. The welcome tab is a title page with a keyboard index, the catalog uses index cards and Settings reads like a spec sheet.
+- **Themes (Light / Dark / System):** Paper (light) and night-reading (dark) themes for the UI. Docset contents always preserve their authentic light documentation styling to prevent broken inversion artifacts on code samples, tables, and diagrams.
 - **Accent Colors:** Choose between **Red**, **Blue**, **Amber**, or **Catppuccin** (Latte/Mocha Mauve). Updates UI highlights, branded buttons, the app logo, and the running window/Dock icon in real time.
 - **Settings Panel (`Ctrl/Cmd+,`):** A full settings window organized in sections — General (language, tab restore, number of search results), Appearance (theme previews, accent color, reduce motion), Reading (smooth scrolling, docset zoom, link preloading on hover), Docsets (folder, rescan, installed list, pending installs, catalog), a keyboard shortcuts reference and About (version, links, reset preferences).
 - **Bilingual Interface:** Fully localized in **English** (default) and **Spanish**, switchable live from Settings with 100% dictionary key parity.
@@ -116,7 +117,7 @@ Compiled binaries land in `src-tauri/target/release/` and platform installers (.
 Before submitting changes, ensure all tests, linters, and typechecks pass:
 
 ```bash
-# Frontend tests (Vitest: 124 tests covering stores, session sync, i18n, etc.)
+# Frontend tests (Vitest: 140 tests covering stores, session sync, i18n, etc.)
 npm test
 
 # Frontend typechecking
@@ -184,3 +185,4 @@ Each documentation set you load remains the intellectual property of its respect
 - [Catppuccin](https://catppuccin.com/) for the Mauve palette values (Latte/Mocha) utilized in the accent color scheme (MIT License).
 - [nucleo-matcher](https://github.com/helix-editor/nucleo) for high-performance in-memory fuzzy matching.
 - [Devicon](https://devicon.dev/) for the bundled language and framework icons (MIT License, see `src/assets/devicons/LICENSE`).
+- [Newsreader](https://github.com/productiontype/Newsreader) and [IBM Plex Mono](https://github.com/IBM/plex) typefaces, bundled via Fontsource (SIL Open Font License 1.1).

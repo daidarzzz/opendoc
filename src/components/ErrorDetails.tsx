@@ -9,14 +9,14 @@ export function ErrorDetails({ error }: { error: unknown }) {
   const info = toAppError(error);
   if (!info) return null;
   return (
-    <div className="text-sm text-red-500">
+    <div className="text-[14px] text-red-700 dark:text-red-400">
       <p>{errorTitle(lang, info)}</p>
       {info.detail !== "" && (
         <details className="mt-1">
-          <summary className="cursor-pointer text-xs text-gray-500 dark:text-gray-400">
+          <summary className="label cursor-pointer">
             {t("common.details")}
           </summary>
-          <p className="mt-1 break-all font-mono text-xs text-gray-500 dark:text-gray-400">
+          <p className="mt-1 break-all font-mono text-[11px] text-muted">
             {info.kind !== "unknown" ? `${info.kind}: ` : ""}{info.detail}
           </p>
         </details>

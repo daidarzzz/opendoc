@@ -11,7 +11,7 @@ interface IconProps {
 function Svg({
   size = 16,
   className = "",
-  strokeWidth = 2,
+  strokeWidth = 1.6,
   children,
 }: IconProps & { children: ReactNode }) {
   return (

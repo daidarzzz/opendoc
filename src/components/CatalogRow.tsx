@@ -20,11 +20,19 @@ import {
 import { t as translate, tn, type I18nKey } from "../lib/i18n";
 import type { RowAction } from "../lib/catalogUi";
 
+/** Estado como etiqueta de ficha: punto de color + versalitas mono. */
 const BADGE_CLASSES: Record<string, string> = {
-  muted: "bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400",
-  ok: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/15 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-400/20",
-  info: "bg-accent/15 text-accent-text ring-1 ring-inset ring-accent-text/20",
-  warn: "bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-400/20",
+  muted: "text-faint",
+  ok: "text-emerald-800 dark:text-emerald-300",
+  info: "text-accent-text",
+  warn: "text-amber-800 dark:text-amber-300",
+};
+
+const BADGE_DOT: Record<string, string> = {
+  muted: "border border-faint",
+  ok: "bg-emerald-600 dark:bg-emerald-400",
+  info: "bg-accent",
+  warn: "bg-amber-500",
 };
 
 const ACTION_KEY: Record<Exclude<RowAction, "none">, I18nKey> = {
@@ -62,33 +70,33 @@ export const CatalogRow = memo(function CatalogRow({
   const pct = op.progress ? progressPercent(op.progress) : null;
   const title = displayName(entry.name);
   const installed = status?.installed === true;
-  const highlight = badge.tone === "info" ? "border-accent-text/30" : installed ? "border-emerald-500/25" : "border-gray-200/80 dark:border-white/[0.07]";
+  const highlight = badge.tone === "info" ? "border-accent-text/40" : "border-rule";
 
   return (
     <li
-      className={`group flex animate-rise-in flex-col rounded-xl border bg-white p-4 shadow-soft transition-all duration-200 ease-smooth hover:-translate-y-px hover:shadow-md dark:bg-white/[0.03] dark:hover:bg-white/[0.05] ${highlight}`}
+      className={`group relative flex animate-rise-in flex-col rounded-[3px] border bg-paper-3 p-4 shadow-soft transition-all duration-200 ease-smooth hover:-translate-y-px hover:border-ink/30 hover:shadow-float ${highlight}`}
     >
-      <div className="flex items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-gray-100 bg-gray-50 dark:border-white/5 dark:bg-white/5">
-          <DocsetIcon icon={icon} name={entry.name} hint={entry.id} size={26} />
+      {installed && <span aria-hidden className="absolute -left-px -top-px h-[calc(100%+2px)] w-[3px] rounded-l-[3px] bg-accent" />}
+      <div className="mb-4 flex items-start gap-3.5">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[3px] border border-rule bg-paper">
+          <DocsetIcon icon={icon} name={entry.name} hint={entry.id} size={24} />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <p className="truncate pt-0.5 text-sm font-semibold tracking-tight" title={title}>
-              {title}
-            </p>
-            <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${BADGE_CLASSES[badge.tone]}`}>
-              {t(badge.key)}
-            </span>
-          </div>
-          <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400" title={lines}>
+          <p className={`label flex items-center gap-1.5 text-[9.5px] ${BADGE_CLASSES[badge.tone]}`}>
+            <span aria-hidden className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${BADGE_DOT[badge.tone]}`} />
+            {t(badge.key)}
+          </p>
+          <p className="mt-1 truncate text-[17px] font-medium leading-tight tracking-[-0.01em]" title={title}>
+            {title}
+          </p>
+          <p className="mt-1 truncate font-mono text-[11px] text-muted" title={lines}>
             {lines}
           </p>
         </div>
       </div>
 
-      <div className="mt-auto flex items-center justify-between gap-2 pt-4">
-        <span className="truncate text-[11px] text-gray-400 dark:text-gray-500">{mirrors}</span>
+      <div className="mt-auto flex items-center justify-between gap-2 border-t border-dotted border-rule pt-3">
+        <span className="truncate text-[13px] italic text-faint">{mirrors}</span>
         <div className="flex shrink-0 items-center gap-1.5">
           {installed && (
             confirmUninstall ? (
@@ -96,7 +104,7 @@ export const CatalogRow = memo(function CatalogRow({
                 <button
                   onClick={() => setConfirmUninstall(false)}
                   disabled={op.busy}
-                  className="rounded-md px-2 py-1 text-xs text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
+                  className="rounded-sm px-2 py-1 font-mono text-[11px] text-muted transition-colors hover:bg-ink/[0.06] hover:text-ink"
                 >
                   {t("catalog.cancelUninstall")}
                 </button>
@@ -106,7 +114,7 @@ export const CatalogRow = memo(function CatalogRow({
                     onUninstall(entry.id);
                   }}
                   disabled={op.busy}
-                  className="inline-flex items-center gap-1 rounded-md bg-red-600 px-2.5 py-1 text-xs font-medium text-white shadow-soft transition-all duration-150 hover:bg-red-700 active:scale-[0.98] disabled:opacity-50"
+                  className="btn-danger px-2.5 py-1"
                 >
                   <TrashIcon size={12} />
                   {t("catalog.confirmUninstall")}
@@ -118,7 +126,7 @@ export const CatalogRow = memo(function CatalogRow({
                 disabled={op.busy}
                 title={op.busy ? t("catalog.uninstalling") : t("catalog.uninstall")}
                 aria-label={t("catalog.uninstall")}
-                className="icon-btn text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-300"
+                className="icon-btn text-faint hover:bg-red-600/10 hover:text-red-700 dark:hover:text-red-300"
               >
                 <TrashIcon size={15} />
               </button>
@@ -128,7 +136,11 @@ export const CatalogRow = memo(function CatalogRow({
             <button
               onClick={() => onAction(entry.id, action !== "install")}
               disabled={op.busy}
-              className={`py-1 text-xs ${action === "reinstall" ? "btn" : "btn-primary"}`}
+              className={
+                action === "reinstall"
+                  ? "inline-flex items-center gap-1.5 rounded-sm px-2 py-1 font-mono text-[11px] text-muted transition-colors hover:bg-ink/[0.06] hover:text-ink disabled:opacity-50"
+                  : "btn-primary py-1"
+              }
             >
               {op.busy ? (
                 <RefreshIcon size={12} className="animate-spin" />
@@ -144,28 +156,28 @@ export const CatalogRow = memo(function CatalogRow({
       </div>
 
       {(op.progress || op.error !== null || op.done) && (
-        <div className="mt-3 animate-fade-in border-t border-gray-100 pt-3 dark:border-white/5" aria-live="polite">
+        <div className="mt-3 animate-fade-in border-t border-rule pt-3" aria-live="polite">
           {op.progress && !op.error && !op.done && (
             <>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{formatProgress(op.progress, lang)}</p>
+              <p className="font-mono text-[11px] text-muted">{formatProgress(op.progress, lang)}</p>
               <div
-                className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-gray-100 dark:bg-white/5"
+                className="mt-2 h-[3px] overflow-hidden bg-ink/[0.08]"
                 role="progressbar"
                 aria-valuenow={pct ?? undefined}
                 aria-valuemin={0}
                 aria-valuemax={100}
               >
                 <div
-                  className={`h-full rounded-full bg-accent-text transition-[width] duration-300 ease-smooth ${pct === null ? "w-1/3 animate-pulse" : ""}`}
+                  className={`h-full bg-accent transition-[width] duration-300 ease-smooth ${pct === null ? "w-1/3 animate-pulse" : ""}`}
                   style={pct === null ? undefined : { width: `${pct}%` }}
                 />
               </div>
             </>
           )}
           {op.done && (
-            <p className="flex items-center justify-between text-xs text-emerald-700 dark:text-emerald-300">
+            <p className="flex items-center justify-between font-mono text-[11px] text-emerald-800 dark:text-emerald-300">
               <span className="flex items-center gap-1.5">
-                <CheckIcon size={13} strokeWidth={2.5} />
+                <CheckIcon size={13} strokeWidth={2} />
                 {t("catalog.installedOk")}
               </span>
               <button
@@ -173,13 +185,13 @@ export const CatalogRow = memo(function CatalogRow({
                 aria-label={t("catalog.dismissNotice", { name: entry.name })}
                 className="icon-btn p-1"
               >
-                <CloseIcon size={12} strokeWidth={2.5} />
+                <CloseIcon size={12} strokeWidth={2} />
               </button>
             </p>
           )}
           {op.error !== null && (
-            <div className="text-xs">
-              <p className="flex items-start justify-between gap-2 text-red-600 dark:text-red-400">
+            <div className="text-[13px]">
+              <p className="flex items-start justify-between gap-2 text-red-700 dark:text-red-400">
                 <span className="min-w-0 flex-1">
                   <ErrorDetails error={op.error} />
                 </span>
@@ -188,11 +200,11 @@ export const CatalogRow = memo(function CatalogRow({
                   aria-label={t("catalog.dismissError", { name: entry.name })}
                   className="icon-btn shrink-0 p-1"
                 >
-                  <CloseIcon size={12} strokeWidth={2.5} />
+                  <CloseIcon size={12} strokeWidth={2} />
                 </button>
               </p>
               {op.errorKind === "no_docsets_dir" && (
-                <button onClick={onChooseFolder} className="mt-1 underline">
+                <button onClick={onChooseFolder} className="mt-1 font-mono text-[11px] underline underline-offset-4">
                   {t("catalog.chooseFolder")}
                 </button>
               )}

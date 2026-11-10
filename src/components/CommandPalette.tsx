@@ -2,6 +2,7 @@
 // Filtros por docset (`cpp:vector`): chips con icono dentro del campo,
 // fantasma de Tab-completado, aviso con filtro vacío.
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
+import { platform } from "@tauri-apps/plugin-os";
 import { useT } from "../hooks/useT";
 import { usePalette } from "../store/palette";
 import { useDocsets } from "../store/docsets";
@@ -34,8 +35,8 @@ const PaletteRow = memo(function PaletteRow({
       id={`palette-option-${index}`}
       role="option"
       aria-selected={active}
-      className={`mx-1.5 cursor-pointer rounded-lg px-2.5 py-2 text-sm transition-colors duration-75 ${
-        active ? "bg-accent/10 text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-300"
+      className={`relative mx-2 cursor-pointer rounded-sm px-3 py-[7px] transition-colors duration-75 ${
+        active ? "bg-ink/[0.06] text-ink" : "text-ink-2"
       }`}
       onMouseEnter={() => onHover(index)}
       onClick={() => onChoose()}
@@ -49,14 +50,13 @@ const PaletteRow = memo(function PaletteRow({
         }
       }}
     >
-      <span className="flex min-w-0 items-center gap-2.5">
+      {active && <span aria-hidden className="absolute bottom-[7px] left-0 top-[7px] w-[2px] bg-accent" />}
+      <span className="flex min-w-0 items-center gap-3">
         <DocsetIcon icon={icon} name={docName} />
-        <span className="truncate font-medium">{result.name}</span>
-        <span className="ml-auto flex shrink-0 items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
-          <span className="rounded bg-gray-100 px-1.5 py-px font-medium text-gray-500 dark:bg-white/5 dark:text-gray-400">
-            {result.kind}
-          </span>
-          <span className="max-w-[10rem] truncate">{docName}</span>
+        <span className={`truncate font-mono text-[13px] ${active ? "font-medium" : ""}`}>{result.name}</span>
+        <span className="ml-auto flex shrink-0 items-baseline gap-2.5">
+          <span className="label text-[9.5px] text-faint">{result.kind}</span>
+          <span className="max-w-[10rem] truncate text-[13.5px] italic text-muted">{docName}</span>
         </span>
       </span>
     </li>
@@ -83,6 +83,7 @@ export function CommandPalette() {
   const docsets = useDocsets((s) => s.docsets);
   const pending = useDocsets((s) => s.pending);
   const { t } = useT();
+  const mod = platform() === "macos" ? "⌘" : "Ctrl";
 
   // Mapa id -> (icono, nombre): una sola copia de cada data-URL (incluye
   // pendientes para los chips "(sin instalar)").
@@ -170,14 +171,14 @@ export function CommandPalette() {
         role="dialog"
         aria-modal="true"
         aria-label={t("palette.dialog")}
-        className="surface w-full max-w-xl overflow-hidden"
+        className="surface w-full max-w-[40rem] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {(applied.length > 0 || unknown.length > 0) && (
           <div
             role="group"
             aria-label={t("palette.filters")}
-            className="flex flex-wrap gap-1 px-4 pt-3"
+            className="flex flex-wrap gap-1.5 px-5 pt-3.5"
           >
             {applied.map((f) => {
               const meta = docMeta.get(f.docset_id);
@@ -188,12 +189,12 @@ export function CommandPalette() {
                   onClick={() => removeFilter(f.token)}
                   aria-label={t("palette.removeFilter", { name })}
                   title={t("palette.removeFilterTitle", { name })}
-                  className="flex animate-fade-in items-center gap-1 rounded-full bg-accent/15 py-0.5 pl-1.5 pr-1 text-xs font-medium text-accent-text transition-colors hover:bg-accent/25"
+                  className="flex animate-fade-in items-center gap-1.5 rounded-sm border border-accent-text/25 bg-accent/10 py-0.5 pl-1.5 pr-1 font-mono text-[11px] font-medium text-accent-text transition-colors hover:bg-accent/20"
                 >
                   <DocsetIcon icon={meta?.icon ?? null} name={name} size={12} />
                   <span>{name}</span>
                   {!f.installed && <span>{t("palette.notInstalled")}</span>}
-                  <CloseIcon size={11} strokeWidth={2.5} className="opacity-70" />
+                  <CloseIcon size={11} strokeWidth={2} className="opacity-70" />
                 </button>
               );
             })}
@@ -203,28 +204,28 @@ export function CommandPalette() {
                 onClick={() => removeFilter(u)}
                 aria-label={t("palette.unknownFilter", { name: u })}
                 title={t("palette.unknownTitle")}
-                className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-400 line-through dark:bg-gray-800"
+                className="rounded-sm border border-rule px-2 py-0.5 font-mono text-[11px] text-faint line-through"
               >
                 {t("palette.unknownSuffix", { name: u })}
               </button>
             ))}
           </div>
         )}
-        <div className="relative border-b border-gray-100 dark:border-white/5">
+        <div className="relative border-b border-rule">
           <SearchIcon
-            size={17}
-            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+            size={18}
+            className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-muted"
           />
           <div
             aria-hidden
-            className="pointer-events-none select-none overflow-hidden whitespace-pre py-3.5 pl-11 pr-4 text-[15px] text-gray-900 dark:text-gray-100"
+            className="pointer-events-none select-none overflow-hidden whitespace-pre py-4 pl-[3.25rem] pr-5 text-[19px] text-ink"
           >
             {query === "" ? (
-              <span className="text-gray-400">{t("palette.ghost")}</span>
+              <span className="italic text-faint">{t("palette.ghost")}</span>
             ) : (
               <>
                 <span>{query}</span>
-                {ghost !== null && <span className="text-gray-400">{ghost}</span>}
+                {ghost !== null && <span className="text-faint">{ghost}</span>}
               </>
             )}
           </div>
@@ -241,15 +242,15 @@ export function CommandPalette() {
             }
             role="combobox"
             aria-autocomplete="list"
-            className="absolute inset-0 w-full border-0 bg-transparent py-3.5 pl-11 pr-4 text-[15px] text-transparent caret-accent-text outline-none selection:bg-accent/30 focus-visible:shadow-none"
+            className="absolute inset-0 w-full border-0 bg-transparent py-4 pl-[3.25rem] pr-5 text-[19px] text-transparent caret-accent-text outline-none selection:bg-accent/30 focus-visible:shadow-none"
           />
         </div>
         {query.trim() === "" ? (
-          <p className="px-4 py-3.5 text-xs text-gray-500 dark:text-gray-400">
+          <p className="px-5 py-4 text-[14.5px] italic text-muted">
             {t("palette.emptyHint")}
           </p>
         ) : noticeMode ? (
-          <p className="px-4 py-3.5 text-xs text-gray-500 dark:text-gray-400">
+          <p className="px-5 py-4 text-[14.5px] italic text-muted">
             {t("palette.searchingIn", { names: noticeNames.join(", ") })}
           </p>
         ) : results.length === 0 ? (
@@ -257,12 +258,12 @@ export function CommandPalette() {
           // la línea se reserva invisible para que la caja no cambie de alto.
           <p
             aria-hidden={searching}
-            className={`px-4 py-3.5 text-xs text-gray-500 dark:text-gray-400 ${searching ? "invisible" : ""}`}
+            className={`px-5 py-4 text-[14.5px] italic text-muted ${searching ? "invisible" : ""}`}
           >
             {t("palette.noResults")}
           </p>
         ) : (
-          <ul role="listbox" className="max-h-96 overflow-y-auto py-1.5">
+          <ul role="listbox" className="max-h-[26rem] overflow-y-auto py-2">
             {results.map((r, i) => {
               const meta = docMeta.get(r.docset_id);
               return (
@@ -280,6 +281,12 @@ export function CommandPalette() {
             })}
           </ul>
         )}
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-rule bg-paper/60 px-5 py-2 font-mono text-[10.5px] text-faint">
+          <span className="flex items-center gap-1.5"><kbd className="kbd min-w-0 text-[10px]">↑</kbd><kbd className="kbd min-w-0 text-[10px]">↓</kbd>{t("palette.hintNavigate")}</span>
+          <span className="flex items-center gap-1.5"><kbd className="kbd min-w-0 text-[10px]">↵</kbd>{t("palette.hintOpen")}</span>
+          <span className="flex items-center gap-1.5"><kbd className="kbd min-w-0 text-[10px]">{mod} ↵</kbd>{t("palette.hintNewTab")}</span>
+          <span className="ml-auto flex items-center gap-1.5"><kbd className="kbd min-w-0 text-[10px]">esc</kbd>{t("palette.hintClose")}</span>
+        </div>
       </div>
     </div>
   );

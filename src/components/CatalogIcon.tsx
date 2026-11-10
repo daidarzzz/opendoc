@@ -19,7 +19,7 @@ export const CatalogIcon = memo(function CatalogIcon({ size = 16, className }: C
       className={className ? `shrink-0 ${className}` : "shrink-0"}
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.6"
       strokeLinecap="round"
       strokeLinejoin="round"
     >

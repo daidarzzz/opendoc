@@ -77,14 +77,8 @@ const LANG_VALUES: Language[] = ["en", "es"];
 function Group({ title, children }: { title?: string; children: ReactNode }) {
   return (
     <div>
-      {title && (
-        <p className="mb-2 px-1 text-[11px] font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">
-          {title}
-        </p>
-      )}
-      <div className="divide-y divide-gray-100 rounded-xl border border-gray-200/80 bg-white shadow-soft dark:divide-white/5 dark:border-white/10 dark:bg-white/[0.03]">
-        {children}
-      </div>
+      {title && <p className="label mb-1">{title}</p>}
+      <div className="divide-y divide-rule border-y border-rule">{children}</div>
     </div>
   );
 }
@@ -102,10 +96,10 @@ function Row({
   stacked?: boolean;
 }) {
   return (
-    <div className={`px-4 py-3.5 ${stacked ? "space-y-3" : "flex items-center justify-between gap-6"}`}>
+    <div className={`py-4 ${stacked ? "space-y-3.5" : "flex items-center justify-between gap-8"}`}>
       <div className="min-w-0">
-        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{label}</p>
-        {desc && <p className="mt-0.5 text-xs leading-relaxed text-gray-500 dark:text-gray-400">{desc}</p>}
+        <p className="text-[15.5px] font-medium text-ink">{label}</p>
+        {desc && <p className="mt-0.5 text-[13.5px] italic leading-snug text-muted">{desc}</p>}
       </div>
       {children !== undefined && <div className={stacked ? "" : "shrink-0"}>{children}</div>}
     </div>
@@ -120,12 +114,12 @@ function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: 
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-[22px] w-[38px] shrink-0 items-center rounded-full transition-colors duration-200 ease-smooth ${
-        checked ? "bg-accent-solid" : "bg-gray-300 dark:bg-white/15"
+      className={`relative inline-flex h-[20px] w-[36px] shrink-0 items-center rounded-full border transition-colors duration-200 ease-smooth ${
+        checked ? "border-accent-solid bg-accent-solid" : "border-ink/20 bg-ink/[0.08]"
       }`}
     >
       <span
-        className={`inline-block h-[18px] w-[18px] rounded-full bg-white shadow-soft transition-transform duration-200 ease-smooth ${
+        className={`inline-block h-[14px] w-[14px] rounded-full bg-paper-3 shadow-[0_1px_2px_rgb(0_0_0/0.25)] transition-transform duration-200 ease-smooth ${
           checked ? "translate-x-[18px]" : "translate-x-[2px]"
         }`}
       />
@@ -143,7 +137,7 @@ function Segmented<T extends string | number>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="flex gap-0.5 rounded-lg bg-gray-100 p-0.5 dark:bg-white/5">
+    <div className="flex flex-wrap gap-1">
       {options.map((o) => {
         const on = o.value === value;
         return (
@@ -152,10 +146,10 @@ function Segmented<T extends string | number>({
             type="button"
             aria-pressed={on}
             onClick={() => onChange(o.value)}
-            className={`min-w-[3.5rem] rounded-md px-3 py-1 text-sm transition-all duration-150 ease-smooth ${
+            className={`min-w-[3.25rem] rounded-sm border px-3 py-1.5 font-mono text-[11.5px] transition-all duration-150 ease-smooth ${
               on
-                ? "bg-white font-medium text-gray-900 shadow-soft dark:bg-white/15 dark:text-white"
-                : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                ? "border-ink bg-ink text-paper"
+                : "border-rule text-ink-2 hover:border-ink/60 hover:text-ink"
             }`}
           >
             {o.label}
@@ -172,12 +166,9 @@ function Keys({ combos }: { combos: string[][] }) {
     <span className="flex flex-wrap items-center justify-end gap-1.5">
       {combos.map((combo, i) => (
         <span key={i} className="flex items-center gap-1">
-          {i > 0 && <span className="mr-0.5 text-xs text-gray-400">{t("settings.sc.or")}</span>}
+          {i > 0 && <span className="mr-0.5 text-[13px] italic text-faint">{t("settings.sc.or")}</span>}
           {combo.map((k, j) => (
-            <kbd
-              key={j}
-              className="min-w-[1.6rem] rounded-md border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-center text-xs font-medium text-gray-600 shadow-[0_1px_0_rgb(0_0_0/0.06)] dark:border-white/10 dark:bg-white/5 dark:text-gray-300"
-            >
+            <kbd key={j} className="kbd">
               {k}
             </kbd>
           ))}
@@ -189,18 +180,19 @@ function Keys({ combos }: { combos: string[][] }) {
 
 /** Miniatura de la interfaz para las tarjetas de tema. */
 function ThemePreview({ mode }: { mode: ThemeMode }) {
+  // Colores fijos del papel claro / oscuro (no dependen del tema activo).
   const pane = (dark: boolean) => (
-    <div className={`flex h-full flex-1 ${dark ? "bg-gray-900" : "bg-white"}`}>
-      <div className={`w-1/3 space-y-1 p-1.5 ${dark ? "bg-gray-950" : "bg-gray-100"}`}>
-        <div className="h-1 w-3/4 rounded-full bg-accent/80" />
-        <div className={`h-1 w-full rounded-full ${dark ? "bg-white/15" : "bg-gray-300"}`} />
-        <div className={`h-1 w-2/3 rounded-full ${dark ? "bg-white/15" : "bg-gray-300"}`} />
+    <div className={`flex h-full flex-1 ${dark ? "bg-[#15140F]" : "bg-[#F5F1E8]"}`}>
+      <div className={`w-1/3 space-y-1.5 border-r p-2 ${dark ? "border-[#322E27] bg-[#0F0E0B]" : "border-[#DCD3C2] bg-[#ECE6D9]"}`}>
+        <div className="h-1 w-3/4 rounded-full bg-accent" />
+        <div className={`h-1 w-full rounded-full ${dark ? "bg-[#EDE7DA]/25" : "bg-[#1B1915]/20"}`} />
+        <div className={`h-1 w-2/3 rounded-full ${dark ? "bg-[#EDE7DA]/25" : "bg-[#1B1915]/20"}`} />
       </div>
-      <div className="flex-1 space-y-1 p-1.5">
-        <div className={`h-1.5 w-1/2 rounded-full ${dark ? "bg-white/30" : "bg-gray-400"}`} />
-        <div className={`h-1 w-full rounded-full ${dark ? "bg-white/10" : "bg-gray-200"}`} />
-        <div className={`h-1 w-5/6 rounded-full ${dark ? "bg-white/10" : "bg-gray-200"}`} />
-        <div className={`h-1 w-2/3 rounded-full ${dark ? "bg-white/10" : "bg-gray-200"}`} />
+      <div className="flex-1 space-y-1.5 p-2">
+        <div className={`h-2 w-1/2 rounded-full ${dark ? "bg-[#EDE7DA]/70" : "bg-[#1B1915]/70"}`} />
+        <div className={`h-1 w-full rounded-full ${dark ? "bg-[#EDE7DA]/15" : "bg-[#1B1915]/15"}`} />
+        <div className={`h-1 w-5/6 rounded-full ${dark ? "bg-[#EDE7DA]/15" : "bg-[#1B1915]/15"}`} />
+        <div className={`h-1 w-2/3 rounded-full ${dark ? "bg-[#EDE7DA]/15" : "bg-[#1B1915]/15"}`} />
       </div>
     </div>
   );
@@ -248,7 +240,7 @@ function GeneralSection() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Group>
         <Row label={t("settings.language")} desc={t("settings.languageDesc")}>
           <Segmented
@@ -280,7 +272,7 @@ function AppearanceSection() {
   const accentButtons = useRef(new Map<Accent, HTMLButtonElement>());
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Group>
         <Row label={t("settings.theme")} desc={t("settings.themeDesc")} stacked>
           <div className="grid grid-cols-3 gap-3">
@@ -295,15 +287,15 @@ function AppearanceSection() {
                   className="group text-left"
                 >
                   <div
-                    className={`h-20 overflow-hidden rounded-lg border transition-all duration-150 ease-smooth ${
+                    className={`h-20 overflow-hidden rounded-[3px] border transition-all duration-150 ease-smooth ${
                       on
-                        ? "border-transparent ring-2 ring-accent-text ring-offset-2 ring-offset-white dark:ring-offset-gray-900"
-                        : "border-gray-200 group-hover:border-gray-300 dark:border-white/10 dark:group-hover:border-white/20"
+                        ? "border-transparent ring-2 ring-accent-text ring-offset-2 ring-offset-paper-3"
+                        : "border-rule group-hover:border-ink/40"
                     }`}
                   >
                     <ThemePreview mode={value} />
                   </div>
-                  <span className={`mt-2 flex items-center gap-1.5 text-sm ${on ? "font-medium text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400"}`}>
+                  <span className={`mt-2 flex items-center gap-1.5 text-[14.5px] ${on ? "font-medium text-ink" : "text-muted"}`}>
                     {on && <CheckIcon size={14} className="text-accent-text" />}
                     {t(key)}
                   </span>
@@ -340,17 +332,17 @@ function AppearanceSection() {
                   aria-checked={on}
                   tabIndex={on ? 0 : -1}
                   onClick={() => void useAccent.getState().setAccent(value)}
-                  className={`flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-sm transition-all duration-150 ease-smooth ${
+                  className={`flex items-center gap-2 rounded-sm border py-1.5 pl-2 pr-3 font-mono text-[11.5px] transition-all duration-150 ease-smooth ${
                     on
-                      ? "border-accent-text/40 bg-accent/10 font-medium text-gray-900 dark:text-white"
-                      : "border-gray-200 text-gray-600 hover:border-gray-300 dark:border-white/10 dark:text-gray-300 dark:hover:border-white/20"
+                      ? "border-ink bg-ink text-paper"
+                      : "border-rule text-ink-2 hover:border-ink/60 hover:text-ink"
                   }`}
                 >
                   <span
-                    className="flex h-6 w-6 items-center justify-center rounded-full shadow-soft"
+                    className="flex h-4 w-4 items-center justify-center rounded-full shadow-[inset_0_0_0_1px_rgb(0_0_0/0.15)]"
                     style={{ backgroundColor: ACCENT_HEX[value].light.accent }}
                   >
-                    {on && <CheckIcon size={13} strokeWidth={3} className="text-white" />}
+                    {on && <CheckIcon size={10} strokeWidth={3} className="text-white" />}
                   </span>
                   {t(ACCENT_KEY[value])}
                 </button>
@@ -376,10 +368,10 @@ function ReadingSection() {
   const linkPrefetch = usePrefs((s) => s.linkPrefetch);
   const zoom = useZoom((s) => s.level);
   const stepBtn =
-    "flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-white hover:text-gray-900 disabled:pointer-events-none disabled:opacity-30 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white";
+    "flex h-7 w-7 items-center justify-center rounded-sm text-muted transition-colors hover:bg-ink/[0.07] hover:text-ink disabled:pointer-events-none disabled:opacity-30";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Group>
         <Row label={t("settings.smoothScroll")} desc={t("settings.smoothScrollDesc")}>
           <Switch
@@ -390,7 +382,7 @@ function ReadingSection() {
         </Row>
         <Row label={t("settings.zoom")} desc={t("settings.zoomDesc")}>
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-0.5 rounded-lg bg-gray-100 p-0.5 dark:bg-white/5">
+            <div className="flex items-center gap-0.5 rounded-sm border border-rule p-0.5">
               <button
                 type="button"
                 aria-label={t("settings.sc.zoomOut")}
@@ -401,7 +393,7 @@ function ReadingSection() {
               >
                 <MinusIcon size={14} />
               </button>
-              <span className="w-12 text-center font-mono text-xs tabular-nums text-gray-700 dark:text-gray-200">
+              <span className="w-12 text-center font-mono text-[11.5px] tabular-nums text-ink">
                 {formatZoom(zoom)}
               </span>
               <button
@@ -446,15 +438,15 @@ function DocsetsSection() {
   const sorted = [...docsets].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Group>
         <Row label={t("settings.docsetsFolder")} desc={t("settings.docsetsFolderDesc")} stacked>
           <div className="space-y-2.5">
             <p
-              className={`break-all rounded-lg px-3 py-2 font-mono text-xs ${
+              className={`break-all rounded-sm border px-3 py-2 font-mono text-[11.5px] ${
                 dirMissing
-                  ? "bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300"
-                  : "bg-gray-50 text-gray-600 dark:bg-white/5 dark:text-gray-300"
+                  ? "border-red-600/30 bg-red-600/5 text-red-700 dark:text-red-300"
+                  : "border-rule bg-paper text-ink-2"
               }`}
             >
               {savedDir ?? t("settings.notConfigured")}
@@ -474,29 +466,26 @@ function DocsetsSection() {
         </Row>
       </Group>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-8">
         {[
           { label: t("settings.installed"), value: docsets.length },
           { label: t("settings.issues"), value: issues.length },
         ].map((s) => (
-          <div
-            key={s.label}
-            className="rounded-xl border border-gray-200/80 bg-white px-4 py-3 shadow-soft dark:border-white/10 dark:bg-white/[0.03]"
-          >
-            <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">{s.label}</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight">{s.value}</p>
+          <div key={s.label} className="border-t-2 border-ink pt-2">
+            <p className="label">{s.label}</p>
+            <p className="mt-1 text-[2.6rem] font-light leading-none tabular-nums tracking-[-0.03em]">{s.value}</p>
           </div>
         ))}
       </div>
 
       {sorted.length > 0 && (
         <Group title={t("settings.installed")}>
-          <div className="grid grid-cols-2 gap-1 p-2">
+          <div className="grid grid-cols-2 gap-x-8 py-1">
             {sorted.map((d) => (
-              <div key={d.id} className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-sm">
+              <div key={d.id} className="flex min-w-0 items-center gap-2.5 py-1.5 text-[15px]">
                 <DocsetIcon icon={d.icon} name={d.name} hint={d.id} />
                 <span className="truncate">{d.name}</span>
-                {d.version && <span className="ml-auto shrink-0 font-mono text-[11px] text-gray-400">{d.version}</span>}
+                {d.version && <span className="ml-auto shrink-0 font-mono text-[10.5px] text-faint">{d.version}</span>}
               </div>
             ))}
           </div>
@@ -508,12 +497,12 @@ function DocsetsSection() {
           {pending.map((p) => {
             const busy = extractingIds.includes(p.id);
             return (
-              <div key={p.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                <span className="flex min-w-0 items-center gap-2 text-sm">
+              <div key={p.id} className="flex items-center justify-between gap-3 py-2.5">
+                <span className="flex min-w-0 items-center gap-2 text-[15px]">
                   <DocsetIcon icon={p.icon} name={p.name} hint={p.id} />
                   <span className="truncate">{p.name}</span>
                 </span>
-                <button type="button" onClick={() => void extract(p.id)} disabled={busy} className="btn px-2.5 py-1 text-xs">
+                <button type="button" onClick={() => void extract(p.id)} disabled={busy} className="btn px-2.5 py-1">
                   {busy ? t("settings.extracting") : t("common.install")}
                 </button>
               </div>
@@ -578,12 +567,13 @@ function ShortcutsSection() {
     },
   ];
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {groups.map((g) => (
         <Group key={g.title} title={t(g.title)}>
           {g.rows.map((r) => (
-            <div key={r.label} className="flex items-center justify-between gap-4 px-4 py-2.5">
-              <span className="text-sm text-gray-700 dark:text-gray-200">{t(r.label)}</span>
+            <div key={r.label} className="flex items-baseline gap-3 py-2.5">
+              <span className="text-[15px] text-ink-2">{t(r.label)}</span>
+              <span aria-hidden className="min-w-[1rem] flex-1 -translate-y-1 border-b-[1.5px] border-dotted border-ink/20" />
               <Keys combos={r.combos} />
             </div>
           ))}
@@ -632,17 +622,15 @@ function AboutSection() {
   };
 
   const link =
-    "flex items-center justify-between px-4 py-3 text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-white/5";
+    "group flex items-center justify-between py-3 font-mono text-[13px] text-ink-2 transition-colors hover:text-accent-text";
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col items-center rounded-xl border border-gray-200/80 bg-gradient-to-b from-accent/10 to-transparent px-6 py-8 text-center dark:border-white/10">
-        <AppLogo size={64} />
-        <h3 className="mt-4 text-xl font-semibold tracking-tight">OpenDoc</h3>
-        <p className="mt-1 font-mono text-xs text-gray-500 dark:text-gray-400">
-          {t("settings.version", { version })}
-        </p>
-        <p className="mt-3 max-w-sm text-sm text-gray-600 dark:text-gray-300">{t("settings.aboutTagline")}</p>
+    <div className="space-y-8">
+      <div className="flex flex-col items-center px-6 pb-8 pt-4 text-center">
+        <AppLogo size={60} />
+        <h3 className="mt-5 text-[2.6rem] font-[380] leading-none tracking-[-0.025em]">OpenDoc</h3>
+        <p className="label mt-3">{t("settings.version", { version })}</p>
+        <p className="mt-4 max-w-sm text-[17px] italic leading-snug text-ink-2">{t("settings.aboutTagline")}</p>
       </div>
 
       <Group>
@@ -651,9 +639,9 @@ function AboutSection() {
           { label: "opendoc-core", href: CORE_URL },
           { label: "opendoc-cli", href: CLI_URL },
         ].map((l) => (
-          <a key={l.href} href={l.href} className={`${link} first:rounded-t-xl last:rounded-b-xl`}>
+          <a key={l.href} href={l.href} className={link}>
             <span>{l.label}</span>
-            <ExternalIcon size={14} className="text-gray-400" />
+            <ExternalIcon size={14} className="text-faint transition-colors group-hover:text-accent-text" />
           </a>
         ))}
       </Group>
@@ -663,11 +651,7 @@ function AboutSection() {
           <button
             type="button"
             onClick={reset}
-            className={
-              confirming
-                ? "inline-flex items-center rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white shadow-soft transition-all hover:bg-red-500 active:scale-[0.98]"
-                : "btn"
-            }
+            className={confirming ? "btn-danger" : "btn"}
           >
             {done ? (
               <>
@@ -720,7 +704,7 @@ export function SettingsDialog() {
         role="dialog"
         aria-modal="true"
         aria-label={t("settings.title")}
-        className="surface flex h-[min(640px,calc(100vh-2rem))] w-[min(900px,100%)] overflow-hidden"
+        className="surface flex h-[min(660px,calc(100vh-2rem))] w-[min(940px,100%)] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => {
           if (e.key === "Escape") {
@@ -731,17 +715,17 @@ export function SettingsDialog() {
       >
         <nav
           aria-label={t("settings.title")}
-          className="flex w-56 shrink-0 flex-col border-r border-gray-200/80 bg-gray-50/80 p-3 dark:border-white/5 dark:bg-black/20"
+          className="flex w-60 shrink-0 flex-col border-r border-rule bg-paper-2 px-3 pb-4 pt-5"
         >
-          <div className="flex items-center gap-2.5 px-2 pb-5 pt-2">
-            <AppLogo size={28} />
+          <div className="flex items-center gap-3 px-2.5 pb-6">
+            <AppLogo size={26} />
             <div className="min-w-0">
-              <p className="text-sm font-semibold leading-tight tracking-tight">{t("settings.title")}</p>
-              <p className="text-xs leading-tight text-gray-500 dark:text-gray-400">{t("settings.subtitle")}</p>
+              <p className="text-[17px] font-medium leading-tight tracking-[-0.01em]">{t("settings.title")}</p>
+              <p className="text-[13px] italic leading-tight text-muted">{t("settings.subtitle")}</p>
             </div>
           </div>
-          <ul className="space-y-0.5">
-            {SECTIONS.map(({ id, icon: Icon }) => {
+          <ul className="space-y-px">
+            {SECTIONS.map(({ id, icon: Icon }, i) => {
               const on = id === section;
               return (
                 <li key={id}>
@@ -749,33 +733,38 @@ export function SettingsDialog() {
                     type="button"
                     aria-current={on ? "page" : undefined}
                     onClick={() => setSection(id)}
-                    className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-all duration-150 ease-smooth ${
-                      on
-                        ? "bg-white font-medium text-gray-900 shadow-soft dark:bg-white/10 dark:text-white"
-                        : "text-gray-600 hover:bg-gray-200/60 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-100"
+                    className={`relative flex w-full items-center gap-3 rounded-sm px-2.5 py-[7px] text-[15px] transition-all duration-150 ease-smooth ${
+                      on ? "bg-ink/[0.06] text-ink" : "text-ink-2 hover:bg-ink/[0.04] hover:text-ink"
                     }`}
                   >
-                    <Icon size={16} className={on ? "text-accent-text" : ""} />
+                    {on && <span aria-hidden className="absolute bottom-[7px] left-0 top-[7px] w-[2px] bg-accent" />}
+                    <span className={`w-4 font-mono text-[10px] tabular-nums ${on ? "text-accent-text" : "text-faint"}`}>
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <Icon size={15} className={on ? "text-accent-text" : "text-muted"} />
                     {t(NAV_KEY[id])}
                   </button>
                 </li>
               );
             })}
           </ul>
-          <p className="mt-auto px-2 font-mono text-[11px] text-gray-400 dark:text-gray-500">v{version}</p>
+          <p className="mt-auto px-2.5 font-mono text-[10.5px] text-faint">v{version}</p>
         </nav>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex items-start justify-between gap-4 px-8 pb-5 pt-7">
+          <header className="mx-10 flex items-end justify-between gap-4 border-b-2 border-ink pb-4 pt-8">
             <div>
-              <h2 className="text-lg font-semibold tracking-tight">{t(NAV_KEY[section])}</h2>
-              <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{t(DESC_KEY[section])}</p>
+              <p className="font-mono text-[11px] font-semibold text-accent-text">
+                § {SECTIONS.findIndex((x) => x.id === section) + 1}
+              </p>
+              <h2 className="mt-1.5 text-[2.1rem] font-[380] leading-none tracking-[-0.02em]">{t(NAV_KEY[section])}</h2>
+              <p className="mt-2 text-[15px] italic text-ink-2">{t(DESC_KEY[section])}</p>
             </div>
-            <button aria-label={t("settings.close")} title={t("settings.close")} onClick={close} className="icon-btn -mr-2" autoFocus>
+            <button aria-label={t("settings.close")} title={t("settings.close")} onClick={close} className="icon-btn -mr-2 mb-auto" autoFocus>
               <CloseIcon size={16} />
             </button>
           </header>
-          <div key={section} className="min-h-0 flex-1 animate-rise-in overflow-y-auto px-8 pb-8">
+          <div key={section} className="min-h-0 flex-1 animate-rise-in overflow-y-auto px-10 pb-10 pt-6">
             {section === "general" && <GeneralSection />}
             {section === "appearance" && <AppearanceSection />}
             {section === "reading" && <ReadingSection />}

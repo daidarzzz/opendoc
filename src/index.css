@@ -1,14 +1,56 @@
+/* Tipografías empaquetadas (la app es offline: nada se pide a la red).
+   Newsreader (SIL OFL 1.1) para texto y títulos; IBM Plex Mono (SIL OFL
+   1.1) para etiquetas, contadores, atajos y nombres de símbolos. */
+@import "@fontsource-variable/newsreader/opsz.css";
+@import "@fontsource-variable/newsreader/opsz-italic.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
+@import "@fontsource/ibm-plex-mono/400-italic.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Base: tipografía nítida, fondo coherente y foco visible con el acento. */
+/* Papel y tinta: canales RGB para usar con opacidad desde Tailwind
+   (`bg-paper`, `text-ink/60`, `border-rule`…). `paper` es el fondo
+   (APP_BG en `lib/accent.ts`), `paper-2` el lomo (barra lateral y
+   pestañas), `paper-3` lo que flota (paleta, menús, campos), `sheet` la
+   hoja donde se lee (los docsets conservan siempre su estilo claro). */
+:root {
+  --paper-ch: 245 241 232;
+  --paper-2-ch: 236 230 217;
+  --paper-3-ch: 251 249 244;
+  --sheet-ch: 255 255 255;
+  --ink-ch: 27 25 21;
+  --ink-2-ch: 69 64 58;
+  --muted-ch: 108 100 88;
+  --faint-ch: 154 145 132;
+  --rule-ch: 220 211 194;
+  --shadow-ch: 60 40 20;
+  color-scheme: light;
+}
+
+html.dark {
+  --paper-ch: 21 20 15;
+  --paper-2-ch: 15 14 11;
+  --paper-3-ch: 30 28 23;
+  --sheet-ch: 255 255 255;
+  --ink-ch: 237 231 218;
+  --ink-2-ch: 199 191 176;
+  --muted-ch: 153 143 128;
+  --faint-ch: 107 99 87;
+  --rule-ch: 50 46 39;
+  --shadow-ch: 0 0 0;
+  color-scheme: dark;
+}
+
 @layer base {
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    font-feature-settings: "cv11", "ss01";
+    font-optical-sizing: auto;
     /* La ventana de la app nunca rebota ni hace scroll como documento
        (en macOS el gesto del trackpad podía acabar moviendo la app). */
     overscroll-behavior: none;
@@ -16,14 +58,11 @@
 
   body {
     overscroll-behavior: none;
-  }
-
-  body {
-    @apply bg-white font-sans text-gray-900 dark:bg-gray-900 dark:text-gray-100;
+    @apply bg-paper font-sans text-ink;
   }
 
   ::selection {
-    background: rgb(var(--accent-ch) / 0.25);
+    background: rgb(var(--accent-ch) / 0.22);
   }
 
   :focus-visible {
@@ -45,44 +84,59 @@
   select:focus-visible,
   textarea:focus-visible {
     outline: none;
-    border-color: rgb(var(--accent-text-ch) / 0.6);
-    box-shadow: 0 0 0 3px rgb(var(--accent-ch) / 0.18);
+    border-color: rgb(var(--accent-text-ch) / 0.7);
+    box-shadow: 0 0 0 3px rgb(var(--accent-ch) / 0.14);
   }
 
   kbd {
-    @apply font-sans;
+    @apply font-mono;
   }
 }
 
 @layer components {
-  /* Botón icono circular reutilizado en cabeceras y barras. */
+  /* Botón de icono: discreto, sin relleno hasta el hover. */
   .icon-btn {
-    @apply inline-flex items-center justify-center rounded-md p-1.5 text-gray-500 transition-colors duration-150 ease-smooth hover:bg-gray-200/80 hover:text-gray-900 active:scale-95 disabled:pointer-events-none disabled:opacity-30 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-gray-100;
+    @apply inline-flex items-center justify-center rounded p-1.5 text-muted transition-colors duration-150 ease-smooth hover:bg-ink/[0.06] hover:text-ink active:scale-95 disabled:pointer-events-none disabled:opacity-30;
   }
 
-  /* Botón secundario con borde. */
+  /* Botón secundario: filete de tinta, etiqueta en mono. */
   .btn {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-soft transition-all duration-150 ease-smooth hover:border-gray-300 hover:bg-gray-50 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:border-white/20 dark:hover:bg-white/10;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-sm border border-ink/25 bg-transparent px-3 py-1.5 font-mono text-xs font-medium tracking-wide text-ink transition-all duration-150 ease-smooth hover:border-ink hover:bg-ink/[0.04] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40;
   }
 
-  /* Botón primario con el acento. */
+  /* Botón primario: tinta del acento. */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-md bg-accent-solid px-3 py-1.5 text-sm font-medium text-accent-on shadow-soft transition-all duration-150 ease-smooth hover:brightness-110 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-sm border border-accent-solid bg-accent-solid px-3 py-1.5 font-mono text-xs font-medium tracking-wide text-accent-on shadow-[inset_0_-2px_0_rgb(0_0_0/0.14)] transition-all duration-150 ease-smooth hover:brightness-110 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  /* Botón de peligro (desinstalar, restablecer). */
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-sm border border-red-700 bg-red-700 px-3 py-1.5 font-mono text-xs font-medium tracking-wide text-white transition-all duration-150 hover:bg-red-600 active:scale-[0.98] disabled:opacity-50;
   }
 
   /* Campo de texto. */
   .field {
-    @apply rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 dark:border-white/10 dark:bg-white/5 dark:text-gray-100 dark:placeholder:text-gray-500;
+    @apply rounded-sm border border-rule bg-paper-3 px-2.5 py-1.5 text-sm text-ink placeholder:text-faint;
   }
 
-  /* Velo de los diálogos modales. */
+  /* Etiqueta tipo índice: mono, versalitas, espaciada. */
+  .label {
+    @apply font-mono text-[10.5px] font-medium uppercase tracking-[0.09em] text-muted;
+  }
+
+  /* Tecla. */
+  .kbd {
+    @apply inline-block min-w-[1.5rem] rounded-[3px] border border-b-2 border-rule bg-paper-3 px-1.5 py-px text-center font-mono text-[11px] font-medium leading-[1.45] text-ink-2;
+  }
+
+  /* Velo de los diálogos modales: papel tintado, sin cristal. */
   .backdrop {
-    @apply fixed inset-0 flex animate-fade-in items-start justify-center bg-gray-950/30 p-4 backdrop-blur-[3px] dark:bg-black/50;
+    @apply fixed inset-0 flex animate-fade-in items-start justify-center bg-[rgb(var(--shadow-ch)/0.18)] p-4 dark:bg-black/50;
   }
 
-  /* Superficie flotante (paleta, ajustes). */
+  /* Superficie flotante (paleta, ajustes, menús). */
   .surface {
-    @apply animate-pop-in rounded-xl border border-gray-200/80 bg-white/95 shadow-float backdrop-blur-xl dark:border-white/10 dark:bg-gray-900/95;
+    @apply animate-pop-in rounded-md border border-rule bg-paper-3 shadow-float;
   }
 }
 
@@ -97,10 +151,10 @@
   }
 }
 
-/* Scrollbars finas y discretas, consistentes en Chromium y Firefox. */
+/* Scrollbars finas, del color de la tinta. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgb(0 0 0 / 0.22) transparent;
+  scrollbar-color: rgb(var(--ink-ch) / 0.2) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -116,30 +170,15 @@
   border: 3px solid transparent;
   border-radius: 9999px;
   background-clip: padding-box;
-  background-color: rgb(0 0 0 / 0.2);
+  background-color: rgb(var(--ink-ch) / 0.18);
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background-color: rgb(0 0 0 / 0.35);
+  background-color: rgb(var(--ink-ch) / 0.32);
 }
 
 *::-webkit-scrollbar-corner {
   background: transparent;
-}
-
-html.dark,
-html.dark * {
-  scrollbar-color: rgb(255 255 255 / 0.18) transparent;
-}
-
-html.dark *::-webkit-scrollbar-thumb,
-html.dark::-webkit-scrollbar-thumb {
-  background-color: rgb(255 255 255 / 0.16);
-}
-
-html.dark *::-webkit-scrollbar-thumb:hover,
-html.dark::-webkit-scrollbar-thumb:hover {
-  background-color: rgb(255 255 255 / 0.3);
 }
 
 /* Acento de color: canales RGB por acento y modo (ver `src/lib/accent.ts`,
@@ -149,28 +188,28 @@ html.dark::-webkit-scrollbar-thumb:hover {
 :root,
 :root[data-accent="red"] {
   --accent-ch: 222 56 48;
-  --accent-text-ch: 198 40 40;
+  --accent-text-ch: 179 39 30;
   --accent-solid-ch: 198 40 40;
   --on-accent-ch: 255 255 255;
 }
 
 :root[data-accent="blue"] {
   --accent-ch: 0 113 188;
-  --accent-text-ch: 0 113 188;
+  --accent-text-ch: 0 95 158;
   --accent-solid-ch: 0 113 188;
   --on-accent-ch: 255 255 255;
 }
 
 :root[data-accent="amber"] {
   --accent-ch: 251 176 59;
-  --accent-text-ch: 180 83 9;
+  --accent-text-ch: 154 74 8;
   --accent-solid-ch: 251 176 59;
   --on-accent-ch: 31 41 55;
 }
 
 :root[data-accent="catppuccin"] {
   --accent-ch: 136 57 239;
-  --accent-text-ch: 136 57 239;
+  --accent-text-ch: 116 40 217;
   --accent-solid-ch: 136 57 239;
   --on-accent-ch: 255 255 255;
 }

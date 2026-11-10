@@ -1,23 +1,22 @@
-// Página de bienvenida de pestaña vacía (solo con docsets cargados).
-// Minimalista con barra de búsqueda interactiva central (estilo Raycast / Spotlight).
-import { useCallback, useRef } from "react";
+// Página de bienvenida de pestaña vacía: una portada. Titular, línea de
+// búsqueda (abre la paleta), índice de atajos con guías de puntos y una
+// entrada de diccionario para el filtro por docset.
 import { platform } from "@tauri-apps/plugin-os";
 import { useT } from "../hooks/useT";
-import { tn } from "../lib/i18n";
+import { tn, type I18nKey } from "../lib/i18n";
 import { usePalette } from "../store/palette";
 import { useTabs } from "../store/tabs";
 import { AppLogo } from "./AppLogo";
+import { SearchIcon } from "./Icons";
 
-function Shortcut({ keys, label }: { keys: string; label: string }) {
+function Shortcut({ keys, label }: { keys: string[]; label: string }) {
   return (
-    <li className="flex items-center justify-between gap-6">
-      <span className="text-sm text-gray-600 dark:text-gray-300">{label}</span>
+    <li className="flex items-baseline gap-2 py-[7px]">
+      <span className="text-[15px] text-ink-2">{label}</span>
+      <span aria-hidden className="min-w-[1.5rem] flex-1 -translate-y-1 border-b-[1.5px] border-dotted border-ink/20" />
       <span className="flex shrink-0 gap-1">
-        {keys.split(" ").map((k) => (
-          <kbd
-            key={k}
-            className="min-w-[1.6rem] rounded-md border border-gray-200 bg-white px-1.5 py-0.5 text-center text-[11px] font-medium text-gray-500 shadow-[0_1px_0_rgb(0_0_0/0.06)] dark:border-white/10 dark:bg-white/5 dark:text-gray-400"
-          >
+        {keys.map((k) => (
+          <kbd key={k} className="kbd">
             {k}
           </kbd>
         ))}
@@ -33,91 +32,75 @@ export function Welcome({ docCount }: { docCount: number }) {
   // Símbolo del modificador según plataforma (macOS: ⌘).
   const mod = platform() === "macos" ? "⌘" : "Ctrl";
 
-  const barRef = useRef<HTMLButtonElement>(null);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    const el = barRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    el.style.setProperty("--mx", `${x}px`);
-    el.style.setProperty("--my", `${y}px`);
-  }, []);
+  const shortcuts: { keys: string[]; label: I18nKey }[] = [
+    { keys: [mod, "K"], label: "welcome.search" },
+    { keys: [mod, "T"], label: "welcome.newTab" },
+    { keys: [mod, "W"], label: "welcome.closeTab" },
+    { keys: [mod, "F"], label: "settings.sc.find" },
+    { keys: [mod, ","], label: "settings.sc.settings" },
+  ];
 
   return (
-    <div className="flex flex-1 animate-rise-in flex-col items-center justify-center p-8">
-      <h1 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">
-        <span className="relative isolate">
-          <span
-            aria-hidden="true"
-            className="absolute inset-0 -z-10 scale-150 rounded-full bg-accent/25 blur-2xl"
-          />
-          <AppLogo size={44} />
-        </span>
-        OpenDoc
-      </h1>
-
-      {/* Barra de búsqueda interactiva estilo Raycast / Spotlight */}
-      <button
-        ref={barRef}
-        type="button"
-        onClick={() => setOpen(true)}
-        onMouseMove={handleMouseMove}
-        className="group relative mt-8 flex w-full max-w-md items-center justify-between gap-6 overflow-hidden rounded-xl border border-gray-200/90 bg-white px-4 py-3 text-sm text-gray-500 shadow-soft transition-all duration-300 ease-smooth hover:-translate-y-0.5 hover:border-accent/60 hover:text-gray-800 hover:shadow-lg active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-text dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-gray-400 dark:hover:border-accent dark:hover:text-gray-200"
-        aria-label={t("welcome.searchDocs", { mod })}
-      >
-        <div
-          className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-          style={{
-            background:
-              "radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), rgb(var(--accent-ch) / 0.12) 0%, transparent 80%)",
-          }}
-          aria-hidden="true"
-        />
-        <div className="relative z-10 flex min-w-0 items-center gap-2.5">
-          <svg
-            className="h-4 w-4 shrink-0 text-gray-400 transition-colors group-hover:text-accent-text dark:text-gray-500"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth="2"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"
-            />
-          </svg>
-          <span className="truncate font-normal">{t("palette.input")}</span>
+    <div className="flex min-h-0 w-full flex-1 overflow-y-auto">
+      <div className="m-auto w-full max-w-[35rem] animate-rise-in px-6 py-8">
+        <div className="flex items-center gap-2.5">
+          <AppLogo size={22} />
+          <span className="label text-accent-text">{t("welcome.kicker")}</span>
         </div>
-        <kbd className="relative z-10 shrink-0 rounded border border-gray-200 bg-white px-2 py-0.5 font-mono text-xs text-gray-400 shadow-2xs dark:border-zinc-700/80 dark:bg-zinc-800/80 dark:text-gray-400">
-          {mod} K
-        </kbd>
-      </button>
+        <h1 className="mt-5 text-[2.75rem] font-[380] leading-[1.02] tracking-[-0.025em] text-ink">
+          {t("welcome.title")}
+        </h1>
 
-      <div className="mt-3 flex flex-col items-center">
         <button
-          onClick={openCatalogTab}
-          className="text-xs text-gray-500 underline decoration-gray-300 underline-offset-4 hover:text-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-text dark:text-gray-400 dark:decoration-gray-700 dark:hover:text-gray-100"
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label={t("welcome.searchDocs", { mod })}
+          className="group mt-9 flex w-full items-center gap-3 border-b-2 border-ink/70 pb-3 text-left transition-colors duration-200 hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-text"
         >
-          {t("welcome.searchCatalog")}
+          <SearchIcon size={19} className="shrink-0 text-muted transition-colors group-hover:text-accent-text" />
+          <span className="min-w-0 flex-1 truncate text-[1.3rem] italic text-faint transition-colors group-hover:text-muted">
+            {t("palette.input")}
+          </span>
+          <span className="flex shrink-0 gap-1">
+            <kbd className="kbd">{mod}</kbd>
+            <kbd className="kbd">K</kbd>
+          </span>
         </button>
-      </div>
+        <div className="mt-3 flex flex-wrap items-baseline justify-between gap-2">
+          <span className="font-mono text-[11px] text-muted">
+            {tn(lang, docCount, "welcome.docCountOne", "welcome.docCountMany", { n: docCount })}
+          </span>
+          <button
+            onClick={openCatalogTab}
+            className="font-mono text-[11px] text-ink-2 underline decoration-rule decoration-1 underline-offset-[5px] transition-colors hover:text-accent-text hover:decoration-accent-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-text"
+          >
+            {t("welcome.searchCatalog")} →
+          </button>
+        </div>
 
-      <ul className="mt-10 w-full max-w-[15rem] space-y-2" aria-label={t("welcome.shortcuts")}>
-        <Shortcut keys={`${mod} K`} label={t("welcome.search")} />
-        <Shortcut keys={`${mod} T`} label={t("welcome.newTab")} />
-        <Shortcut keys={`${mod} W`} label={t("welcome.closeTab")} />
-      </ul>
-      <p className="mt-8 text-xs text-gray-400 dark:text-gray-500">
-        {t("welcome.filterBy")}{" "}
-        <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-gray-600 dark:bg-white/5 dark:text-gray-300">cpp:vector</code>
-      </p>
-      <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
-        {tn(lang, docCount, "welcome.docCountOne", "welcome.docCountMany", { n: docCount })}
-      </p>
+        <section className="mt-14" aria-label={t("welcome.shortcuts")}>
+          <p className="label border-b border-ink/80 pb-2">{t("welcome.shortcuts")}</p>
+          <ul className="mt-1.5">
+            {shortcuts.map((s) => (
+              <Shortcut key={s.label} keys={s.keys} label={t(s.label)} />
+            ))}
+          </ul>
+        </section>
+
+        <div className="relative mt-10 border border-rule bg-paper-3 px-5 py-4">
+          <span aria-hidden className="absolute -inset-y-px -left-px w-[3px] bg-accent" />
+          <p className="label">{t("welcome.filterHead")}</p>
+          <p className="mt-2 font-mono text-[15px] font-semibold text-ink">
+            docset<span className="text-accent-text">:</span>query
+          </p>
+          <p className="mt-1.5 text-[14.5px] italic text-ink-2">
+            {t("welcome.filterBy")}{" "}
+            <code className="rounded-sm border border-rule px-1.5 py-0.5 font-mono text-[12px] not-italic text-ink">
+              <span className="font-semibold text-accent-text">cpp:</span>vector
+            </code>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

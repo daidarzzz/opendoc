@@ -5,22 +5,30 @@ export default {
   theme: {
     extend: {
       fontFamily: {
+        // Newsreader para todo el texto (también el `font-sans` por
+        // defecto); IBM Plex Mono para etiquetas, teclas y símbolos.
         sans: [
-          "Inter",
-          "ui-sans-serif",
-          "system-ui",
-          "-apple-system",
-          "Segoe UI Variable Text",
-          "Segoe UI",
-          "Roboto",
-          "Helvetica Neue",
-          "Arial",
-          "sans-serif",
+          "Newsreader Variable",
+          "Iowan Old Style",
+          "Palatino Linotype",
+          "Palatino",
+          "Georgia",
+          "serif",
+        ],
+        serif: ["Newsreader Variable", "Iowan Old Style", "Palatino Linotype", "Georgia", "serif"],
+        mono: [
+          "IBM Plex Mono",
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "Consolas",
+          "monospace",
         ],
       },
       // Acento de color (canales RGB de `index.css`, con opacidad):
       // `accent` (marca), `accent-text` (texto e indicadores),
       // `accent-solid` (botones primarios) y `on-accent` (sobre sólido).
+      // Papel y tinta: superficies y textos de la interfaz.
       colors: {
         accent: {
           DEFAULT: "rgb(var(--accent-ch) / <alpha-value>)",
@@ -28,15 +36,42 @@ export default {
           solid: "rgb(var(--accent-solid-ch) / <alpha-value>)",
           on: "rgb(var(--on-accent-ch) / <alpha-value>)",
         },
+        paper: {
+          DEFAULT: "rgb(var(--paper-ch) / <alpha-value>)",
+          2: "rgb(var(--paper-2-ch) / <alpha-value>)",
+          3: "rgb(var(--paper-3-ch) / <alpha-value>)",
+        },
+        sheet: "rgb(var(--sheet-ch) / <alpha-value>)",
+        ink: {
+          DEFAULT: "rgb(var(--ink-ch) / <alpha-value>)",
+          2: "rgb(var(--ink-2-ch) / <alpha-value>)",
+        },
+        muted: "rgb(var(--muted-ch) / <alpha-value>)",
+        faint: "rgb(var(--faint-ch) / <alpha-value>)",
+        rule: "rgb(var(--rule-ch) / <alpha-value>)",
+        // Gris cálido (piedra) por si algún resto usa `gray-*`.
+        gray: {
+          50: "#F8F6F1",
+          100: "#EFEBE2",
+          200: "#E2DCCF",
+          300: "#CFC6B5",
+          400: "#A69C8B",
+          500: "#7D7466",
+          600: "#5F574B",
+          700: "#4A4339",
+          800: "#2F2A23",
+          900: "#1F1C17",
+          950: "#15130F",
+        },
       },
       transitionTimingFunction: {
         // Curva suave de salida usada en toda la interfaz.
         smooth: "cubic-bezier(0.22, 1, 0.36, 1)",
       },
       boxShadow: {
-        soft: "0 1px 2px rgb(0 0 0 / 0.04), 0 1px 3px rgb(0 0 0 / 0.06)",
+        soft: "0 1px 0 rgb(var(--shadow-ch) / 0.06)",
         float:
-          "0 0 0 1px rgb(0 0 0 / 0.04), 0 8px 24px -4px rgb(0 0 0 / 0.18), 0 24px 48px -12px rgb(0 0 0 / 0.22)",
+          "0 1px 0 rgb(var(--shadow-ch) / 0.05), 0 14px 32px -12px rgb(var(--shadow-ch) / 0.32), 0 30px 60px -30px rgb(var(--shadow-ch) / 0.35)",
       },
       keyframes: {
         "fade-in": {

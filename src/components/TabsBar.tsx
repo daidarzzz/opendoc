@@ -74,14 +74,14 @@ const TabButton = memo(function TabButton({
           onActivate();
         }
       }}
-      className={`group relative flex h-8 w-44 min-w-[6rem] shrink select-none touch-none cursor-default items-center gap-2 rounded-t-lg pl-2.5 pr-1 text-xs transition-colors duration-150 ease-smooth ${
+      className={`group relative flex h-[34px] w-48 min-w-[6.5rem] shrink select-none touch-none cursor-default items-center gap-2 rounded-t-[5px] border-x border-t pl-3 pr-1.5 text-[13.5px] transition-colors duration-150 ease-smooth ${
         selected
-          ? "z-[1] bg-white font-medium text-gray-900 shadow-[0_-1px_0_0_rgb(0_0_0/0.04),1px_0_0_0_rgb(0_0_0/0.05),-1px_0_0_0_rgb(0_0_0/0.05)] dark:bg-gray-900 dark:text-gray-100 dark:shadow-[1px_0_0_0_rgb(255_255_255/0.05),-1px_0_0_0_rgb(255_255_255/0.05)]"
-          : "text-gray-500 hover:bg-gray-200/70 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-200"
-      } ${dragging ? "z-10 bg-white shadow-float dark:bg-gray-800" : ""} ${unavailable ? "opacity-50" : ""}`}
+          ? "z-[1] border-rule bg-paper text-ink"
+          : "border-transparent text-muted hover:bg-ink/[0.04] hover:text-ink"
+      } ${dragging ? "z-10 border-rule bg-paper-3 shadow-float" : ""} ${unavailable ? "opacity-50" : ""}`}
     >
       {selected && (
-        <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-2 rounded-t-lg border-t-2 border-accent-text" />
+        <span aria-hidden className="pointer-events-none absolute -inset-x-px -top-px h-[2px] rounded-t-[5px] bg-accent" />
       )}
       {isNew ? (
         <AppLogo size={14} />
@@ -98,11 +98,11 @@ const TabButton = memo(function TabButton({
           e.stopPropagation();
           onClose();
         }}
-        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded text-gray-400 transition-all duration-150 hover:bg-gray-200 hover:text-gray-800 dark:hover:bg-white/10 dark:hover:text-gray-100 ${
+        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-sm text-faint transition-all duration-150 hover:bg-ink/[0.08] hover:text-ink ${
           selected ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
         }`}
       >
-        <CloseIcon size={12} strokeWidth={2.5} />
+        <CloseIcon size={12} strokeWidth={2} />
       </button>
     </div>
   );
@@ -268,8 +268,8 @@ export function TabsBar({
   };
 
   return (
-    <div className="flex items-end gap-1 border-b border-gray-200/80 bg-gray-50/80 px-2 pt-1.5 dark:border-white/5 dark:bg-gray-950">
-      <div className="mb-1 flex items-center gap-0.5">
+    <div className="flex items-end gap-1 border-b border-rule bg-paper-2 px-2 pt-[7px]">
+      <div className="mb-[5px] mr-1 flex items-center">
         {sidebarCollapsed && (
           <button
             aria-label={tr("settings.expandSidebar")}
@@ -299,7 +299,7 @@ export function TabsBar({
           <ChevronIcon direction="right" size={17} />
         </button>
       </div>
-      <div role="tablist" aria-label={tr("tabs.list")} onKeyDown={onListKeyDown} className="-mb-px flex min-w-0 flex-1 items-end gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div role="tablist" aria-label={tr("tabs.list")} onKeyDown={onListKeyDown} className="-mb-px flex min-w-0 flex-1 items-end gap-px overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {tabs.map((t) => {
           const isCatalogTab = t.type === "catalog";
           const m = meta.get(t.docsetId);
@@ -356,7 +356,7 @@ export function TabsBar({
           newTab();
           usePalette.getState().setOpen(true);
         }}
-        className="icon-btn mb-1"
+        className="icon-btn mb-[5px]"
       >
         <PlusIcon size={16} />
       </button>

@@ -176,7 +176,7 @@ export default function App() {
   if (!langLoaded) return null;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100">
+    <div className="flex h-screen overflow-hidden bg-paper text-ink">
       <Sidebar
         style={{ width: sidebarWidth, flexBasis: sidebarWidth }}
         collapsed={sidebarCollapsed}

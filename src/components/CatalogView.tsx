@@ -32,7 +32,7 @@ const IDLE_OP: FeedOp = {
   done: false,
 };
 
-const GRID = "grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(270px,1fr))]";
+const GRID = "grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(270px,1fr))]";
 
 export function CatalogView() {
   const status = useCatalog((s) => s.status);
@@ -116,23 +116,18 @@ export function CatalogView() {
     <div role="region" className="flex min-h-0 min-w-0 flex-1 flex-col" aria-label={t("catalog.main")}>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {/* Cabecera */}
-        <header className="relative overflow-hidden border-b border-gray-200/80 dark:border-white/5">
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-accent/[0.08] via-transparent to-transparent" />
-          <div className="relative mx-auto max-w-6xl px-8 pb-5 pt-7">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent-solid text-accent-on shadow-soft">
-                <CatalogIcon size={24} />
-              </div>
+        <header>
+          <div className="mx-auto max-w-6xl px-10 pb-6 pt-10">
+            <div className="flex items-end gap-6 border-b-2 border-ink pb-5">
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-xl font-semibold tracking-tight">{t("catalog.title")}</h2>
-                  {status && status.count > 0 && (
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium tabular-nums text-gray-500 dark:bg-white/5 dark:text-gray-400">
-                      {tn(lang, status.count, "catalog.entriesOne", "catalog.entriesMany", { n: status.count })}
-                    </span>
-                  )}
-                </div>
-                <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{t("catalog.subtitle")}</p>
+                <p className="label flex items-center gap-2 text-accent-text">
+                  <CatalogIcon size={13} />
+                  {status && status.count > 0
+                    ? tn(lang, status.count, "catalog.entriesOne", "catalog.entriesMany", { n: status.count })
+                    : t("catalog.title")}
+                </p>
+                <h2 className="mt-3 text-[2.6rem] font-[380] leading-none tracking-[-0.025em]">{t("catalog.title")}</h2>
+                <p className="mt-2.5 max-w-xl text-[16px] italic text-ink-2">{t("catalog.subtitle")}</p>
               </div>
               <button
                 onClick={() => void refresh()}
@@ -146,11 +141,11 @@ export function CatalogView() {
             </div>
 
             {/* Fuente (repo de feeds) */}
-            <div className="mt-4 text-xs">
+            <div className="mt-3 font-mono text-[11px]">
               {!showRepoEditor ? (
-                <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-gray-500 dark:text-gray-400">
+                <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-muted">
                   <span>{t("catalog.source")}</span>
-                  <span className="rounded-md bg-gray-100 px-1.5 py-0.5 font-mono text-gray-700 dark:bg-white/5 dark:text-gray-300">
+                  <span className="font-medium text-ink">
                     {status?.repo}
                   </span>
                   <span>· {t("catalog.updated", { date: formatDateTime(lang, status?.fetched_at ?? null) })}</span>
@@ -159,15 +154,16 @@ export function CatalogView() {
                   )}
                   <button
                     onClick={() => setEditingRepo(true)}
-                    className="ml-1 font-medium text-accent-text hover:underline"
+                    className="ml-1 font-medium text-accent-text underline decoration-accent-text/30 underline-offset-4 hover:decoration-accent-text"
                   >
                     {t("catalog.changeSource")}
                   </button>
                 </p>
               ) : (
-                <div className="max-w-xl animate-fade-in rounded-xl border border-gray-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-white/[0.03]">
+                <div className="relative mt-2 max-w-xl animate-fade-in border border-rule bg-paper-3 p-4 font-sans">
+                  <span aria-hidden className="absolute -inset-y-px -left-px w-[3px] bg-accent" />
                   <div className="flex items-center justify-between">
-                    <p className="font-medium text-gray-700 dark:text-gray-200">{t("catalog.repoLabel")}</p>
+                    <p className="label">{t("catalog.repoLabel")}</p>
                     {status?.repo && (
                       <button
                         onClick={() => setEditingRepo(false)}
@@ -178,7 +174,7 @@ export function CatalogView() {
                       </button>
                     )}
                   </div>
-                  {!status?.repo && <p className="mt-1 text-gray-500 dark:text-gray-400">{t("catalog.setupHelp")}</p>}
+                  {!status?.repo && <p className="mt-1.5 text-[14.5px] italic text-ink-2">{t("catalog.setupHelp")}</p>}
                   <form
                     className="mt-2 flex gap-2"
                     onSubmit={(e) => {
@@ -193,7 +189,7 @@ export function CatalogView() {
                       aria-label={t("catalog.repoLabel")}
                       className="field min-w-0 flex-1 font-mono text-xs"
                     />
-                    <button type="submit" disabled={repoBusy} className="btn-primary shrink-0 text-xs">
+                    <button type="submit" disabled={repoBusy} className="btn-primary shrink-0">
                       {repoBusy ? t("catalog.saving") : t("common.save")}
                     </button>
                   </form>
@@ -205,16 +201,16 @@ export function CatalogView() {
         </header>
 
         {/* Búsqueda y filtros (fijos al hacer scroll) */}
-        <div className="sticky top-0 z-10 border-b border-gray-200/80 bg-white/85 backdrop-blur-md dark:border-white/5 dark:bg-gray-900/85">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-8 py-3">
-            <label className="relative min-w-[220px] flex-1">
-              <SearchIcon size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <div className="sticky top-0 z-10 bg-paper/95">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-end gap-x-8 gap-y-3 border-b border-rule px-10 pb-0 pt-3">
+            <label className="relative mb-2.5 min-w-[220px] flex-1">
+              <SearchIcon size={16} className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 text-muted" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t("catalog.searchPlaceholder")}
                 aria-label={t("catalog.searchLabel")}
-                className="field w-full rounded-lg py-2 pl-9 pr-8"
+                className="w-full border-0 border-b border-transparent bg-transparent py-1.5 pl-7 pr-8 text-[16px] text-ink outline-none placeholder:italic placeholder:text-faint focus-visible:shadow-none"
               />
               {query !== "" && (
                 <button
@@ -227,7 +223,7 @@ export function CatalogView() {
                 </button>
               )}
             </label>
-            <div role="radiogroup" aria-label={t("catalog.filterLabel")} className="flex gap-0.5 rounded-lg bg-gray-100 p-0.5 dark:bg-white/5">
+            <div role="radiogroup" aria-label={t("catalog.filterLabel")} className="-mb-px flex gap-5">
               {FILTERS.map(({ value, key }) => {
                 const on = filter === value;
                 return (
@@ -236,16 +232,16 @@ export function CatalogView() {
                     role="radio"
                     aria-checked={on}
                     onClick={() => setFilter(value)}
-                    className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition-all duration-150 ease-smooth ${
+                    className={`flex items-baseline gap-1.5 border-b-2 pb-2.5 pt-1 text-[14.5px] transition-colors duration-150 ease-smooth ${
                       on
-                        ? "bg-white font-medium text-gray-900 shadow-soft dark:bg-white/15 dark:text-white"
-                        : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                        ? "border-accent text-ink"
+                        : "border-transparent text-muted hover:text-ink"
                     }`}
                   >
                     {t(key)}
                     <span
-                      className={`rounded-full px-1.5 text-[10px] tabular-nums ${
-                        on ? "bg-accent/15 text-accent-text" : "bg-gray-200/70 text-gray-500 dark:bg-white/10 dark:text-gray-400"
+                      className={`font-mono text-[10.5px] tabular-nums ${
+                        on ? "text-accent-text" : "text-faint"
                       }`}
                     >
                       {counts[value]}
@@ -258,15 +254,15 @@ export function CatalogView() {
         </div>
 
         {/* Contenido */}
-        <div className="mx-auto max-w-6xl px-8 py-6">
+        <div className="mx-auto max-w-6xl px-10 py-8">
           {loading ? (
             <ul className={GRID} aria-busy="true" aria-label={t("catalog.loading")}>
               {Array.from({ length: 9 }, (_, i) => (
-                <li key={i} className="h-[118px] animate-pulse rounded-xl border border-gray-200/80 bg-gray-50 dark:border-white/5 dark:bg-white/[0.03]" />
+                <li key={i} className="h-[124px] animate-pulse rounded-[3px] border border-rule bg-paper-3" />
               ))}
             </ul>
           ) : error !== null && entries.length === 0 ? (
-            <div className="mx-auto max-w-md py-12 text-center text-sm">
+            <div className="mx-auto max-w-md py-12 text-center">
               <ErrorDetails error={error} />
               <button onClick={() => void load()} className="btn mt-3">
                 {t("catalog.retry")}
@@ -279,14 +275,14 @@ export function CatalogView() {
               text={query.trim() !== "" ? t("catalog.noResultsFor", { query: query.trim() }) : t("catalog.noResults")}
             />
           ) : (
-            <div className="space-y-8">
+            <div className="space-y-10">
               {sections.map((s) => (
                 <section key={s.key ?? "list"}>
                   {s.key && (
-                    <h3 className="mb-3 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                    <h3 className="label mb-4 flex items-center gap-2.5">
                       {t(s.key)}
-                      <span className="tabular-nums">{s.rows.length}</span>
-                      <span className="h-px flex-1 bg-gray-200/80 dark:bg-white/5" />
+                      <span className="tabular-nums text-faint">{s.rows.length}</span>
+                      <span className="h-px flex-1 bg-rule" />
                     </h3>
                   )}
                   <ul className={GRID}>{s.rows.map(renderRow)}</ul>
@@ -295,7 +291,7 @@ export function CatalogView() {
             </div>
           )}
           {error !== null && entries.length > 0 && (
-            <div className="mt-4 text-xs text-yellow-700 dark:text-yellow-300">
+            <div className="mt-4">
               <ErrorDetails error={error} />
             </div>
           )}
@@ -308,10 +304,8 @@ export function CatalogView() {
 function EmptyState({ text }: { text: string }) {
   return (
     <div className="flex flex-col items-center py-16 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-400 dark:bg-white/5 dark:text-gray-500">
-        <CatalogIcon size={26} />
-      </div>
-      <p className="mt-4 max-w-sm text-sm text-gray-500 dark:text-gray-400">{text}</p>
+      <CatalogIcon size={28} className="text-faint" />
+      <p className="mt-4 max-w-sm text-[17px] italic text-ink-2">{text}</p>
     </div>
   );
 }

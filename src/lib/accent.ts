@@ -31,27 +31,27 @@ export interface AccentTones {
 
 export const ACCENT_HEX: Record<Accent, { light: AccentTones; dark: AccentTones }> = {
   red: {
-    light: { accent: "#DE3830", text: "#C62828", solid: "#C62828", on: "#FFFFFF" },
+    light: { accent: "#DE3830", text: "#B3271E", solid: "#C62828", on: "#FFFFFF" },
     dark: { accent: "#DE3830", text: "#FF8A80", solid: "#C62828", on: "#FFFFFF" },
   },
   blue: {
-    light: { accent: "#0071BC", text: "#0071BC", solid: "#0071BC", on: "#FFFFFF" },
+    light: { accent: "#0071BC", text: "#005F9E", solid: "#0071BC", on: "#FFFFFF" },
     dark: { accent: "#0071BC", text: "#4FA3E3", solid: "#0071BC", on: "#FFFFFF" },
   },
   amber: {
-    light: { accent: "#FBB03B", text: "#B45309", solid: "#FBB03B", on: "#1F2937" },
+    light: { accent: "#FBB03B", text: "#9A4A08", solid: "#FBB03B", on: "#1F2937" },
     dark: { accent: "#FBB03B", text: "#FBB03B", solid: "#FBB03B", on: "#1F2937" },
   },
   catppuccin: {
-    light: { accent: "#8839EF", text: "#8839EF", solid: "#8839EF", on: "#FFFFFF" },
+    light: { accent: "#8839EF", text: "#7428D9", solid: "#8839EF", on: "#FFFFFF" },
     dark: { accent: "#CBA6F7", text: "#CBA6F7", solid: "#CBA6F7", on: "#111827" },
   },
 };
 
-/** Fondo de la app por modo (de `App.tsx`: `bg-white` / `dark:bg-gray-900`). */
+/** Fondo de la app por modo: papel (`--paper` en `index.css`, `bg-paper`). */
 export const APP_BG: { light: string; dark: string } = {
-  light: "#FFFFFF",
-  dark: "#111827",
+  light: "#F5F1E8",
+  dark: "#15140F",
 };
 
 /** Cualquier valor desconocido cae al rojo (lectura tolerante por campo). */

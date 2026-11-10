@@ -25,15 +25,15 @@ export function FindBar() {
 
   const none = query !== "" && answered && total === 0;
   const btn =
-    "flex h-6 w-6 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:pointer-events-none disabled:opacity-30 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white";
+    "flex h-6 w-6 items-center justify-center rounded-sm text-muted transition-colors hover:bg-ink/[0.07] hover:text-ink disabled:pointer-events-none disabled:opacity-30";
 
   return (
     <div
       role="search"
       aria-label={t("find.label")}
-      className="absolute right-4 top-3 z-20 flex animate-pop-in items-center gap-1 rounded-xl border border-gray-200/80 bg-white/95 py-1 pl-2.5 pr-1 shadow-float backdrop-blur-xl dark:border-white/10 dark:bg-gray-900/95"
+      className="absolute right-5 top-3 z-20 flex animate-pop-in items-center gap-1 rounded-md border border-rule bg-paper-3 py-1 pl-3 pr-1 shadow-float"
     >
-      <SearchIcon size={14} className={none ? "text-red-500" : "text-gray-400"} />
+      <SearchIcon size={14} className={none ? "text-red-600" : "text-muted"} />
       <input
         ref={inputRef}
         value={query}
@@ -51,25 +51,25 @@ export function FindBar() {
         placeholder={t("find.placeholder")}
         aria-label={t("find.placeholder")}
         spellCheck={false}
-        className={`w-48 border-0 bg-transparent px-1 py-1 text-sm outline-none placeholder:text-gray-400 focus-visible:shadow-none dark:placeholder:text-gray-500 ${
-          none ? "text-red-600 dark:text-red-400" : "text-gray-900 dark:text-gray-100"
+        className={`w-52 border-0 bg-transparent px-1 py-1 text-[15px] outline-none placeholder:italic placeholder:text-faint focus-visible:shadow-none ${
+          none ? "text-red-700 dark:text-red-400" : "text-ink"
         }`}
       />
       <span
         aria-live="polite"
-        className={`min-w-[4.5rem] shrink-0 px-1 text-right text-xs tabular-nums ${none ? "text-red-500" : "text-gray-400 dark:text-gray-500"}`}
+        className={`min-w-[4.5rem] shrink-0 px-1 text-right font-mono text-[11px] tabular-nums ${none ? "text-red-600 dark:text-red-400" : "text-muted"}`}
       >
         {query === "" || !answered ? "" : total === 0 ? t("find.none") : t("find.count", { current, total })}
       </span>
-      <span className="mx-0.5 h-4 w-px bg-gray-200 dark:bg-white/10" />
+      <span className="mx-0.5 h-4 w-px bg-rule" />
       <button type="button" aria-label={t("find.prev")} title={t("find.prev")} disabled={total === 0} onClick={() => useFind.getState().step(-1)} className={btn}>
-        <ChevronIcon direction="left" size={14} strokeWidth={2.5} className="rotate-90" />
+        <ChevronIcon direction="left" size={14} strokeWidth={2} className="rotate-90" />
       </button>
       <button type="button" aria-label={t("find.next")} title={t("find.next")} disabled={total === 0} onClick={() => useFind.getState().step(1)} className={btn}>
-        <ChevronIcon direction="down" size={14} strokeWidth={2.5} />
+        <ChevronIcon direction="down" size={14} strokeWidth={2} />
       </button>
       <button type="button" aria-label={t("find.close")} title={t("find.close")} onClick={() => useFind.getState().close()} className={btn}>
-        <CloseIcon size={13} strokeWidth={2.5} />
+        <CloseIcon size={13} strokeWidth={2} />
       </button>
     </div>
   );
