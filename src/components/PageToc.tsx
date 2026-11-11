@@ -47,7 +47,7 @@ export const PageToc = memo(function PageToc({
     >
       {/* Lista desplegable (hover / foco), a la izquierda de la guía. */}
       <div className="pointer-events-none absolute right-full top-1/2 mr-1 w-72 -translate-y-1/2 translate-x-2 opacity-0 transition-all duration-200 ease-smooth group-focus-within/toc:pointer-events-auto group-focus-within/toc:translate-x-0 group-focus-within/toc:opacity-100 group-hover/toc:pointer-events-auto group-hover/toc:translate-x-0 group-hover/toc:opacity-100">
-        <div className="max-h-[min(70vh,34rem)] overflow-y-auto rounded-xl border border-line bg-card/95 p-1.5 shadow-pop backdrop-blur-md">
+        <div className="max-h-[min(70vh,34rem)] overflow-y-auto rounded-xl border border-line bg-card p-1.5 shadow-pop">
           <p className="label px-2.5 pb-1.5 pt-1.5">{t("toc.label")}</p>
           <ul>
             {items.map((it, i) => {

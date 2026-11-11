@@ -224,9 +224,10 @@ html.dark:root[data-accent="catppuccin"] {
     @apply inline-flex h-[20px] min-w-[20px] items-center justify-center rounded-md border border-line bg-card px-1.5 font-sans text-[11px] font-medium text-muted shadow-[inset_0_-1px_0_rgb(var(--line-ch))];
   }
 
-  /* Velo de los diálogos modales: teñido por el lienzo, con desenfoque. */
+  /* Velo de los diálogos modales: teñido por el lienzo. Sin `backdrop-filter`:
+     en WebKitGTK (Linux) el desenfoque de fondo es muy costoso. */
   .backdrop {
-    @apply fixed inset-0 flex animate-fade-in items-start justify-center bg-[rgb(var(--canvas-ch)/0.55)] p-4 backdrop-blur-[6px] dark:bg-black/45;
+    @apply fixed inset-0 flex animate-fade-in items-start justify-center bg-[rgb(var(--canvas-ch)/0.7)] p-4 dark:bg-black/55;
   }
 
   /* Superficie flotante (paleta, ajustes). */

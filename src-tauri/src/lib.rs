@@ -6,6 +6,7 @@ pub mod browse;
 pub mod catalog;
 pub mod commands;
 pub mod docset;
+pub mod linux_gpu;
 pub mod navigation;
 pub mod persist;
 pub mod profile;

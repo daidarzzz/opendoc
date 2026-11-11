@@ -204,7 +204,7 @@ export function CatalogView() {
         </header>
 
         {/* Búsqueda y filtros (fijos al hacer scroll) */}
-        <div className="sticky top-0 z-10 border-b border-line bg-card/90 backdrop-blur-md">
+        <div className="sticky top-0 z-10 border-b border-line bg-card">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-10 py-3">
             <label className="relative min-w-[220px] flex-1">
               <SearchIcon size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
