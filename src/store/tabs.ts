@@ -22,6 +22,7 @@ import {
   moveTab as moveTabPure,
   navigateTab,
   noteScroll,
+  replaceCurrent,
   tabWithEntry,
 } from "../lib/tabHistory";
 import type { Tab } from "../lib/types";
@@ -62,7 +63,9 @@ interface TabsState {
   moveTab: (id: string, to: number) => void;
   goBack: () => void;
   goForward: () => void;
-  childNav: (url: string, title: string | null) => void;
+  /** Navegación reportada por el iframe; `redirect` sustituye la entrada
+   *  actual (la página se fue sola, sin interacción del usuario). */
+  childNav: (url: string, title: string | null, redirect?: boolean) => void;
   childScroll: (url: string, y: number) => void;
   childKey: (key: IframeKey, shift: boolean) => void;
   /**
@@ -244,13 +247,14 @@ export const useTabs = create<TabsState>()((set, get) => {
       });
     },
 
-    childNav: (url: string, title: string | null) => {
+    childNav: (url: string, title: string | null, redirect = false) => {
       set((s) => {
         const tab = s.tabs.find((t) => t.id === s.activeId);
         const current = tab ? currentEntry(tab) : null;
         if (!tab || !current || tab.type === "catalog") return s;
         const item = { url, title: title ?? current.title };
-        const next = { ...navigateTab(tab, item), docsetId: docsetOf(url) };
+        const moved = redirect ? replaceCurrent(tab, item) : navigateTab(tab, item);
+        const next = { ...moved, docsetId: docsetOf(url) };
         return { tabs: s.tabs.map((t) => (t.id === tab.id ? next : t)) };
       });
     },

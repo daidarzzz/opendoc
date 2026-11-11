@@ -6,7 +6,33 @@ import type { DocsetProgress, FeedEntry, InstallStatus } from "./types";
 import type { Language } from "./types";
 
 /** Filtro de estado de la lista (además de la búsqueda por texto). */
-export type CatalogFilter = "all" | "installed" | "not-installed" | "updatable";
+export type CatalogFilter = "all" | "installed" | "not-installed" | "updatable" | "queue";
+
+/** Lo que la cola necesita de una operación del store (`FeedOp`). */
+export interface QueueOp {
+  busy: boolean;
+  /** Momento del clic en instalar/actualizar (`null` = no es instalación). */
+  startedAt: number | null;
+  progress: DocsetProgress | null;
+}
+
+/**
+ * Instalaciones en marcha o esperando turno, en orden de llegada (el mismo
+ * que sigue la cola FIFO del backend).
+ */
+export function queueOrder(ops: Record<string, QueueOp>): string[] {
+  return Object.entries(ops)
+    .filter(([, op]) => op.busy && op.startedAt !== null)
+    .sort(([, a], [, b]) => (a.startedAt ?? 0) - (b.startedAt ?? 0))
+    .map(([id]) => id);
+}
+
+/** Puesto (1, 2…) de un feed entre los que esperan turno; `null` si no espera. */
+export function queuePosition(ops: Record<string, QueueOp>, feedId: string): number | null {
+  const waiting = queueOrder(ops).filter((id) => ops[id]?.progress?.stage === "queued");
+  const i = waiting.indexOf(feedId);
+  return i < 0 ? null : i + 1;
+}
 
 /** Acción principal que ofrece una fila según su estado. */
 export type RowAction = "install" | "update" | "reinstall" | "none";
@@ -63,14 +89,18 @@ export function displayName(name: string): string {
   return name.replace(/_+/g, " ").trim() || name;
 }
 
-/** Filtra por texto (nombre o id) y por estado. */
+/**
+ * Filtra por texto (nombre o id) y por estado. Con `queue` (ids de
+ * `queueOrder`) el filtro "En cola" devuelve esas filas en ese orden.
+ */
 export function filterCatalog(
   rows: CatalogRowData[],
   query: string,
   filter: CatalogFilter,
+  queue: readonly string[] = [],
 ): CatalogRowData[] {
   const q = query.trim().toLowerCase();
-  return rows.filter(({ entry, status }) => {
+  const matched = rows.filter(({ entry, status }) => {
     if (
       q !== "" &&
       !entry.name.toLowerCase().includes(q) &&
@@ -88,8 +118,12 @@ export function filterCatalog(
         return status === null || (!status.installed && !status.ambiguous);
       case "updatable":
         return status !== null && status.update_available === true;
+      case "queue":
+        return queue.includes(entry.id);
     }
   });
+  if (filter !== "queue") return matched;
+  return matched.sort((a, b) => queue.indexOf(a.entry.id) - queue.indexOf(b.entry.id));
 }
 
 /** Bytes en forma legible (número con Intl + unidad). */
@@ -112,6 +146,8 @@ export function formatBytes(lang: Language, n: number): string {
  */
 export function formatProgress(p: DocsetProgress, lang: Language): string {
   switch (p.stage) {
+    case "queued":
+      return t(lang, "catalog.progressQueued");
     case "downloading":
       if (p.total_bytes !== null && p.total_bytes > 0) {
         const pct = Math.floor((p.received_bytes / p.total_bytes) * 100);

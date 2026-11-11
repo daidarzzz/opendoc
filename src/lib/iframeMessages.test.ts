@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  isActivatedMessage,
   isValidNavUrl,
   normalizeBackendUrl,
   KEY_RATE_MAX,
@@ -309,5 +310,14 @@ describe("normalizeBackendUrl", () => {
   it("toBackendUrl returns the canonical form on both platforms", () => {
     expect(toBackendUrl("http://opendoc.localhost/d/a%20b.html")).toBe("opendoc://d/a%20b.html");
     expect(toBackendUrl("opendoc://d/a b.html")).toBe("opendoc://d/a%20b.html");
+  });
+});
+
+describe("isActivatedMessage", () => {
+  it("accepts only the exact type from the trusted frame", () => {
+    expect(isActivatedMessage({ type: "opendoc-activated" }, true)).toBe(true);
+    expect(isActivatedMessage({ type: "opendoc-activated" }, false)).toBe(false);
+    expect(isActivatedMessage({ type: "opendoc-nav" }, true)).toBe(false);
+    expect(isActivatedMessage(null, true)).toBe(false);
   });
 });

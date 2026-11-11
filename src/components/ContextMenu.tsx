@@ -14,6 +14,7 @@ import {
   CutIcon,
   FindIcon,
   MinusIcon,
+  MoonIcon,
   NewTabIcon,
   PasteIcon,
   PlusIcon,
@@ -40,6 +41,7 @@ function iconFor(icon: MenuIcon | undefined): ReactNode {
     case "close": return <CloseIcon {...p} />;
     case "reopen": return <UndoIcon {...p} />;
     case "catalog": return <CatalogIcon size={15} className={p.className} />;
+    case "moon": return <MoonIcon {...p} />;
     default: return <span className="w-[15px]" />;
   }
 }

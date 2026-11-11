@@ -3,13 +3,14 @@
 //! `list_entries`, `get_docset_home`, `get_settings`, `set_theme`,
 //! `set_accent`, `set_language`, `set_restore_tabs`, `get_session`, `save_session`, `extract_tarix`,
 //! `get_catalog_status`, `set_feed_repo`, `refresh_catalog`,
-//! `list_catalog`, `install_docset`, `get_install_status`,
+//! `list_catalog`, `install_docset`, `cancel_install`, `get_install_status`,
 //! `uninstall_docset`, `confirm_exit`.
 //!
 //! Solo delegan en `service.rs` (testeable sin Tauri). Si se toca este
 //! contrato, actualizar `src/lib/types.ts` y la tabla de SPEC §4.4.
 
 pub mod error;
+pub mod install_queue;
 pub mod service;
 pub mod state;
 
@@ -187,47 +188,110 @@ fn data_dir_of(app: &tauri::AppHandle) -> Result<std::path::PathBuf, ApiError> {
     })
 }
 
-/// Libera el guard de instalación de un feed. Nunca falla hacia fuera:
-/// si el lock está envenenado, no hay nada útil que hacer (el siguiente
-/// intento lo reportará como `LoadFailed`).
+/// Libera el guard de instalación de un feed y su sitio en la cola. Nunca
+/// falla hacia fuera: si el lock está envenenado, no hay nada útil que
+/// hacer (el siguiente intento lo reportará como `LoadFailed`).
 fn remove_installing(state: &State<'_, AppState>, feed_id: &str) {
     if let Ok(mut installing) = state.installing.lock() {
         installing.remove(feed_id);
     }
+    if let Ok(mut queue) = state.install_queue.lock() {
+        queue.finish(feed_id);
+    }
 }
 
-/// Máximo de instalaciones simultáneas (feeds distintos) para no
-/// saturar CPU ni disco. El guard por feed ya frena duplicadas.
-const MAX_CONCURRENT_INSTALLS: usize = 2;
-/// Pausa entre comprobaciones de hueco (en el pool bloqueante, sin
+/// Pausa entre comprobaciones de turno (en el pool bloqueante, sin
 /// detener el executor).
-const SLOT_POLL: std::time::Duration = std::time::Duration::from_millis(250);
+const SLOT_POLL: std::time::Duration = std::time::Duration::from_millis(200);
 
-/// ¿Hay hueco global? La cuenta incluye la propia instalación (ya
-/// registrada en el guard al comprobar).
-fn install_slot_free(active: usize) -> bool {
-    active <= MAX_CONCURRENT_INSTALLS
+/// Resultado de pedir turno en la cola.
+enum Turn {
+    /// Arranca ya.
+    Go,
+    /// Sigue esperando.
+    Wait,
+    /// Se quitó de la cola (`cancel_install`).
+    Cancelled,
 }
 
-/// Espera un hueco global cediendo el executor (sin bloquear hilos).
-/// El slot se libera junto al guard, en todos los caminos.
-async fn wait_install_slot(state: &State<'_, AppState>) -> Result<(), ApiError> {
+fn take_turn(state: &State<'_, AppState>, feed_id: &str) -> Result<Turn, ApiError> {
+    let mut queue = state
+        .install_queue
+        .lock()
+        .map_err(|e| ApiError::LoadFailed {
+            message: e.to_string(),
+        })?;
+    if queue.try_start(feed_id) {
+        Ok(Turn::Go)
+    } else if queue.is_waiting(feed_id) {
+        Ok(Turn::Wait)
+    } else {
+        Ok(Turn::Cancelled)
+    }
+}
+
+/// Espera turno en la cola FIFO cediendo el executor (sin bloquear hilos).
+/// Si hay que esperar, avisa a la UI con la etapa `queued`. El sitio se
+/// libera junto al guard (`remove_installing`) en todos los caminos.
+async fn wait_install_turn(
+    state: &State<'_, AppState>,
+    app: &tauri::AppHandle,
+    feed_id: &str,
+) -> Result<(), ApiError> {
+    state
+        .install_queue
+        .lock()
+        .map_err(|e| ApiError::LoadFailed {
+            message: e.to_string(),
+        })?
+        .enqueue(feed_id);
+    let mut announced = false;
     loop {
-        let full = state
-            .installing
-            .lock()
-            .map(|installing| !install_slot_free(installing.len()))
-            .unwrap_or(false);
-        if !full {
-            return Ok(());
+        match take_turn(state, feed_id)? {
+            Turn::Go => return Ok(()),
+            Turn::Cancelled => {
+                return Err(ApiError::InstallCancelled {
+                    id: feed_id.to_string(),
+                })
+            }
+            Turn::Wait => {}
         }
-        dlog!("[opendoc] install en espera de hueco global");
+        if !announced {
+            announced = true;
+            dlog!("[opendoc] install {feed_id} en cola");
+            let _ = app.emit(
+                "docset-progress",
+                DocsetProgress {
+                    feed_id: feed_id.to_string(),
+                    docset_id: None,
+                    stage: ProgressStage::Queued,
+                    received_bytes: 0,
+                    total_bytes: None,
+                    files: 0,
+                    message: None,
+                },
+            );
+        }
         tauri::async_runtime::spawn_blocking(|| std::thread::sleep(SLOT_POLL))
             .await
             .map_err(|e| ApiError::LoadFailed {
                 message: e.to_string(),
             })?;
     }
+}
+
+/// Quita de la cola una instalación que aún espera turno. Las que ya
+/// están descargando no se tocan. `true` si se quitó; su
+/// `install_docset` pendiente termina con `InstallCancelled`.
+#[tauri::command]
+pub fn cancel_install(state: State<'_, AppState>, feed_id: String) -> Result<bool, ApiError> {
+    let mut queue = state
+        .install_queue
+        .lock()
+        .map_err(|e| ApiError::LoadFailed {
+            message: e.to_string(),
+        })?;
+    Ok(queue.cancel(&feed_id))
 }
 
 /// Estado del catálogo (repo, última descarga, entradas en caché). Sin red.
@@ -351,7 +415,7 @@ struct DocsetProgress {
     feed_id: String,
     /// Id del docset (solo en `done`, cuando ya se conoce).
     docset_id: Option<String>,
-    /// Etapa (`downloading`/`extracting`/`verifying`/`done`/`error`).
+    /// Etapa (`queued`/`downloading`/`extracting`/`verifying`/`done`/`error`).
     stage: ProgressStage,
     /// Bytes descargados (solo en `downloading`).
     received_bytes: u64,
@@ -364,10 +428,12 @@ struct DocsetProgress {
 }
 
 /// Etapa serializable del progreso (espejo de `docset::ProgressStage`
-/// más los estados finales que emite el comando).
+/// más la espera en cola y los estados finales que emite el comando).
 #[derive(Debug, Clone, Copy, serde::Serialize)]
 #[serde(rename_all = "snake_case")]
 enum ProgressStage {
+    /// Esperando turno en la cola (hay otras descargas en marcha).
+    Queued,
     /// Descargando el `.tgz`.
     Downloading,
     /// Extrayendo el `.tgz` en temporal.
@@ -461,10 +527,10 @@ pub async fn install_docset(
             return Err(ApiError::InstallInProgress { id: feed_id });
         }
     }
-    // Tope global de instalaciones simultáneas (la cuenta incluye esta):
-    // espera hueco sin bloquear el executor. Si falla, libera el guard
+    // Tope global de instalaciones simultáneas: espera turno en la cola
+    // sin bloquear el executor. Si falla o se cancela, libera el guard
     // para no dejar el feed atascado.
-    if let Err(e) = wait_install_slot(&state).await {
+    if let Err(e) = wait_install_turn(&state, &app, &feed_id).await {
         remove_installing(&state, &feed_id);
         return Err(e);
     }
@@ -1026,17 +1092,4 @@ pub fn set_accent(
 #[tauri::command]
 pub fn confirm_exit(app: tauri::AppHandle) {
     app.exit(0);
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn install_slot_caps_concurrent_installs() {
-        assert!(install_slot_free(0));
-        assert!(install_slot_free(1));
-        assert!(install_slot_free(MAX_CONCURRENT_INSTALLS));
-        assert!(!install_slot_free(MAX_CONCURRENT_INSTALLS + 1));
-    }
 }

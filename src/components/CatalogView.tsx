@@ -12,7 +12,7 @@ import { useT } from "../hooks/useT";
 import { useCatalog } from "../store/catalog";
 import { useDocsets } from "../store/docsets";
 import { formatDateTime, tn, type I18nKey } from "../lib/i18n";
-import { filterCatalog } from "../lib/catalogUi";
+import { filterCatalog, queueOrder, queuePosition } from "../lib/catalogUi";
 import type { CatalogFilter, CatalogRowData } from "../lib/catalogUi";
 import type { FeedOp } from "../store/catalog";
 
@@ -21,6 +21,7 @@ const FILTERS: { value: CatalogFilter; key: I18nKey }[] = [
   { value: "installed", key: "catalog.filterInstalled" },
   { value: "updatable", key: "catalog.filterUpdatable" },
   { value: "not-installed", key: "catalog.filterNotInstalled" },
+  { value: "queue", key: "catalog.filterQueue" },
 ];
 
 /** Operación inactiva compartida (no rompe la memoización de filas). */
@@ -30,6 +31,7 @@ const IDLE_OP: FeedOp = {
   error: null,
   errorKind: "",
   done: false,
+  startedAt: null,
 };
 
 const GRID = "grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]";
@@ -53,6 +55,7 @@ export function CatalogView() {
   const refresh = useCatalog((s) => s.refresh);
   const install = useCatalog((s) => s.install);
   const uninstall = useCatalog((s) => s.uninstall);
+  const cancel = useCatalog((s) => s.cancel);
   const clearOp = useCatalog((s) => s.clearOp);
   const setQuery = useCatalog((s) => s.setQuery);
   const setFilter = useCatalog((s) => s.setFilter);
@@ -75,12 +78,16 @@ export function CatalogView() {
     () => entries.map((entry) => ({ entry, status: installMap[entry.id] ?? null })),
     [entries, installMap],
   );
-  const visible = useMemo(() => filterCatalog(rows, query, filter), [rows, query, filter]);
+  // Descargando o esperando turno, en orden de llegada.
+  const queue = useMemo(() => queueOrder(ops), [ops]);
+  const visible = useMemo(() => filterCatalog(rows, query, filter, queue), [rows, query, filter, queue]);
   const counts = useMemo(() => {
     const out = {} as Record<CatalogFilter, number>;
-    for (const f of FILTERS) out[f.value] = filterCatalog(rows, query, f.value).length;
+    for (const f of FILTERS) out[f.value] = filterCatalog(rows, query, f.value, queue).length;
     return out;
-  }, [rows, query]);
+  }, [rows, query, queue]);
+  // "En cola" solo aparece si hay algo en ella (o si es el filtro actual).
+  const filters = FILTERS.filter((f) => f.value !== "queue" || queue.length > 0 || filter === "queue");
   // Con "Todos", los instalados (o ambiguos) van primero en su sección.
   const sections = useMemo(() => {
     if (filter !== "all") return [{ key: null, rows: visible }];
@@ -105,7 +112,9 @@ export function CatalogView() {
       status={st}
       icon={st?.docset_id ? (icons.get(st.docset_id) ?? null) : null}
       op={ops[entry.id] ?? IDLE_OP}
+      queuePos={queuePosition(ops, entry.id)}
       onAction={(feedId, force) => void install(feedId, force)}
+      onCancel={(feedId) => void cancel(feedId)}
       onUninstall={(feedId) => void uninstall(feedId)}
       onDismiss={(feedId) => clearOp(feedId)}
       onChooseFolder={() => void choose()}
@@ -227,7 +236,7 @@ export function CatalogView() {
               )}
             </label>
             <div role="radiogroup" aria-label={t("catalog.filterLabel")} className="flex gap-0.5 rounded-xl bg-card-2 p-1 ring-1 ring-line">
-              {FILTERS.map(({ value, key }) => {
+              {filters.map(({ value, key }) => {
                 const on = filter === value;
                 return (
                   <button
@@ -273,6 +282,8 @@ export function CatalogView() {
             </div>
           ) : entries.length === 0 ? (
             <EmptyState text={t("catalog.emptySetup")} />
+          ) : visible.length === 0 && filter === "queue" && query.trim() === "" ? (
+            <EmptyState text={t("catalog.queueEmpty")} />
           ) : visible.length === 0 ? (
             <EmptyState
               text={query.trim() !== "" ? t("catalog.noResultsFor", { query: query.trim() }) : t("catalog.noResults")}

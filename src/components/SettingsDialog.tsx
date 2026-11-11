@@ -137,17 +137,27 @@ function Row({
   desc,
   children,
   stacked = false,
+  badge,
 }: {
   label: string;
   desc?: string;
   children?: ReactNode;
+  /** Etiqueta pequeña junto al título (p. ej. "Beta"). */
+  badge?: string;
   /** Control debajo del texto (para controles anchos). */
   stacked?: boolean;
 }) {
   return (
     <div className={`px-5 py-4 ${stacked ? "space-y-3.5" : "flex items-center justify-between gap-8"}`}>
       <div className="min-w-0">
-        <p className="text-[13.5px] font-semibold text-ink">{label}</p>
+        <p className="flex items-center gap-2 text-[13.5px] font-semibold text-ink">
+          {label}
+          {badge && (
+            <span className="rounded-full bg-accent/15 px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide text-accent-text">
+              {badge}
+            </span>
+          )}
+        </p>
         {desc && <p className="mt-0.5 text-[12.5px] leading-snug text-muted">{desc}</p>}
       </div>
       {children !== undefined && <div className={stacked ? "" : "shrink-0"}>{children}</div>}
@@ -636,6 +646,7 @@ function ReadingSection() {
   const smoothScroll = usePrefs((s) => s.smoothScroll);
   const linkPrefetch = usePrefs((s) => s.linkPrefetch);
   const toc = usePrefs((s) => s.toc);
+  const docDarkMode = usePrefs((s) => s.docDarkMode);
   const zoom = useZoom((s) => s.level);
   const stepBtn =
     "flex h-7 w-7 items-center justify-center rounded-lg text-muted transition-colors hover:bg-card hover:text-ink disabled:pointer-events-none disabled:opacity-30";
@@ -697,6 +708,13 @@ function ReadingSection() {
             checked={linkPrefetch}
             onChange={(v) => usePrefs.getState().set("linkPrefetch", v)}
             label={t("settings.linkPrefetch")}
+          />
+        </Row>
+        <Row label={t("settings.docDark")} desc={t("settings.docDarkDesc")} badge={t("settings.beta")}>
+          <Switch
+            checked={docDarkMode}
+            onChange={(v) => usePrefs.getState().set("docDarkMode", v)}
+            label={t("settings.docDark")}
           />
         </Row>
       </Group>

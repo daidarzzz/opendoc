@@ -87,6 +87,29 @@ export function navigateTab(tab: Tab, rawEntry: TabEntry): Tab {
   return { ...tab, type: "docset", history, historyIndex };
 }
 
+/**
+ * Redirección (la página se fue sola a otra, sin que el usuario hiciera
+ * nada): sustituye la entrada actual en vez de añadir otra, como hace un
+ * navegador. Sin esto, "atrás" volvería a la página puente y esta
+ * redirigiría otra vez hacia delante (trampa sin salida).
+ * Si el destino coincide con la entrada anterior, se fusionan.
+ * El tramo futuro se conserva.
+ */
+export function replaceCurrent(tab: Tab, rawEntry: TabEntry): Tab {
+  if (!currentEntry(tab)) return navigateTab(tab, rawEntry);
+  const entry = { ...rawEntry, url: normalizeBackendUrl(rawEntry.url) };
+  const prev = tab.history[tab.historyIndex - 1];
+  if (prev && normalizeBackendUrl(prev.url) === entry.url) {
+    const history = [...tab.history];
+    history.splice(tab.historyIndex, 1);
+    history[tab.historyIndex - 1] = entry;
+    return { ...tab, type: "docset", history, historyIndex: tab.historyIndex - 1 };
+  }
+  const history = [...tab.history];
+  history[tab.historyIndex] = entry;
+  return { ...tab, type: "docset", history };
+}
+
 /** Atrás: mueve el cursor una posición. Sin página anterior → igual. */
 export function goBack(tab: Tab): Tab {
   return canGoBack(tab) ? { ...tab, historyIndex: tab.historyIndex - 1 } : tab;

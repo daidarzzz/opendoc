@@ -12,13 +12,16 @@ function systemTheme(): "light" | "dark" {
     : "light";
 }
 
-function applyResolved(mode: ThemeMode): void {
+function applyResolved(mode: ThemeMode): "light" | "dark" {
   const resolved = mode === "system" ? systemTheme() : mode;
   document.documentElement.classList.toggle("dark", resolved === "dark");
+  return resolved;
 }
 
 interface ThemeState {
   mode: ThemeMode;
+  /** Tema efectivo (System ya resuelto según el SO). */
+  resolved: "light" | "dark";
   loaded: boolean;
   init: () => Promise<void>;
   cycle: () => Promise<void>;
@@ -26,16 +29,16 @@ interface ThemeState {
 }
 
 // Sin flash: sistema de inmediato; init() corrige con lo guardado.
-applyResolved("system");
+const initialResolved = applyResolved("system");
 
 export const useTheme = create<ThemeState>()((set, get) => ({
   mode: "system",
+  resolved: initialResolved,
   loaded: false,
   init: async () => {
     try {
       const settings = await getSettings();
-      set({ mode: settings.theme, loaded: true });
-      applyResolved(settings.theme);
+      set({ mode: settings.theme, resolved: applyResolved(settings.theme), loaded: true });
     } catch {
       set({ loaded: true });
     }
@@ -43,8 +46,7 @@ export const useTheme = create<ThemeState>()((set, get) => ({
   cycle: async () => {
     const order: ThemeMode[] = ["light", "dark", "system"];
     const next = order[(order.indexOf(get().mode) + 1) % order.length] ?? "light";
-    set({ mode: next });
-    applyResolved(next);
+    set({ mode: next, resolved: applyResolved(next) });
     try {
       await setTheme(next);
     } catch {
@@ -52,8 +54,7 @@ export const useTheme = create<ThemeState>()((set, get) => ({
     }
   },
   setMode: async (mode) => {
-    set({ mode });
-    applyResolved(mode);
+    set({ mode, resolved: applyResolved(mode) });
     try {
       await setTheme(mode);
     } catch {
@@ -67,6 +68,6 @@ window
   .matchMedia("(prefers-color-scheme: dark)")
   .addEventListener("change", () => {
     if (useTheme.getState().mode === "system") {
-      applyResolved("system");
+      useTheme.setState({ resolved: applyResolved("system") });
     }
   });

@@ -187,6 +187,16 @@ export function validateOpenTabMessage(
   return validateUrlMessage(data, trustedSource, docsetIds, "opendoc-open-tab");
 }
 
+/**
+ * `opendoc-activated`: primera interacción real (pointerdown/keydown con
+ * `isTrusted`) del usuario con el documento actual. Sin datos: solo forma.
+ * Sirve para distinguir una navegación del usuario de una redirección.
+ */
+export function isActivatedMessage(data: unknown, trustedSource: boolean): boolean {
+  if (!trustedSource || typeof data !== "object" || data === null) return false;
+  return (data as Record<string, unknown>)["type"] === "opendoc-activated";
+}
+
 /** Mensaje `opendoc-scroll`. Null si roto o fuera de rango. */
 export function validateScrollMessage(
   data: unknown,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_PREFS, loadPrefsFrom, normalizePrefs, savePrefsTo } from "./prefs";
+import { DEFAULT_PREFS, docDarkFor, loadPrefsFrom, normalizePrefs, savePrefsTo } from "./prefs";
 
 function memory(): { getItem: (k: string) => string | null; setItem: (k: string, v: string) => void } {
   const data = new Map<string, string>();
@@ -22,6 +22,8 @@ describe("prefs", () => {
       design: "paper",
       toc: false,
       home: { greeting: false, search: true, filters: false, recent: true, library: false, shortcuts: true },
+      docDarkMode: true,
+      docDarkOff: ["dart"],
     };
     expect(normalizePrefs(p)).toEqual(p);
   });
@@ -39,5 +41,26 @@ describe("prefs", () => {
     store.setItem("opendoc.prefs", "{roto");
     expect(loadPrefsFrom(store)).toEqual(DEFAULT_PREFS);
     expect(loadPrefsFrom(null)).toEqual(DEFAULT_PREFS);
+  });
+});
+
+describe("docDarkMode (beta)", () => {
+  it("is off by default and tolerates junk", () => {
+    expect(DEFAULT_PREFS.docDarkMode).toBe(false);
+    expect(normalizePrefs({ docDarkMode: true }).docDarkMode).toBe(true);
+    expect(normalizePrefs({ docDarkMode: "yes" }).docDarkMode).toBe(false);
+  });
+});
+
+describe("docDarkOff (per-docset)", () => {
+  it("keeps only unique non-empty strings", () => {
+    expect(normalizePrefs({ docDarkOff: ["dart", "dart", "", 3, "go"] }).docDarkOff).toEqual(["dart", "go"]);
+    expect(normalizePrefs({ docDarkOff: "dart" }).docDarkOff).toEqual([]);
+  });
+
+  it("docDarkFor needs the global switch and respects exclusions", () => {
+    expect(docDarkFor({ docDarkMode: false, docDarkOff: [] }, "dart")).toBe(false);
+    expect(docDarkFor({ docDarkMode: true, docDarkOff: [] }, "dart")).toBe(true);
+    expect(docDarkFor({ docDarkMode: true, docDarkOff: ["dart"] }, "dart")).toBe(false);
   });
 });

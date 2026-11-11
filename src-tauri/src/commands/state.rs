@@ -9,6 +9,7 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
+use super::install_queue::InstallQueue;
 use crate::docset::{Docset, PendingTarix, ScanIssue};
 use crate::search::SearchIndex;
 use crate::settings::Settings;
@@ -62,6 +63,8 @@ pub struct AppState {
     /// Feeds con instalación en curso (F2: evita dos instalaciones del
     /// mismo docset a la vez; las de distintos docsets van en paralelo).
     pub installing: Mutex<HashSet<String>>,
+    /// Cola de instalaciones: activas (tope global) y en espera, en orden.
+    pub install_queue: Mutex<InstallQueue>,
 }
 
 impl Default for AppState {
@@ -71,6 +74,7 @@ impl Default for AppState {
             settings: Mutex::new(Settings::default()),
             extracting: Mutex::new(HashSet::new()),
             installing: Mutex::new(HashSet::new()),
+            install_queue: Mutex::new(InstallQueue::default()),
         }
     }
 }

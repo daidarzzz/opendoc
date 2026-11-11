@@ -122,7 +122,7 @@ fn serve_inner(
 /// no se encadena al documento de la app (que en macOS rebotaba entero).
 pub const THEME_STYLE: &str =
     "<style>html{color-scheme:light!important;overscroll-behavior:contain;}</style>";
-pub const THEME_SCRIPT: &str = r#"<script>(function(){function rep(t,x){x=x||{};x.type=t;window.parent.postMessage(x,"*");}function here(){return {url:String(location.href),title:String(document.title)};}window.addEventListener("message",function(e){if(e.source!==window.parent)return;var d=e.data;if(!d)return;if(d.type==="opendoc-theme"){document.documentElement.removeAttribute("data-opendoc-theme");}else if(d.type==="opendoc-scroll-to"){var y=Number(d.y);if(isFinite(y)&&y>=0){window.scrollTo(0,y);}}else if(d.type==="opendoc-hash"&&typeof d.hash==="string"&&d.hash.length<=4096){if(d.hash){if(location.hash!=='#'+d.hash){location.replace('#'+d.hash);}}else{window.scrollTo(0,0);}}});window.addEventListener("DOMContentLoaded",function(){rep("opendoc-ready",here());},{once:true});window.addEventListener("load",function(){rep("opendoc-nav",here());});window.addEventListener("hashchange",function(){rep("opendoc-nav",here());});var lastY=-1,lastT=0;function sendScroll(force){var y=window.scrollY||window.pageYOffset||0;var t=Date.now();if(y!==lastY&&(force||t-lastT>250)){lastT=t;lastY=y;rep("opendoc-scroll",{y:y,url:String(location.href)});}}window.addEventListener("scroll",function(){sendScroll(false);},true);window.addEventListener("pagehide",function(){sendScroll(true);});document.addEventListener("visibilitychange",function(){if(document.visibilityState==="hidden")sendScroll(true);});window.addEventListener("keydown",function(e){if(e.isComposing||e.key==="Process")return;var c=e.code||"",k=c==="KeyW"?"w":c==="KeyT"?"t":c==="KeyK"?"k":c==="Tab"?"tab":/^Digit([1-9])$/.test(c)?c.charAt(5):/^Numpad([1-9])$/.test(c)?c.charAt(6):null;if((e.ctrlKey||e.metaKey)&&!e.altKey&&k!==null){e.preventDefault();if(e.stopPropagation)e.stopPropagation();rep("opendoc-key",{key:k,shift:!!e.shiftKey});}else if(e.altKey&&!e.ctrlKey&&!e.metaKey&&(e.key==="ArrowLeft"||e.key==="ArrowRight")){e.preventDefault();if(e.stopPropagation)e.stopPropagation();rep("opendoc-key",{key:e.key==="ArrowLeft"?"alt-left":"alt-right",shift:!!e.shiftKey});}},true);function linkUrl(e){try{var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(!a)return null;var u=new URL(a.getAttribute("href"),document.baseURI);if(u.origin!==location.origin)return null;return u.toString();}catch(_){return null;}}var hoverTimer=null,hoverAnchor=null;window.addEventListener("pointerover",function(e){if(!e.isTrusted)return;var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;var u=linkUrl(e);if(!a||!u)return;try{var target=new URL(u),current=new URL(location.href);if(target.pathname===current.pathname&&target.search===current.search)return;}catch(_){return;}if(hoverTimer)clearTimeout(hoverTimer);hoverAnchor=a;hoverTimer=setTimeout(function(){if(hoverAnchor===a&&a.matches(":hover"))rep("opendoc-prefetch",{url:u});},60);},true);function openTab(e){if(!e.isTrusted)return;var u=linkUrl(e);if(!u)return;e.preventDefault();if(e.stopImmediatePropagation)e.stopImmediatePropagation();else if(e.stopPropagation)e.stopPropagation();rep("opendoc-open-tab",{url:u});}window.addEventListener("mousedown",function(e){if(e.button===1&&linkUrl(e)){e.preventDefault();}},true);window.addEventListener("auxclick",function(e){if(e.button===1){openTab(e);}else if(e.button===3||e.button===4){e.preventDefault();e.stopPropagation();rep("opendoc-key",{key:e.button===3?"mouse-back":"mouse-forward",shift:false});}},true);window.addEventListener("click",function(e){if(e.button!==0||e.altKey||e.shiftKey)return;if(e.ctrlKey||e.metaKey){openTab(e);return;}if(!e.isTrusted)return;var u=linkUrl(e);if(!u)return;var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;try{var target=new URL(u),current=new URL(location.href);if(target.pathname===current.pathname&&target.search===current.search)return;}catch(_){return;}e.preventDefault();if(e.stopPropagation)e.stopPropagation();rep("opendoc-navigate",{url:u,title:a&&a.textContent?a.textContent.trim():document.title});},true);})();</script>"#;
+pub const THEME_SCRIPT: &str = r#"<script>(function(){function rep(t,x){x=x||{};x.type=t;window.parent.postMessage(x,"*");}function here(){return {url:String(location.href),title:String(document.title)};}function ownDark(){try{var m=document.querySelector('meta[name="color-scheme"]');if(m&&/dark/.test(m.content)&&!/light/.test(m.content))return true;var els=[document.body,document.documentElement];for(var i=0;i<els.length;i++){if(!els[i])continue;var p=getComputedStyle(els[i]).backgroundColor.match(/[\d.]+/g);if(p&&p.length>=3&&(p.length<4||Number(p[3])>0.5)){return (0.299*p[0]+0.587*p[1]+0.114*p[2])/255<0.4;}}}catch(_){}return false;}window.addEventListener("message",function(e){if(e.source!==window.parent)return;var d=e.data;if(!d)return;if(d.type==="opendoc-theme"){var root=document.documentElement;if(d.value==="dark"&&!ownDark()){root.setAttribute("data-opendoc-theme","dark");}else{root.removeAttribute("data-opendoc-theme");}}else if(d.type==="opendoc-scroll-to"){var y=Number(d.y);if(isFinite(y)&&y>=0){window.scrollTo(0,y);}}else if(d.type==="opendoc-hash"&&typeof d.hash==="string"&&d.hash.length<=4096){if(d.hash){if(location.hash!=='#'+d.hash){location.replace('#'+d.hash);}}else{window.scrollTo(0,0);}}});window.addEventListener("DOMContentLoaded",function(){rep("opendoc-ready",here());},{once:true});window.addEventListener("load",function(){rep("opendoc-nav",here());});window.addEventListener("hashchange",function(){rep("opendoc-nav",here());});var lastY=-1,lastT=0;function sendScroll(force){var y=window.scrollY||window.pageYOffset||0;var t=Date.now();if(y!==lastY&&(force||t-lastT>250)){lastT=t;lastY=y;rep("opendoc-scroll",{y:y,url:String(location.href)});}}window.addEventListener("scroll",function(){sendScroll(false);},true);window.addEventListener("pagehide",function(){sendScroll(true);});document.addEventListener("visibilitychange",function(){if(document.visibilityState==="hidden")sendScroll(true);});window.addEventListener("keydown",function(e){if(e.isComposing||e.key==="Process")return;var c=e.code||"",k=c==="KeyW"?"w":c==="KeyT"?"t":c==="KeyK"?"k":c==="Tab"?"tab":/^Digit([1-9])$/.test(c)?c.charAt(5):/^Numpad([1-9])$/.test(c)?c.charAt(6):null;if((e.ctrlKey||e.metaKey)&&!e.altKey&&k!==null){e.preventDefault();if(e.stopPropagation)e.stopPropagation();rep("opendoc-key",{key:k,shift:!!e.shiftKey});}else if(e.altKey&&!e.ctrlKey&&!e.metaKey&&(e.key==="ArrowLeft"||e.key==="ArrowRight")){e.preventDefault();if(e.stopPropagation)e.stopPropagation();rep("opendoc-key",{key:e.key==="ArrowLeft"?"alt-left":"alt-right",shift:!!e.shiftKey});}},true);function linkUrl(e){try{var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(!a)return null;var u=new URL(a.getAttribute("href"),document.baseURI);if(u.origin!==location.origin)return null;return u.toString();}catch(_){return null;}}var hoverTimer=null,hoverAnchor=null;window.addEventListener("pointerover",function(e){if(!e.isTrusted)return;var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;var u=linkUrl(e);if(!a||!u)return;try{var target=new URL(u),current=new URL(location.href);if(target.pathname===current.pathname&&target.search===current.search)return;}catch(_){return;}if(hoverTimer)clearTimeout(hoverTimer);hoverAnchor=a;hoverTimer=setTimeout(function(){if(hoverAnchor===a&&a.matches(":hover"))rep("opendoc-prefetch",{url:u});},60);},true);function openTab(e){if(!e.isTrusted)return;var u=linkUrl(e);if(!u)return;e.preventDefault();if(e.stopImmediatePropagation)e.stopImmediatePropagation();else if(e.stopPropagation)e.stopPropagation();rep("opendoc-open-tab",{url:u});}window.addEventListener("mousedown",function(e){if(e.button===1&&linkUrl(e)){e.preventDefault();}},true);window.addEventListener("auxclick",function(e){if(e.button===1){openTab(e);}else if(e.button===3||e.button===4){e.preventDefault();e.stopPropagation();rep("opendoc-key",{key:e.button===3?"mouse-back":"mouse-forward",shift:false});}},true);window.addEventListener("click",function(e){if(e.button!==0||e.altKey||e.shiftKey)return;if(e.ctrlKey||e.metaKey){openTab(e);return;}if(!e.isTrusted)return;var u=linkUrl(e);if(!u)return;var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;try{var target=new URL(u),current=new URL(location.href);if(target.pathname===current.pathname&&target.search===current.search)return;}catch(_){return;}e.preventDefault();if(e.stopPropagation)e.stopPropagation();rep("opendoc-navigate",{url:u,title:a&&a.textContent?a.textContent.trim():document.title});},true);})();</script>"#;
 
 /// Scroll de rueda/trackpad dentro del docset. Lo que llega nativo al iframe
 /// se deja al scroll nativo del navegador (fluido, con inercia, sin JS en
@@ -155,6 +155,31 @@ window.addEventListener("wheel",function(e){if(e.ctrlKey){e.preventDefault();ret
 window.addEventListener("message",function(e){if(e.source!==window.parent||!e.data)return;var d=e.data;if(d.type==="opendoc-smooth-scroll"){smooth=d.enabled===true;return;}if(d.type!=="opendoc-wheel")return;if(typeof d.deltaX!=="number"||typeof d.deltaY!=="number"||!isFinite(d.deltaX)||!isFinite(d.deltaY)||d.ctrlKey)return;if(Date.now()-lastSelf<50)return;apply(Number(d.x)||0,Number(d.y)||0,d.deltaX,d.deltaY,Number(d.deltaMode)||0);});
 })();</script>"#;
 
+/// Modo oscuro de los docsets (beta). Mismo enfoque que el modo "filtro" de
+/// Dark Reader, y equivalente portable al `ForceDarkMode` de Chromium que
+/// usa Zeal (WKWebView/WebKitGTK no tienen nada parecido):
+/// - el documento se invierte y se rota el tono 180° (los enlaces siguen
+///   siendo azules; `.9` evita el negro puro);
+/// - imágenes, vídeo, lienzos, objetos incrustados y elementos con `url(` en
+///   su estilo en línea (`background`/`background-image`, no `none`) se
+///   vuelven a invertir para conservar sus colores reales. Solo el más
+///   externo: lo que va dentro de `<picture>` o de un fondo con imagen ya
+///   queda re-invertido con su contenedor (si no, se invertiría dos veces);
+/// - `contrast(1.25)` en la re-inversión compensa el `.9` de la raíz: sin él
+///   las imágenes salían lavadas (rango 10–90 %);
+/// - las `<img>` llevan una placa clara detrás: los dibujos de líneas
+///   oscuras sobre fondo transparente (diagramas, fórmulas) serían
+///   invisibles sobre el fondo oscuro. En imágenes opacas no se ve;
+/// - la barra de desplazamiento no hereda el filtro: se oscurece aparte con
+///   `scrollbar-color`;
+/// - solo actúa con `data-opendoc-theme="dark"` en `<html>`, que el script
+///   pone al recibir `opendoc-theme {value:"dark"}` del visor y nunca en
+///   páginas que ya son oscuras por sí mismas (`ownDark`).
+///
+/// `filter` en el elemento raíz no rompe `position: fixed` (la especificación
+/// lo exime de crear bloque contenedor).
+pub const DARK_STYLE: &str = r#"<style>html[data-opendoc-theme=dark]{filter:invert(.9) hue-rotate(180deg);background-color:#fff;min-height:100%;scrollbar-color:#5c5c5c #1a1a1a;}html[data-opendoc-theme=dark] :is(img,picture,video,canvas,iframe,embed,object,svg image,[style*="url(" i]):not(:is(picture,[style*="url(" i]) *){filter:invert(1) contrast(1.25) hue-rotate(180deg);}html[data-opendoc-theme=dark] img{background-color:#fff;}</style>"#;
+
 /// Resaltado de la búsqueda en página (CSS Custom Highlight API). Donde no
 /// existe `::highlight`, la regla es inválida y se ignora (el script cae a
 /// seleccionar la coincidencia actual).
@@ -170,6 +195,10 @@ pub const ACTIONS_STYLE: &str = "<style>::highlight(opendoc-find){background-col
 /// - Zoom: aplica `opendoc-zoom` (0.25..5) como `zoom` del documento y
 ///   reenvía Ctrl/Cmd+rueda, Ctrl/Cmd +/-/0 y Ctrl/Cmd+F como `opendoc-key`.
 /// - `opendoc-select-all`: selecciona el contenido del documento.
+/// - `opendoc-activated`: avisa una vez por documento de la primera
+///   interacción real (pointerdown/keydown con `isTrusted`). El visor la usa
+///   para tratar como redirección (sustituir, no apilar) las navegaciones
+///   que una página hace sola (meta refresh, redirecciones por JS).
 ///
 /// Igual que el resto del canal: no lleva datos de usuario y todo lo que
 /// manda al padre se valida allí (ver `src/lib/iframeMessages.ts`).
@@ -193,6 +222,7 @@ window.addEventListener("keydown",function(e){if(e.isComposing||e.key==="Process
 var acc=0,lastZ=0;
 window.addEventListener("wheel",function(e){if(!e.ctrlKey||!e.isTrusted)return;e.preventDefault();acc+=e.deltaMode===1?e.deltaY*33:e.deltaY;var now=Date.now();if(Math.abs(acc)<50||now-lastZ<80)return;lastZ=now;rep("opendoc-key",{key:acc<0?"zoom-in":"zoom-out",shift:false});acc=0;},{capture:true,passive:false});
 window.addEventListener("pointerdown",function(e){if(e.isTrusted&&e.button!==2)rep("opendoc-pointerdown");},true);
+var act=false;function activate(e){if(act||!e.isTrusted)return;act=true;rep("opendoc-activated");}window.addEventListener("pointerdown",activate,true);window.addEventListener("keydown",activate,true);
 window.addEventListener("contextmenu",function(e){e.preventDefault();if(!e.isTrusted)return;var s="";try{s=String(window.getSelection()||"");}catch(_){}var a=e.target&&e.target.closest?e.target.closest("a[href]"):null,u=null;if(a){try{var x=new URL(a.getAttribute("href"),location.href);if(x.origin===location.origin)u=x.toString();}catch(_){}}rep("opendoc-context",{x:e.clientX,y:e.clientY,selection:s.slice(0,10000),link:u});},true);
 })();</script>"#;
 
@@ -219,7 +249,7 @@ const UTF8_BOM: [u8; 3] = [0xEF, 0xBB, 0xBF];
 pub fn inject_theme_support(html: &[u8]) -> Vec<u8> {
     let block =
         format!(
-            "{THEME_STYLE}{ACTIONS_STYLE}{THEME_SCRIPT}{THEME_WHEEL_SCRIPT}{ACTIONS_SCRIPT}{TOC_SCRIPT}"
+            "{THEME_STYLE}{DARK_STYLE}{ACTIONS_STYLE}{THEME_SCRIPT}{THEME_WHEEL_SCRIPT}{ACTIONS_SCRIPT}{TOC_SCRIPT}"
         );
     let bytes = block.as_bytes();
     if let Some(pos) = find_head_close(html) {
@@ -422,6 +452,23 @@ mod tests {
         assert!(THEME_SCRIPT.contains("data-opendoc-theme"));
         assert!(THEME_STYLE.contains("color-scheme:light!important"));
         assert!(!THEME_STYLE.contains("invert("));
+        // Modo oscuro (beta): solo con el atributo que pone el script, y
+        // re-invierte el contenido multimedia.
+        assert!(DARK_STYLE.is_ascii());
+        assert!(DARK_STYLE.contains("html[data-opendoc-theme=dark]{filter:invert("));
+        for token in [
+            ":is(img,picture,video,canvas,",
+            "[style*=\"url(\" i]",
+            // Sin doble inversión dentro de <picture> o de un fondo con imagen.
+            ":not(:is(picture,[style*=\"url(\" i]) *)",
+            "contrast(1.25)",
+            "img{background-color:#fff;}",
+            "scrollbar-color:",
+        ] {
+            assert!(DARK_STYLE.contains(token), "falta {token}");
+        }
+        assert!(THEME_SCRIPT.contains("ownDark"));
+        assert!(THEME_SCRIPT.contains("d.value===\"dark\""));
         // Canal de navegación: reportes + restauración de scroll + teclas.
         // Sigue siendo una constante sin datos de usuario.
         assert!(THEME_SCRIPT.starts_with("<script>(function(){"));
@@ -487,6 +534,7 @@ mod tests {
             "find-close",
             "CSS.highlights",
             "\"opendoc-pointerdown\"",
+            "\"opendoc-activated\"",
         ] {
             assert!(ACTIONS_SCRIPT.contains(token), "falta {token}");
         }

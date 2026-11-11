@@ -11,7 +11,9 @@ import { useContextMenu, type MenuEntry } from "../store/contextMenu";
 import { useFind } from "../store/find";
 import { useLang } from "../store/lang";
 import { usePalette } from "../store/palette";
+import { usePrefs } from "../store/prefs";
 import { useTabs } from "../store/tabs";
+import { useTheme } from "../store/theme";
 
 type T = (key: I18nKey, vars?: I18nVars) => string;
 
@@ -51,6 +53,21 @@ export interface DocContext {
 }
 
 /** Entradas del menú dentro del docset. */
+/**
+ * Modo oscuro beta: activar/desactivar solo para este docset. Solo aparece
+ * con la opción activa y la app en tema oscuro (en claro no haría nada).
+ */
+function docDarkEntry(docsetId: string, t: T): MenuEntry | null {
+  const prefs = usePrefs.getState();
+  if (!prefs.docDarkMode || useTheme.getState().resolved !== "dark") return null;
+  const on = !prefs.docDarkOff.includes(docsetId);
+  return {
+    kind: "item", id: "doc-dark", icon: "moon",
+    label: on ? t("menu.docDarkOff") : t("menu.docDarkOn"),
+    onSelect: () => usePrefs.getState().toggleDocDark(docsetId),
+  };
+}
+
 export function docMenuEntries(ctx: DocContext): MenuEntry[] {
   const t = tr();
   const mod = modLabel();
@@ -83,6 +100,11 @@ export function docMenuEntries(ctx: DocContext): MenuEntry[] {
   }
   out.push(
     { kind: "item", id: "select-all", icon: "select", label: t("menu.selectAll"), hint: `${mod} A`, onSelect: ctx.selectAll },
+  );
+  // Donde se nota que un docset no queda bien en oscuro es en su página.
+  const dark = active?.docsetId ? docDarkEntry(active.docsetId, t) : null;
+  if (dark) out.push(dark);
+  out.push(
     { kind: "separator", id: "s4" },
     { kind: "zoom", id: "zoom" },
   );
@@ -166,9 +188,12 @@ function treeMenu(el: HTMLElement): MenuEntry[] | null {
   const docsetId = el.dataset.ctxDocset;
   if (!docsetId) return null;
   if (el.dataset.ctx === "doc") {
-    return [
+    const entries: MenuEntry[] = [
       { kind: "item", id: "open-tab", icon: "tab", label: t("menu.openNewTab"), onSelect: () => void useTabs.getState().openHome(docsetId, { newTab: true }) },
     ];
+    const dark = docDarkEntry(docsetId, t);
+    if (dark) entries.push({ kind: "separator", id: "s-dark" }, dark);
+    return entries;
   }
   const name = el.dataset.ctxName;
   const path = el.dataset.ctxPath;

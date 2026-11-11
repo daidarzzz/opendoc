@@ -142,6 +142,13 @@ export async function installDocset(
 }
 
 /** Desinstala el docset que coincide con el feed y devuelve su id local. */
+/** Quita de la cola una instalación que aún espera turno (las que ya
+ *  descargan no se tocan). `true` si se quitó: su `installDocset`
+ *  pendiente falla con `install_cancelled`. */
+export async function cancelInstall(feedId: string): Promise<boolean> {
+  return invoke<boolean>("cancel_install", { feedId });
+}
+
 export async function uninstallDocset(feedId: string): Promise<string> {
   return invoke<string>("uninstall_docset", { feedId });
 }

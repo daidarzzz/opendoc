@@ -14,7 +14,8 @@ export type MenuIcon =
   | "forward"
   | "close"
   | "reopen"
-  | "catalog";
+  | "catalog"
+  | "moon";
 
 export type MenuEntry =
   | {

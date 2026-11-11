@@ -4,6 +4,8 @@ import {
   formatBytes,
   formatProgress,
   progressPercent,
+  queueOrder,
+  queuePosition,
   rowAction,
   statusBadge,
   versionLine,
@@ -170,5 +172,41 @@ describe("displayName", () => {
     expect(displayName("C++")).toBe("C++");
     const rows = [{ entry: { id: "Ruby_on_Rails", name: "Ruby_on_Rails", version: "8", urls: [] }, status: null }];
     expect(filterCatalog(rows, "ruby on", "all")).toHaveLength(1);
+  });
+});
+
+describe("cola de descargas", () => {
+  const queued = progress({ stage: "queued" });
+  const ops = {
+    // Clics en este orden: Python_3, CSS, Go (el orden lo da startedAt).
+    CSS: { busy: true, startedAt: 20, progress: queued },
+    Python_3: { busy: true, startedAt: 10, progress: progress({ stage: "downloading" }) },
+    Go: { busy: true, startedAt: 30, progress: queued },
+    // Desinstalando (no es instalación) y una ya terminada: fuera de la cola.
+    Rust: { busy: true, startedAt: null, progress: null },
+    Swift: { busy: false, startedAt: 5, progress: null },
+  };
+
+  it("ordena por llegada y deja fuera lo que no descarga", () => {
+    expect(queueOrder(ops)).toEqual(["Python_3", "CSS", "Go"]);
+  });
+
+  it("puesto solo entre las que esperan turno", () => {
+    expect(queuePosition(ops, "CSS")).toBe(1);
+    expect(queuePosition(ops, "Go")).toBe(2);
+    expect(queuePosition(ops, "Python_3")).toBeNull();
+    expect(queuePosition(ops, "Nope")).toBeNull();
+  });
+
+  it("el filtro En cola respeta el orden de la cola y la búsqueda", () => {
+    const queue = ["Python_3", "CSS"];
+    expect(filterCatalog(rows(), "", "queue", queue).map((r) => r.entry.id)).toEqual(queue);
+    expect(filterCatalog(rows(), "css", "queue", queue).map((r) => r.entry.id)).toEqual(["CSS"]);
+    expect(filterCatalog(rows(), "", "queue")).toHaveLength(0);
+  });
+
+  it("texto de la etapa en cola", () => {
+    expect(formatProgress(queued, "es")).toBe(t("es", "catalog.progressQueued"));
+    expect(progressPercent(queued)).toBeNull();
   });
 });

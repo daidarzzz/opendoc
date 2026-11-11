@@ -103,7 +103,7 @@ graph TD
   - `FindBar.tsx`: barra flotante de búsqueda en la página (`Ctrl/Cmd+F`).
   - `SettingsDialog.tsx`: panel de Ajustes (`Ctrl/Cmd+,` o el engranaje de la barra lateral) con secciones General, Apariencia, Lectura, Docsets, Atajos y Acerca de. Con el panel abierto no actúa ningún otro atajo global.
 - **`store/`**:
-  - Stores de Zustand: `docsets`, `tabs`, `palette`, `catalog`, `browse`, `theme`, `accent`, `lang`, `contextMenu`, `find`, `settingsUi` (apertura y sección del panel de Ajustes), `zoom` y `prefs` (estos dos últimos persistidos en `localStorage`; `prefs` guarda en `opendoc.prefs` el desplazamiento suave, la precarga de enlaces, reducir movimiento, el límite de resultados de la paleta el estilo visual (`design`, aplicado como `data-design` en `<html>` al importar, sin parpadeo), el índice de la página (`toc`) y las secciones visibles del inicio (`home`)).
+  - Stores de Zustand: `docsets`, `tabs`, `palette`, `catalog`, `browse`, `theme`, `accent`, `lang`, `contextMenu`, `find`, `settingsUi` (apertura y sección del panel de Ajustes), `zoom` y `prefs` (estos dos últimos persistidos en `localStorage`; `prefs` guarda en `opendoc.prefs` el desplazamiento suave, la precarga de enlaces, reducir movimiento, el límite de resultados de la paleta, el estilo visual (`design`, aplicado como `data-design` en `<html>` al importar, sin parpadeo), el índice de la página (`toc`) y las secciones visibles del inicio (`home`) y el modo oscuro beta de los docsets (`docDarkMode`) con su lista de docsets excluidos (`docDarkOff`, editable desde el clic derecho en la página del docset o en el docset del panel lateral; la opción solo aparece con el tema oscuro activo)). `theme` expone además `resolved` (tema efectivo con System ya resuelto).
 - **`lib/`**:
   - `commands.ts`: funciones envolventes tipadas sobre `invoke()`, `listen()` y diálogos nativos.
   - `types.ts`: tipos TypeScript espejo de los modelos de Rust.
@@ -158,6 +158,7 @@ graph TD
   - Se rechazan terminantemente intentos de navegación hacia directorios superiores (`..`), rutas absolutas, unidades de disco de Windows, symlinks fuera del árbol y secuencias con doble codificación percent.
 - **Inyección en documentos HTML**:
   - Se añade un bloque `<style>` para forzar esquema claro en los controles nativos.
+  - Modo oscuro de los docsets (beta, `DARK_STYLE`): equivalente portable al `ForceDarkMode` de Chromium que usa Zeal (WKWebView/WebKitGTK no tienen nada parecido). Con `data-opendoc-theme="dark"` en `<html>` el documento se invierte (`invert(.9) hue-rotate(180deg)`) y se re-invierten imágenes, vídeo, lienzos, incrustados y elementos con `url(` en su estilo en línea, solo el más externo (nada dentro de `<picture>` o de un fondo con imagen se invierte dos veces) y con `contrast(1.25)` para compensar el `.9`. Las `<img>` llevan una placa clara detrás (dibujos de líneas transparentes legibles) y la barra de desplazamiento se oscurece con `scrollbar-color`. El visor envía `opendoc-theme {value:"dark"|"light"}` al reportar `opendoc-ready`, al activar un iframe y en caliente al cambiar el ajuste o el tema; solo es `dark` con la opción activada, la app en tema oscuro y el docset de esa página no excluido (`docDarkOff`, clic derecho en la página o en el docset del panel lateral → activar/desactivar modo oscuro en este docset). El script no lo aplica en páginas que ya son oscuras (meta `color-scheme` solo oscuro o fondo de `body`/`html` oscuro).
   - Se inyecta un `<script>` que:
     - Escucha navegaciones y cambios de ancla (`hashchange`) para notificar al visor principal, y obedece `opendoc-hash {hash}` (salto de ancla sin recargar, con `location.replace`).
     - Captura el scroll con limitación temporal (debounce a 250 ms) y lo reporta a la ventana principal.
@@ -179,6 +180,7 @@ graph TD
 - Cada pestaña mantiene su propio historial de navegación independiente (`history: TabEntry[]`, `historyIndex: number`) y un mapa de posiciones de scroll guardadas por URL.
 - Las URLs del historial se guardan en forma canónica (`normalizeBackendUrl`, igual que `location.href` en el iframe): la ruta cruda del índice y el eco del iframe son la misma parada, sin entradas duplicadas.
 - Cada iframe reporta la página que tiene de verdad (`opendoc-ready`/`opendoc-nav`), también si el docset navegó por su cuenta (JS, formularios, redirecciones); el visor solo reutiliza un iframe para atrás/adelante si su página coincide.
+- Redirecciones: si una página cambia sola de documento sin interacción del usuario (meta refresh, `location` por JS al cargar; el iframe avisa de la primera interacción con `opendoc-activated`), la entrada actual se **sustituye** en vez de apilarse, como en un navegador. Así "atrás" nunca vuelve a una página puente que te redirige otra vez hacia delante.
 - Ir a otra ancla de la página visible no recarga el documento. La precarga al pasar el ratón nunca expulsa la página anterior/siguiente del historial.
 - Los atajos reenviados desde el iframe (Alt+←/→, botones laterales del ratón, pestañas) se atienden aunque la página siguiente aún esté cargando.
 - **Persistencia de sesión**:
@@ -193,7 +195,7 @@ graph TD
 - **Feeds configurables**: el usuario puede especificar un repositorio de GitHub (p. ej. `zealdocs/feeds`) o una URL compatible.
 - **Caché sin conexión**: `catalog.json` almacena las entradas tras refrescar el catálogo; la búsqueda y filtrado de feeds funciona completamente offline.
 - **Instalación segura**:
-  1. Concurrencia limitada: máximo de 2 instalaciones simultáneas en segundo plano.
+  1. Concurrencia limitada con cola FIFO (`commands/install_queue.rs`): máximo de 2 instalaciones simultáneas; el resto espera turno en orden de llegada, emite `docset-progress` con etapa `queued` y puede quitarse de la cola con `cancel_install` (su `install_docset` termina con `install_cancelled`). Las activas y las que esperan se cuentan por separado: antes las que esperaban ocupaban cupo y con 3 o más pedidas a la vez se bloqueaban entre sí para siempre. En la UI, el filtro **En cola** del catálogo (visible solo si hay algo descargando o esperando) las lista en orden con su puesto.
   2. Descarga del paquete `.tgz` a un archivo `.part` con soporte para selección de mirrors alternativos y registro del mirror más rápido (`fast_mirror`).
   3. Extracción en carpeta temporal `.tmp-install-*` validando que cada archivo pertenezca a la raíz del docset y no exceda límites de tamaño.
   4. Verificación de que el contenido extraído constituye un docset clásico válido con `Contents/Info.plist` e índice SQLite accesible.
@@ -227,6 +229,7 @@ Todos los comandos se invocan mediante el protocolo IPC de Tauri. La siguiente t
 | `refresh_catalog` | *(ninguno)* | `Result<CatalogSummary, ApiError>` | Descarga y parsea la lista de feeds del repositorio configurado. |
 | `list_catalog` | `query?: String` | `Result<Vec<FeedEntry>, ApiError>` | Consulta las entradas en la caché local del catálogo. |
 | `install_docset` | `feed_id: String, force?: bool` | `Result<InstallSummary, ApiError>` | Descarga e instala un docset emitiendo eventos `docset-progress`. |
+| `cancel_install` | `feed_id: String` | `Result<bool, ApiError>` | Quita de la cola una instalación que aún espera turno (`true` si se quitó); las que ya descargan no se tocan. |
 | `get_install_status` | `feed_id?: String` | `Result<Vec<InstallStatus>, ApiError>` | Compara feeds contra docsets instalados para detectar actualizaciones. |
 | `uninstall_docset` | `feed_id: String` | `Result<String, ApiError>` | Desinstala de forma segura la carpeta `.docset` correspondiente al feed. |
 | `confirm_exit` | *(ninguno)* | `()` | Confirma el cierre del proceso tras completar el volcado de sesión. |
@@ -238,7 +241,7 @@ Todos los comandos se invocan mediante el protocolo IPC de Tauri. La siguiente t
   {
     "feed_id": "CSS",
     "docset_id": "css",
-    "stage": "downloading" | "extracting" | "verifying" | "done" | "error",
+    "stage": "queued" | "downloading" | "extracting" | "verifying" | "done" | "error",
     "received_bytes": 1048576,
     "total_bytes": 5242880,
     "files": 120,
@@ -275,7 +278,7 @@ El repositorio implementa una batería integral de pruebas en frontend y backend
 - **Modo oscuro en docsets desactivado**: el tema oscuro de la aplicación aplica exclusivamente a la interfaz nativa (chrome, barra lateral, pestañas, modales). Los documentos HTML de los docsets se muestran con su presentación clara original. La inversión mediante filtros CSS globales producía artefactos visuales inaceptables en diagramas, tablas y bloques de código; el mecanismo de inyección permanece reservado para soporte de temas CSS específicos por docset en versiones posteriores.
 - **Iconos de acento en tiempo de ejecución**: el acento de color afecta al logo y a los elementos interactivos de la interfaz, así como al icono de la app en ejecución en la barra de tareas y el Dock. El icono empaquetado en el ejecutable, instalador y Finder permanece en el rojo de marca para mantener la identidad visual del archivo.
 - **Independencia de Kapeli**: OpenDoc no depende de servicios propietarios ni redistribuye documentación ajena; los feeds se consultan desde repositorios comunitarios abiertos.
-- **Límite de concurrencia en instalaciones**: máximo 2 instalaciones simultáneas para proteger el ancho de banda y evitar contención en disco.
+- **Límite de concurrencia en instalaciones**: máximo 2 instalaciones simultáneas para proteger el ancho de banda y evitar contención en disco; el resto espera en una cola FIFO (etapa `queued`, cancelable con `cancel_install`).
 
 ### 7.2 Limitaciones Conocidas
 - **Firma de código**: los instaladores distribuidos en GitHub Releases no cuentan con certificados comerciales de firma de código; Windows SmartScreen y macOS Gatekeeper mostrarán advertencias estándar durante la primera instalación.

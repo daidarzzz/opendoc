@@ -5,7 +5,7 @@
 import { memo, useState } from "react";
 import { DocsetIcon } from "./DocsetIcon";
 import { ErrorDetails } from "./ErrorDetails";
-import { CheckIcon, CloseIcon, DownloadIcon, RefreshIcon, TrashIcon } from "./Icons";
+import { CheckIcon, ClockIcon, CloseIcon, DownloadIcon, RefreshIcon, TrashIcon } from "./Icons";
 import { useT } from "../hooks/useT";
 import type { FeedEntry, InstallStatus } from "../lib/types";
 import type { FeedOp } from "../store/catalog";
@@ -46,7 +46,9 @@ export const CatalogRow = memo(function CatalogRow({
   status,
   icon,
   op,
+  queuePos,
   onAction,
+  onCancel,
   onUninstall,
   onDismiss,
   onChooseFolder,
@@ -56,7 +58,11 @@ export const CatalogRow = memo(function CatalogRow({
   /** Icono del instalado (`null` = icono de lenguaje o monograma). */
   icon: string | null;
   op: FeedOp;
+  /** Puesto en la cola si espera turno (`null` si no). */
+  queuePos: number | null;
   onAction: (feedId: string, force: boolean) => void;
+  /** Quita de la cola (solo mientras espera turno). */
+  onCancel: (feedId: string) => void;
   onUninstall: (feedId: string) => void;
   onDismiss: (feedId: string) => void;
   onChooseFolder: () => void;
@@ -70,6 +76,7 @@ export const CatalogRow = memo(function CatalogRow({
   const pct = op.progress ? progressPercent(op.progress) : null;
   const title = displayName(entry.name);
   const installed = status?.installed === true;
+  const queued = op.busy && op.progress?.stage === "queued";
   const highlight = badge.tone === "info" ? "border-accent/40 shadow-[0_0_0_3px_rgb(var(--accent-ch)/0.08)]" : "border-line";
 
   return (
@@ -141,14 +148,20 @@ export const CatalogRow = memo(function CatalogRow({
                   : "btn-primary py-1"
               }
             >
-              {op.busy ? (
+              {queued ? (
+                <ClockIcon size={13} />
+              ) : op.busy ? (
                 <RefreshIcon size={12} className="animate-spin" />
               ) : action === "install" ? (
                 <DownloadIcon size={13} />
               ) : (
                 <RefreshIcon size={12} />
               )}
-              {op.busy ? t("catalog.actionBusy") : t(ACTION_KEY[action])}
+              {queued
+                ? t("catalog.progressQueuedAt", { n: queuePos ?? 1 })
+                : op.busy
+                  ? t("catalog.actionBusy")
+                  : t(ACTION_KEY[action])}
             </button>
           )}
         </div>
@@ -156,7 +169,18 @@ export const CatalogRow = memo(function CatalogRow({
 
       {(op.progress || op.error !== null || op.done) && (
         <div className="mt-3 animate-fade-in border-t border-line pt-3" aria-live="polite">
-          {op.progress && !op.error && !op.done && (
+          {queued && (
+            <p className="flex items-center justify-between gap-2 text-[12px] text-muted">
+              <span className="min-w-0 flex-1">{t("catalog.progressQueued")}</span>
+              <button
+                onClick={() => onCancel(entry.id)}
+                className="shrink-0 rounded-lg px-2 py-1 text-[12px] font-medium text-muted transition-colors hover:bg-ink/[0.06] hover:text-ink"
+              >
+                {t("catalog.cancelQueued")}
+              </button>
+            </p>
+          )}
+          {op.progress && !queued && !op.error && !op.done && (
             <>
               <p className="text-[12px] text-muted">{formatProgress(op.progress, lang)}</p>
               <div

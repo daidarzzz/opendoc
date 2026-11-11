@@ -2,7 +2,7 @@
 // lista virtualizada (altura de fila uniforme, esqueleto donde faltan
 // datos). Teclado completo con aria-activedescendant: el foco es estable
 // porque apunta a ids de fila, no a nodos del DOM.
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { BROWSE_PAGE, useBrowse } from "../store/browse";
 import { useDocsets } from "../store/docsets";
 import { useTabs } from "../store/tabs";
@@ -15,6 +15,42 @@ import { ChevronIcon } from "./Icons";
 import { KindGlyph } from "./KindGlyph";
 
 const ROW_H = 30;
+
+/** Entrada de las filas tras la carga: duración, paso entre filas y tope. */
+const ENTER_MS = 380;
+const ENTER_STEP_MS = 32;
+const ENTER_MAX_ROWS = 14;
+
+/** Anchos de las barras del esqueleto (variados, para que parezcan nombres). */
+const SKELETON_WIDTHS = ["58%", "42%", "66%", "36%", "50%", "44%"];
+
+/**
+ * Carga inicial del panel: filas fantasma con la forma de un docset (icono +
+ * nombre) que laten suavemente. Aparecen con un pequeño retraso para que una
+ * carga rápida no muestre ningún destello.
+ */
+function TreeSkeleton({ label }: { label: string }) {
+  return (
+    <div
+      role="status"
+      aria-label={label}
+      className="animate-[fade-in_400ms_ease-out_180ms_both] px-1 pt-0.5"
+    >
+      {SKELETON_WIDTHS.map((width, i) => (
+        <div key={width + i} style={{ height: ROW_H }} className="flex items-center gap-2 pl-6 pr-2">
+          <span
+            className="h-4 w-4 shrink-0 animate-pulse rounded bg-ink/[0.08]"
+            style={{ animationDelay: `${i * 120}ms` }}
+          />
+          <span
+            className="h-2.5 animate-pulse rounded-full bg-ink/[0.08]"
+            style={{ width, animationDelay: `${i * 120}ms` }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
 const OVERSCAN = 8;
 
 type Row =
@@ -33,6 +69,21 @@ function rowId(di: number, ki: number, ei: number): string {
 
 export function BrowseTree() {
   const docsets = useDocsets((s) => s.docsets);
+  const loading = useDocsets((s) => s.loading);
+  // Entrada escalonada (de arriba abajo) solo justo después de cargar; no
+  // al desplazarse, expandir ni recargar filas. useLayoutEffect: se activa
+  // antes del primer pintado de las filas (con useEffect se veían un
+  // fotograma ya visibles y luego se ocultaban para animarse: un tirón).
+  const [entering, setEntering] = useState(false);
+  const wasLoading = useRef(loading);
+  useLayoutEffect(() => {
+    const finished = wasLoading.current && !loading;
+    wasLoading.current = loading;
+    if (!finished) return;
+    setEntering(true);
+    const id = window.setTimeout(() => setEntering(false), ENTER_STEP_MS * ENTER_MAX_ROWS + ENTER_MS);
+    return () => window.clearTimeout(id);
+  }, [loading]);
   const kinds = useBrowse((s) => s.kinds);
   const kindsState = useBrowse((s) => s.kindsState);
   const kindsError = useBrowse((s) => s.kindsError);
@@ -229,8 +280,10 @@ export function BrowseTree() {
       onScroll={(e) => setScrollTop((e.target as HTMLDivElement).scrollTop)}
       className="group/tree relative flex-1 overflow-y-auto outline-none"
     >
-      {rows.length === 0 ? (
-        <p className="px-2 py-1 text-[13px] text-muted">{t("browse.empty")}</p>
+      {rows.length === 0 && loading ? (
+        <TreeSkeleton label={t("browse.loading")} />
+      ) : rows.length === 0 ? (
+        <p className="animate-fade-in px-2 py-1 text-[13px] text-muted">{t("browse.empty")}</p>
       ) : (
         <div style={{ height: rows.length * ROW_H }} className="relative">
           {rows.slice(start, end).map((r, k) => (
@@ -238,6 +291,7 @@ export function BrowseTree() {
               key={r.id}
               row={r}
               top={(start + k) * ROW_H}
+              enterIndex={entering ? start + k : undefined}
               active={start + k === activeIdx}
               currentDoc={activeDoc}
               onToggleDoc={toggleDoc}
@@ -266,6 +320,8 @@ function findKindRow(rows: Row[], docsetId: string, kind: string): number {
 interface RowViewProps {
   row: Row;
   top: number;
+  /** Posición en la entrada escalonada tras cargar (undefined = sin animar). */
+  enterIndex?: number;
   active: boolean;
   currentDoc: string | null;
   onToggleDoc: (docsetId: string) => void;
@@ -275,16 +331,21 @@ interface RowViewProps {
   onOpenHome: (docsetId: string, newTab: boolean) => void;
 }
 
-const RowView = memo(function RowView({ row, top, active, currentDoc, onToggleDoc, onToggleKind, onActivate, onAuxEntry, onOpenHome }: RowViewProps) {
+const RowView = memo(function RowView({ row, top, enterIndex, active, currentDoc, onToggleDoc, onToggleKind, onActivate, onAuxEntry, onOpenHome }: RowViewProps) {
   const { t, lang } = useT();
   const base: React.CSSProperties = {
     position: "absolute",
     top,
+    ...(enterIndex !== undefined && {
+      animation: `row-in ${ENTER_MS}ms cubic-bezier(0.33, 1, 0.68, 1) ${Math.min(enterIndex, ENTER_MAX_ROWS) * ENTER_STEP_MS}ms both`,
+    }),
     height: ROW_H,
     left: 0,
     right: 0,
   };
-  const hl = `transition-colors duration-100 ${
+  // Resaltado sin transición: con fundido, pasando rápido el ratón o no
+  // llegaba a verse (entrada) o dejaba un rastro de filas apagándose (salida).
+  const hl = `${
     active
       ? "text-ink-2 hover:bg-canvas-2/70 group-focus/tree:bg-canvas-2 group-focus/tree:text-ink"
       : "text-ink-2 hover:bg-canvas-2/70 hover:text-ink"

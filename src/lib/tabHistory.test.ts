@@ -14,6 +14,7 @@ import {
   moveTab,
   navigateTab,
   noteScroll,
+  replaceCurrent,
   sameDocument,
   tabWithEntry,
 } from "./tabHistory";
@@ -202,5 +203,32 @@ describe("URL normalization", () => {
     const raw: Tab = { ...tabWithEntry("d", a), history: [a, { url: "opendoc://d/x y.html", title: "X" }], historyIndex: 1 };
     const echoed = navigateTab(raw, { url: "opendoc://d/x%20y.html", title: "X" });
     expect(echoed.history).toHaveLength(2);
+  });
+});
+
+describe("replaceCurrent (redirects)", () => {
+  const bridge = "opendoc://dart/api/dart-core/dart-core-library.html";
+  const target = "opendoc://dart/api/dart-core/index.html";
+  const home = "opendoc://dart/api/index.html";
+
+  it("a redirect replaces the bridge page, so Back leaves it (Dart docset trap)", () => {
+    let t = tabWith([home, bridge]);
+    t = replaceCurrent(t, { url: target, title: "dart:core" });
+    expect(t.history.map((e) => e.url)).toEqual([home, target]);
+    expect(currentEntry(goBack(t))?.url).toBe(home);
+  });
+
+  it("merges with the previous entry when redirected back to it", () => {
+    let t = tabWith([home, bridge]);
+    t = replaceCurrent(t, { url: home, title: "home" });
+    expect(t.history.map((e) => e.url)).toEqual([home]);
+    expect(t.historyIndex).toBe(0);
+  });
+
+  it("keeps the forward stretch", () => {
+    let t = goBack(tabWith([home, bridge, b.url]));
+    t = replaceCurrent(t, { url: target, title: "x" });
+    expect(t.history.map((e) => e.url)).toEqual([home, target, b.url]);
+    expect(canGoForward(t)).toBe(true);
   });
 });

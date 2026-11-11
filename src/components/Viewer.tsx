@@ -14,6 +14,7 @@ import { useDocsets } from "../store/docsets";
 import { usePalette } from "../store/palette";
 import { useTabs } from "../store/tabs";
 import {
+  isActivatedMessage,
   CONTEXT_RATE_MAX,
   CONTEXT_RATE_WINDOW_MS,
   rateAllow,
@@ -39,6 +40,9 @@ import { useContextMenu } from "../store/contextMenu";
 import { useFind } from "../store/find";
 import { useZoom } from "../store/zoom";
 import { usePrefs } from "../store/prefs";
+import { docDarkFor, type UiPrefs } from "../lib/prefs";
+import { docsetOfUrl } from "../lib/recent";
+import { useTheme } from "../store/theme";
 import { CatalogView } from "./CatalogView";
 import { FindBar } from "./FindBar";
 import { PageToc } from "./PageToc";
@@ -84,6 +88,22 @@ function frameSrc(url: string | null): string | undefined {
   }
 }
 
+/** ¿Se oscurece esta página? Solo con la opción beta activa, la app en
+ *  tema oscuro y su docset no excluido. */
+function isDocDark(
+  url: string | null | undefined,
+  appDark: boolean,
+  prefs: Pick<UiPrefs, "docDarkMode" | "docDarkOff">,
+): boolean {
+  const docsetId = appDark && url ? docsetOfUrl(url) : null;
+  return docsetId !== null && docDarkFor(prefs, docsetId);
+}
+
+/** Tema del contenido que se manda al iframe (estado actual de los stores). */
+function docTheme(url: string | null | undefined): "light" | "dark" {
+  return isDocDark(url, useTheme.getState().resolved === "dark", usePrefs.getState()) ? "dark" : "light";
+}
+
 /** Ctrl/Cmd+rueda: acumula el desplazamiento para que el pellizco del
  *  trackpad no salte de golpe varios pasos. */
 function makeWheelZoom(): (e: WheelEvent) => void {
@@ -127,6 +147,10 @@ export function Viewer() {
   const loadedFrameUrls = useRef<(string | null)[]>(emptySlots<string | null>(null));
   const frameVersionsRef = useRef<number[]>(emptySlots(0));
   const lastShown = useRef<number[]>(emptySlots(0));
+  /** El usuario ha interactuado con el documento actual de cada slot. */
+  const activated = useRef<boolean[]>(emptySlots(false));
+  /** El documento actual de cada slot llegó por redirección. */
+  const redirected = useRef<boolean[]>(emptySlots(false));
   const frontFrameRef = useRef<number | null>(null);
   const pendingFrame = useRef<{ index: number; url: string; version: number } | null>(null);
   const preloadedFrame = useRef<{ index: number; url: string; version: number } | null>(null);
@@ -135,6 +159,10 @@ export function Viewer() {
   const zoomLevel = useZoom((s) => s.level);
   const zoomChangedAt = useZoom((s) => s.changedAt);
   const smoothScroll = usePrefs((s) => s.smoothScroll);
+  const docDarkMode = usePrefs((s) => s.docDarkMode);
+  const docDarkOff = usePrefs((s) => s.docDarkOff);
+  const appDark = useTheme((s) => s.resolved) === "dark";
+  const slotDark = (url: string | null): boolean => isDocDark(url, appDark, { docDarkMode, docDarkOff });
   const findSeq = useFind((s) => s.seq);
   const [zoomToast, setZoomToast] = useState(false);
 
@@ -211,9 +239,8 @@ export function Viewer() {
     if (!focused || focused === document.body || frames.current.includes(focused as HTMLIFrameElement)) {
       frame.focus({ preventScroll: true });
     }
-    // El tema oscuro solo afecta a la interfaz de OpenDoc. El contenido de
-    // los docsets conserva su presentación clara original.
-    win.postMessage({ type: "opendoc-theme", value: "light" }, "*");
+    // Contenido claro original salvo con el modo oscuro beta activado.
+    win.postMessage({ type: "opendoc-theme", value: docTheme(loadedFrameUrls.current[index]) }, "*");
     win.postMessage({ type: "opendoc-zoom", level: useZoom.getState().level }, "*");
     win.postMessage({ type: "opendoc-smooth-scroll", enabled: usePrefs.getState().smoothScroll }, "*");
     sendFind(win, 0);
@@ -240,6 +267,8 @@ export function Viewer() {
     frameVersionsRef.current = versions;
     loadedFrameUrls.current[index] = null;
     useToc.getState().setItems(index, []); // El índice viejo no sobrevive a otra página.
+    activated.current[index] = false;
+    redirected.current[index] = false;
     setFrameVersions(versions);
     setFrameUrls((current) => {
       const next = [...current];
@@ -310,7 +339,23 @@ export function Viewer() {
         const reported = type === "opendoc-ready"
           ? validateReadyMessage(data, true, ids)
           : validateNavMessage(data, true, ids);
+        if (reported && type === "opendoc-ready") {
+          // Documento nuevo en este slot. Si sustituye a otro sin que
+          // nosotros lo pidiéramos y sin interacción del usuario en el
+          // anterior (meta refresh, location.replace/href en la carga…),
+          // es una redirección: su entrada se sustituirá, no se apilará.
+          const prev = loadedFrameUrls.current[sourceIndex];
+          const p = pendingFrame.current;
+          const requested = p?.index === sourceIndex && sameDocument(p.url, reported.url);
+          redirected.current[sourceIndex] = prev !== null && !requested &&
+            !sameDocument(prev, reported.url) && !activated.current[sourceIndex];
+          activated.current[sourceIndex] = false;
+        }
         if (reported) loadedFrameUrls.current[sourceIndex] = reported.url;
+      }
+      if (type === "opendoc-activated") {
+        if (isActivatedMessage(data, true)) activated.current[sourceIndex] = true;
+        return;
       }
       if (type === "opendoc-ready") {
         // Zoom cuanto antes (antes del primer pintado) en cualquiera de
@@ -320,6 +365,7 @@ export function Viewer() {
         own?.postMessage({ type: "opendoc-smooth-scroll", enabled: usePrefs.getState().smoothScroll }, "*");
         const ready = validateReadyMessage(data, true, ids);
         if (!ready) return;
+        own?.postMessage({ type: "opendoc-theme", value: docTheme(ready.url) }, "*");
         const pending = pendingFrame.current;
         if (pending && pending.index === sourceIndex && sameDocument(pending.url, ready.url)) {
           activateFrame(sourceIndex);
@@ -422,7 +468,10 @@ export function Viewer() {
       }
       if (type === "opendoc-nav") {
         const nav = validateNavMessage(data, true, ids);
-        if (nav) childNav(nav.url, nav.title);
+        if (!nav) return;
+        const redirect = redirected.current[sourceIndex];
+        redirected.current[sourceIndex] = false;
+        childNav(nav.url, nav.title, redirect);
       } else if (type === "opendoc-navigate") {
         const nav = validateNavigateMessage(data, true, ids);
         if (nav) childNav(nav.url, nav.title);
@@ -466,6 +515,13 @@ export function Viewer() {
       f?.contentWindow?.postMessage({ type: "opendoc-zoom", level: zoomLevel }, "*");
     }
   }, [zoomLevel]);
+
+  // Modo oscuro de los docsets (beta): se aplica en caliente, sin recargar.
+  useEffect(() => {
+    frames.current.forEach((f, i) => {
+      f?.contentWindow?.postMessage({ type: "opendoc-theme", value: docTheme(loadedFrameUrls.current[i]) }, "*");
+    });
+  }, [docDarkMode, docDarkOff, appDark]);
 
   // Desplazamiento suave: también a todos los iframes.
   useEffect(() => {
@@ -531,6 +587,13 @@ export function Viewer() {
         <CatalogView />
       </main>
     );
+  }
+
+  // Arranque: hasta que cargan los docsets, el visor queda en blanco (el
+  // panel lateral muestra su esqueleto). Si no, una pestaña restaurada
+  // parpadearía "docset no encontrado" y la bienvenida "0 docsets".
+  if (docsets.length === 0 && loading) {
+    return <main className="flex min-w-0 flex-1 flex-col" aria-busy="true" />;
   }
 
   if (docsets.length === 0 && !loading) {
@@ -602,7 +665,7 @@ export function Viewer() {
               scrolling="yes"
               aria-hidden={frontFrame !== index}
               inert={frontFrame !== index}
-              className={`h-full min-h-0 w-full flex-1 border-0 bg-white transition-[opacity,visibility] duration-150 ease-out motion-reduce:transition-none ${frontFrame === index ? `visible opacity-100 ${transitioning ? "pointer-events-none" : ""}` : "invisible absolute inset-0 pointer-events-none opacity-0"}`}
+              className={`h-full min-h-0 w-full flex-1 border-0 ${slotDark(frameUrls[index]) ? "bg-[#1a1a1a]" : "bg-white"} transition-[opacity,visibility] duration-150 ease-out motion-reduce:transition-none ${frontFrame === index ? `visible opacity-100 ${transitioning ? "pointer-events-none" : ""}` : "invisible absolute inset-0 pointer-events-none opacity-0"}`}
               onLoad={() => onIframeLoad(index, frameUrls[index], frameVersions[index])}
             />
           ))}

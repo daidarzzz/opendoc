@@ -8,9 +8,15 @@
 // - El listener de `docset-progress` solo alimenta el progreso visible;
 //   la finalización la resuelve la promesa (sigue valiendo aunque el
 //   componente se desmonte a mitad de una instalación).
+// - Cola: el backend deja descargar a la vez un máximo de instalaciones y
+//   el resto espera turno (etapa `queued`). `startedAt` guarda el orden
+//   de los clics para el filtro "En cola"; `cancel` quita de la cola una
+//   que aún espera (su promesa falla con `install_cancelled` y la tarjeta
+//   vuelve a su estado sin mostrar error).
 import { create } from "zustand";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import {
+  cancelInstall,
   getCatalogStatus,
   getInstallStatus,
   installDocset,
@@ -39,6 +45,8 @@ export interface FeedOp {
   /** `kind` del ApiError si lo hubo (p. ej. `no_docsets_dir`). */
   errorKind: string;
   done: boolean;
+  /** Clic en instalar/actualizar (orden de la cola); `null` en desinstalar. */
+  startedAt: number | null;
 }
 
 /** Resumen de refresco para traducir al pintar (números sin formatear). */
@@ -47,7 +55,7 @@ export interface RefreshNote {
   skipped: number;
 }
 
-const idleOp: FeedOp = { busy: false, progress: null, error: null, errorKind: "", done: false };
+const idleOp: FeedOp = { busy: false, progress: null, error: null, errorKind: "", done: false, startedAt: null };
 
 interface CatalogState {
   status: CatalogStatus | null;
@@ -79,15 +87,22 @@ interface CatalogState {
   /** Instala o actualiza (`force` = actualizar/reinstalar). */
   install: (feedId: string, force: boolean) => Promise<void>;
   uninstall: (feedId: string) => Promise<void>;
+  /** Quita de la cola una instalación que aún espera turno. */
+  cancel: (feedId: string) => Promise<void>;
   /** Relee el estado de un feed tras operar (confirmación del backend). */
   refreshFeed: (feedId: string) => Promise<void>;
   clearOp: (feedId: string) => void;
-  /** Suscribe el progreso (el componente lo libera al desmontar). */
-  subscribe: () => Promise<void>;
+  /** Suscribe el progreso. La vista lo pide al montarse y lo libera al
+   *  desmontarse; `install` lo mantiene vivo mientras haya descargas. */
+  subscribe: (fromView?: boolean) => Promise<void>;
   unsubscribe: () => void;
 }
 
 let unlisten: UnlistenFn | null = null;
+/** Suscripción en marcha (evita registrar dos listeners a la vez). */
+let listening: Promise<void> | null = null;
+/** La vista del catálogo está montada. */
+let viewMounted = false;
 let seq = 0;
 // FASE 0: eventos de progreso recibidos durante la instalación en curso
 // (se reinicia en cada click; solo diagnóstico).
@@ -189,9 +204,12 @@ export const useCatalog = create<CatalogState>()((set, get) => ({
     set((s) => ({
       ops: {
         ...s.ops,
-        [feedId]: { busy: true, progress: null, error: null, errorKind: "", done: false },
+        [feedId]: { busy: true, progress: null, error: null, errorKind: "", done: false, startedAt: Date.now() },
       },
     }));
+    // El progreso (y el aviso de "en cola") se sigue aunque se salga del
+    // catálogo mientras descarga.
+    void get().subscribe(false);
     try {
       // La confirmación es esta promesa (backend), no el evento.
       await installDocset(feedId, force);
@@ -208,6 +226,12 @@ export const useCatalog = create<CatalogState>()((set, get) => ({
       }));
     } catch (e) {
       const errorKind = errorKindOf(e);
+      // Quitada de la cola a propósito: no es un fallo, la tarjeta vuelve
+      // a su estado normal.
+      if (errorKind === "install_cancelled") {
+        get().clearOp(feedId);
+        return; // `finally` libera el listener si ya no hace falta.
+      }
       // FASE 0: solo medida.
       pmark("ui install error", {
         feedId,
@@ -224,13 +248,18 @@ export const useCatalog = create<CatalogState>()((set, get) => ({
       set((s) => ({
         ops: { ...s.ops, [feedId]: { ...opOf(s.ops, feedId), busy: false, error: e, errorKind } },
       }));
+    } finally {
+      releaseIfIdle();
     }
   },
 
   uninstall: async (feedId: string) => {
     if (opOf(get().ops, feedId).busy) return;
     set((s) => ({
-      ops: { ...s.ops,       [feedId]: { ...opOf(s.ops, feedId), busy: true, error: null, errorKind: "", done: false } },
+      ops: {
+        ...s.ops,
+        [feedId]: { ...opOf(s.ops, feedId), busy: true, error: null, errorKind: "", done: false, startedAt: null },
+      },
     }));
     try {
       await uninstallDocset(feedId);
@@ -254,6 +283,17 @@ export const useCatalog = create<CatalogState>()((set, get) => ({
     }
   },
 
+  cancel: async (feedId: string) => {
+    const op = opOf(get().ops, feedId);
+    if (!op.busy || op.progress?.stage !== "queued") return;
+    try {
+      // Si ya le tocó el turno, devuelve false y la descarga sigue.
+      await cancelInstall(feedId);
+    } catch {
+      // Sin cambios: la instalación sigue su curso y la promesa lo dirá.
+    }
+  },
+
   clearOp: (feedId: string) => {
     set((s) => {
       if (!s.ops[feedId]) return s;
@@ -274,22 +314,40 @@ export const useCatalog = create<CatalogState>()((set, get) => ({
     }
   },
 
-  subscribe: async () => {
+  subscribe: async (fromView = true) => {
+    if (fromView) viewMounted = true;
     if (unlisten) return;
-    unlisten = await onDocsetProgress((progress) => {
+    listening ??= onDocsetProgress((progress) => {
       const { entries, ops } = get();
       // Solo feeds conocidos: imposible atribuir a otro docset.
       if (!entries.some((e) => e.id === progress.feed_id)) return;
       // FASE 0: solo conteo (el pintado sigue igual que antes).
       if (opOf(ops, progress.feed_id).busy) progressEvents += 1;
       set({ ops: { ...ops, [progress.feed_id]: { ...opOf(ops, progress.feed_id), progress } } });
-    });
+    }).then(
+      (fn) => {
+        unlisten = fn;
+        listening = null;
+        releaseIfIdle();
+      },
+      () => {
+        listening = null;
+      },
+    );
+    await listening;
   },
 
   unsubscribe: () => {
-    if (unlisten) {
-      unlisten();
-      unlisten = null;
-    }
+    viewMounted = false;
+    releaseIfIdle();
   },
 }));
+
+/** Suelta el listener de progreso si nadie lo necesita (vista cerrada y
+ *  ninguna instalación en marcha). */
+function releaseIfIdle(): void {
+  if (viewMounted || !unlisten) return;
+  if (Object.values(useCatalog.getState().ops).some((op) => op.busy)) return;
+  unlisten();
+  unlisten = null;
+}

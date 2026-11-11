@@ -101,6 +101,8 @@ export function errorTitle(lang: Language, err: AppErrorInfo): string {
       return t(lang, "errors.ambiguous_match", { id, candidates });
     case "install_in_progress":
       return t(lang, "errors.install_in_progress", { id });
+    case "install_cancelled":
+      return t(lang, "errors.install_cancelled", { id });
     case "download_failed":
       return t(lang, "errors.download_failed", { id, message });
     case "extract_failed":

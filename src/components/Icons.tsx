@@ -229,6 +229,14 @@ export const InfoIcon = memo(function InfoIcon(props: IconProps) {
   );
 });
 
+export const MoonIcon = memo(function MoonIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" />
+    </Svg>
+  );
+});
+
 export const CheckIcon = memo(function CheckIcon(props: IconProps) {
   return (
     <Svg {...props}>

@@ -97,6 +97,12 @@ pub enum ApiError {
         /// Id del feed.
         id: String,
     },
+    /// La instalación se quitó de la cola antes de empezar.
+    #[error("install cancelled: {id}")]
+    InstallCancelled {
+        /// Id del feed.
+        id: String,
+    },
     /// Todas las URLs fallaron (red o HTTP).
     #[error("download failed for {id}: {message}")]
     DownloadFailed {

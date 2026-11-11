@@ -117,6 +117,7 @@ export type ApiError =
   | { kind: "already_installed"; id: string }
   | { kind: "ambiguous_match"; id: string; candidates: string[] }
   | { kind: "install_in_progress"; id: string }
+  | { kind: "install_cancelled"; id: string }
   | { kind: "download_failed"; id: string; message: string }
   | { kind: "extract_failed"; id: string; message: string }
   | { kind: "invalid_package"; id: string; message: string }
@@ -250,6 +251,7 @@ export interface InstallSummary {
 
 /** Etapa del progreso de instalación (evento "docset-progress"). */
 export type InstallStage =
+  | "queued"
   | "downloading"
   | "extracting"
   | "verifying"

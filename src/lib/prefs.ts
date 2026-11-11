@@ -40,6 +40,10 @@ export interface UiPrefs {
   toc: boolean;
   /** Qué se ve en la pestaña de inicio. */
   home: HomePrefs;
+  /** (Beta) Oscurece el contenido de los docsets con el tema oscuro. */
+  docDarkMode: boolean;
+  /** Docsets excluidos del modo oscuro (clic derecho en el panel lateral). */
+  docDarkOff: string[];
 }
 
 export const DEFAULT_PREFS: UiPrefs = {
@@ -50,7 +54,23 @@ export const DEFAULT_PREFS: UiPrefs = {
   design: DEFAULT_DESIGN,
   toc: true,
   home: { greeting: true, search: true, filters: true, recent: true, library: true, shortcuts: true },
+  docDarkMode: false,
+  docDarkOff: [],
 };
+
+/** Tope de docsets excluidos que se guardan. */
+export const MAX_DOC_DARK_OFF = 500;
+
+/** ¿Se oscurece este docset? (opción global activa y no excluido). */
+export function docDarkFor(prefs: Pick<UiPrefs, "docDarkMode" | "docDarkOff">, docsetId: string): boolean {
+  return prefs.docDarkMode && !prefs.docDarkOff.includes(docsetId);
+}
+
+function idList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const out = value.filter((v): v is string => typeof v === "string" && v !== "" && v.length <= 200);
+  return [...new Set(out)].slice(0, MAX_DOC_DARK_OFF);
+}
 
 const STORAGE_KEY = "opendoc.prefs";
 
@@ -71,6 +91,8 @@ export function normalizePrefs(raw: unknown): UiPrefs {
     design: normalizeDesign(r["design"]),
     toc: bool(r["toc"], DEFAULT_PREFS.toc),
     home: normalizeHome(r["home"]),
+    docDarkMode: bool(r["docDarkMode"], DEFAULT_PREFS.docDarkMode),
+    docDarkOff: idList(r["docDarkOff"]),
   };
 }
 
