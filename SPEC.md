@@ -33,7 +33,7 @@ graph TD
     end
 
     CORE -->|Git tag v0.1.1| CLI
-    CORE -->|Git tag v0.1.1| APP
+    CORE -->|Git tag v0.1.2| APP
 
     subgraph Arquitectura de OpenDoc Desktop
         FE["Frontend React 19<br/>(Zustand Stores, Components, Hooks, Typed Wrappers)"]

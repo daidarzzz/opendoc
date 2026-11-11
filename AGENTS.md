@@ -68,7 +68,7 @@ Antes de dar una tarea por terminada, ejecuta las comprobaciones pertinentes (`n
 
 La app consume `opendoc-core` por etiqueta Git en `src-tauri/Cargo.toml`:
 ```toml
-opendoc-core = { git = "https://github.com/daidarzzz/opendoc-core", tag = "v0.1.1" }
+opendoc-core = { git = "https://github.com/daidarzzz/opendoc-core", tag = "v0.1.2" }
 ```
 Para trabajar localmente en modificaciones conjuntas entre la app y el núcleo sin publicar tags intermedios, descomenta el bloque `[patch]` al final de `src-tauri/Cargo.toml`:
 ```toml
