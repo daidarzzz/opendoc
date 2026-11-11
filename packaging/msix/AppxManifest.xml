@@ -17,7 +17,8 @@
     ProcessorArchitecture="x64" />
 
   <Properties>
-    <DisplayName>OpenDoc</DisplayName>
+    <!-- Nombre reservado en la Store (puede no ser "OpenDoc"); el menú Inicio usa el de VisualElements. -->
+    <DisplayName>@STORE_NAME@</DisplayName>
     <PublisherDisplayName>@PUBLISHER_DISPLAY_NAME@</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>

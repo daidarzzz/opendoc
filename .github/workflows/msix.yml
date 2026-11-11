@@ -15,6 +15,8 @@ name: MSIX (Microsoft Store)
 #   MSIX_IDENTITY_NAME          Package/Identity/Name
 #   MSIX_PUBLISHER              Package/Identity/Publisher (CN=...)
 #   MSIX_PUBLISHER_DISPLAY_NAME Package/Properties/PublisherDisplayName
+#   MSIX_STORE_NAME             nombre reservado (Package/Properties/DisplayName);
+#                               opcional, "OpenDoc" por defecto
 # Sin ellas se usa una identidad provisional que la Store rechazará.
 
 on:
@@ -43,6 +45,16 @@ jobs:
         with:
           ref: ${{ inputs.tag || github.ref }}
 
+      # El empaquetado (script, manifiesto e iconos) sale siempre de la rama
+      # desde la que corre el workflow, para poder regenerar releases antiguas
+      # con la versión actual del manifiesto.
+      - uses: actions/checkout@v4
+        with:
+          path: _pkg
+          sparse-checkout: |
+            packaging/msix
+            src-tauri/icons
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -70,6 +82,7 @@ jobs:
           IDENTITY_NAME: ${{ vars.MSIX_IDENTITY_NAME }}
           PUBLISHER: ${{ vars.MSIX_PUBLISHER }}
           PUBLISHER_DISPLAY_NAME: ${{ vars.MSIX_PUBLISHER_DISPLAY_NAME }}
+          STORE_NAME: ${{ vars.MSIX_STORE_NAME }}
         run: |
           $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
           if ("v$version" -ne $env:TAG) { throw "El tag $env:TAG no coincide con package.json ($version)" }
@@ -81,8 +94,9 @@ jobs:
             if (-not $display) { $display = "OpenDoc" }
           }
           $out = "OpenDoc_${version}_x64.msix"
-          ./packaging/msix/build-msix.ps1 -Version $version -IdentityName $name -Publisher $pub `
-            -PublisherDisplayName $display -OutFile $out
+          ./_pkg/packaging/msix/build-msix.ps1 -Version $version -IdentityName $name -Publisher $pub `
+            -PublisherDisplayName $display -OutFile $out `
+            -StoreName $(if ($env:STORE_NAME) { $env:STORE_NAME } else { "OpenDoc" })
           "file=$out" >> $env:GITHUB_OUTPUT
 
       - name: Upload to release

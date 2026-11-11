@@ -16,6 +16,8 @@ param(
   [Parameter(Mandatory)] [string] $Publisher,
   [Parameter(Mandatory)] [string] $PublisherDisplayName,
   [Parameter(Mandatory)] [string] $OutFile,
+  # Nombre reservado en Partner Center (Package/Properties/DisplayName).
+  [string] $StoreName = "OpenDoc",
   [string] $Exe = "src-tauri/target/release/opendoc.exe"
 )
 $ErrorActionPreference = "Stop"
@@ -44,6 +46,7 @@ try {
   $manifest = $manifest.Replace("@PUBLISHER@", (Escape-Xml $Publisher))
   $manifest = $manifest.Replace("@PUBLISHER_DISPLAY_NAME@", (Escape-Xml $PublisherDisplayName))
   $manifest = $manifest.Replace("@VERSION@", $msixVersion)
+  $manifest = $manifest.Replace("@STORE_NAME@", (Escape-Xml $StoreName))
   [System.IO.File]::WriteAllText((Join-Path $layout "AppxManifest.xml"), $manifest, [System.Text.UTF8Encoding]::new($false))
 
   # makeappx viene con el Windows SDK (preinstalado en windows-latest).

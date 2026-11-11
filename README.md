@@ -122,7 +122,7 @@ Settings → General checks the latest GitHub release (`latest.json`) and instal
 
 ### 5. Microsoft Store (MSIX)
 
-Each release also ships `OpenDoc_<version>_x64.msix`, built by `.github/workflows/msix.yml` for Microsoft Store. It is compiled with `OPENDOC_STORE=1` / `VITE_OPENDOC_STORE=1`, which leaves out the in-app updater (the Store installs updates), and packaged by `packaging/msix/build-msix.ps1` with `makeappx` from the Windows SDK. The package is unsigned on purpose: the Store signs it after certification. The package identity comes from Partner Center through the repository variables `MSIX_IDENTITY_NAME`, `MSIX_PUBLISHER` and `MSIX_PUBLISHER_DISPLAY_NAME`; to rebuild the .msix of an existing release, run the workflow by hand with its tag.
+Each release also ships `OpenDoc_<version>_x64.msix`, built by `.github/workflows/msix.yml` for Microsoft Store. It is compiled with `OPENDOC_STORE=1` / `VITE_OPENDOC_STORE=1`, which leaves out the in-app updater (the Store installs updates), and packaged by `packaging/msix/build-msix.ps1` with `makeappx` from the Windows SDK. The package is unsigned on purpose: the Store signs it after certification. The package identity comes from Partner Center through the repository variables `MSIX_IDENTITY_NAME`, `MSIX_PUBLISHER` and `MSIX_PUBLISHER_DISPLAY_NAME` (plus `MSIX_STORE_NAME` when the reserved Store name is not "OpenDoc"); to rebuild the .msix of an existing release, run the workflow by hand with its tag.
 
 ---
 
