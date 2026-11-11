@@ -75,10 +75,12 @@ const TabButton = memo(function TabButton({
         }
       }}
       className={`group relative flex h-[34px] w-52 min-w-[7rem] shrink select-none touch-none cursor-default items-center gap-2 rounded-t-[var(--tab-r)] pl-3 pr-1.5 text-[13px] transition-colors duration-150 ease-smooth ${
-        selected
-          ? "tab-connected z-[1] bg-card font-medium text-ink"
-          : "text-muted hover:text-ink"
-      } ${dragging ? "z-10 rounded-[var(--tab-r)] bg-card shadow-float" : ""} ${unavailable ? "opacity-50" : ""}`}
+        dragging
+          ? "z-10 cursor-grabbing rounded-[var(--tab-r)] bg-card font-medium text-ink shadow-pop ring-1 ring-accent/30"
+          : selected
+            ? "tab-connected z-[1] bg-card font-medium text-ink"
+            : "text-muted hover:text-ink"
+      } ${unavailable ? "opacity-50" : ""}`}
     >
       {!selected && !dragging && (
         <span aria-hidden className="pointer-events-none absolute inset-x-1 bottom-1 top-1 rounded-lg transition-colors duration-150 group-hover:bg-canvas-2" />
@@ -128,24 +130,43 @@ export function TabsBar({
   const goForward = useTabs((s) => s.goForward);
   const docsets = useDocsets((s) => s.docsets);
   const pending = useDocsets((s) => s.pending);
+  // Arrastre: la pestaña sigue al puntero (transform en vivo, sin estado de
+  // React por fotograma); al cruzar el centro de una vecina se reordena y
+  // las demás se deslizan a su sitio (FLIP). Al soltar encaja con suavidad.
   const pointerDrag = useRef<{
     pointerId: number;
     fromId: string;
     startX: number;
     startY: number;
     dragging: boolean;
+    /** Distancia del puntero al borde izquierdo de la pestaña al agarrarla. */
+    grabOffset: number;
+    /** Borde izquierdo deseado (coordenadas de la lista) en el último movimiento. */
+    left: number;
   } | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const suppressClickId = useRef<string | null>(null);
   const flipPositions = useRef<Map<string, { left: number; top: number }> | null>(null);
   const animationFrame = useRef<number | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+
+  const tabElement = (id: string): HTMLElement | null =>
+    listRef.current?.querySelector<HTMLElement>(`[data-opendoc-tab-id="${CSS.escape(id)}"]`) ?? null;
+
+  /** Coloca la pestaña arrastrada en `left` (coordenadas de la lista). */
+  const placeDragged = useCallback((id: string, left: number): void => {
+    const el = tabElement(id);
+    if (!el) return;
+    el.style.transition = "none";
+    el.style.transform = `translateX(${left - el.offsetLeft}px)`;
+  }, []);
 
   const moveWithAnimation = useCallback((id: string, destination: number): void => {
     const orderedTabs = useTabs.getState().tabs;
     const from = orderedTabs.findIndex((tab) => tab.id === id);
     if (from < 0 || from === destination) return;
     flipPositions.current = new Map(
-      Array.from(document.querySelectorAll<HTMLElement>("[data-opendoc-tab-id]"))
+      Array.from(listRef.current?.querySelectorAll<HTMLElement>("[data-opendoc-tab-id]") ?? [])
         .map((element) => {
           const rect = element.getBoundingClientRect();
           return [element.dataset.opendocTabId ?? "", { left: rect.left, top: rect.top }] as const;
@@ -157,93 +178,101 @@ export function TabsBar({
 
   useLayoutEffect(() => {
     const previous = flipPositions.current;
+    const drag = pointerDrag.current;
+    // La arrastrada no se anima: sigue al puntero desde su nuevo hueco.
+    if (drag?.dragging) placeDragged(drag.fromId, drag.left);
     if (!previous) return;
     flipPositions.current = null;
     if (animationFrame.current !== null) cancelAnimationFrame(animationFrame.current);
 
-    const elements = Array.from(document.querySelectorAll<HTMLElement>("[data-opendoc-tab-id]"));
+    const elements = Array.from(listRef.current?.querySelectorAll<HTMLElement>("[data-opendoc-tab-id]") ?? []);
     const animated: HTMLElement[] = [];
     for (const element of elements) {
-      const old = previous.get(element.dataset.opendocTabId ?? "");
+      const tabId = element.dataset.opendocTabId ?? "";
+      if (drag?.dragging && tabId === drag.fromId) continue;
+      const old = previous.get(tabId);
       if (!old) continue;
       const rect = element.getBoundingClientRect();
       const dx = old.left - rect.left;
-      const dy = old.top - rect.top;
-      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) continue;
+      if (Math.abs(dx) < 0.5) continue;
       element.style.transition = "none";
-      element.style.transform = `translate(${dx}px, ${dy}px)`;
+      element.style.transform = `translateX(${dx}px)`;
       animated.push(element);
     }
     if (animated.length === 0) return;
     void document.body.offsetHeight;
     animationFrame.current = requestAnimationFrame(() => {
       for (const element of animated) {
-        element.style.transition = "transform 170ms cubic-bezier(0.2, 0.8, 0.2, 1)";
-        element.style.transform = "translate(0, 0)";
+        element.style.transition = "transform 240ms cubic-bezier(0.22, 1, 0.36, 1)";
+        element.style.transform = "";
       }
       animationFrame.current = null;
     });
-  }, [tabs]);
+  }, [tabs, placeDragged]);
 
   useEffect(() => {
-    const reorderAtPointer = (drag: NonNullable<typeof pointerDrag.current>, event: PointerEvent): void => {
-      const target = document
-        .elementFromPoint(event.clientX, event.clientY)
-        ?.closest<HTMLElement>("[data-opendoc-tab-id]");
-      const targetId = target?.dataset.opendocTabId;
-      if (!target || !targetId || targetId === drag.fromId) return;
-      const orderedTabs = useTabs.getState().tabs;
-      const targetIndex = orderedTabs.findIndex((tab) => tab.id === targetId);
-      const fromIndex = orderedTabs.findIndex((tab) => tab.id === drag.fromId);
-      if (targetIndex < 0 || fromIndex < 0) return;
-      const rect = target.getBoundingClientRect();
-      const insertionIndex = targetIndex + (event.clientX >= rect.left + rect.width / 2 ? 1 : 0);
-      const destination = Math.min(
-        orderedTabs.length - 1,
-        insertionIndex - (insertionIndex > fromIndex ? 1 : 0),
-      );
+    const onPointerMove = (event: PointerEvent): void => {
+      const drag = pointerDrag.current;
+      const list = listRef.current;
+      if (!drag || event.pointerId !== drag.pointerId || !list) return;
+      if (!drag.dragging && Math.abs(event.clientX - drag.startX) < 5) return;
+      const el = tabElement(drag.fromId);
+      if (!el) return;
+      if (!drag.dragging) {
+        drag.dragging = true;
+        setDraggingId(drag.fromId);
+      }
+      const listRect = list.getBoundingClientRect();
+      const maxLeft = Math.max(0, list.scrollWidth - el.offsetWidth);
+      const left = Math.min(maxLeft, Math.max(0, event.clientX - listRect.left + list.scrollLeft - drag.grabOffset));
+      drag.left = left;
+      placeDragged(drag.fromId, left);
+
+      // Hueco de destino: cuántas pestañas (sin la arrastrada) quedan con
+      // su centro a la izquierda del centro de la arrastrada.
+      const center = left + el.offsetWidth / 2;
+      const ordered = useTabs.getState().tabs;
+      let destination = 0;
+      for (const tab of ordered) {
+        if (tab.id === drag.fromId) continue;
+        const other = tabElement(tab.id);
+        if (other && other.offsetLeft + other.offsetWidth / 2 < center) destination++;
+      }
       moveWithAnimation(drag.fromId, destination);
     };
 
-    const onPointerMove = (event: PointerEvent): void => {
-      const drag = pointerDrag.current;
-      if (!drag || event.pointerId !== drag.pointerId) return;
-      if (!drag.dragging && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 6) return;
-      drag.dragging = true;
-      setDraggingId(drag.fromId);
-      reorderAtPointer(drag, event);
-    };
-
-    const onPointerUp = (event: PointerEvent): void => {
+    const finish = (event: PointerEvent): void => {
       const drag = pointerDrag.current;
       if (!drag || event.pointerId !== drag.pointerId) return;
       pointerDrag.current = null;
-      setDraggingId(null);
-      if (drag.dragging) {
-        suppressClickId.current = drag.fromId;
-        window.setTimeout(() => {
-          if (suppressClickId.current === drag.fromId) suppressClickId.current = null;
-        }, 0);
-      }
-      // También trata un pequeño movimiento que no haya cruzado otro tab.
       if (!drag.dragging) return;
-      reorderAtPointer(drag, event);
-    };
-
-    const onPointerCancel = (event: PointerEvent): void => {
-      if (pointerDrag.current?.pointerId === event.pointerId) pointerDrag.current = null;
-      setDraggingId(null);
+      suppressClickId.current = drag.fromId;
+      window.setTimeout(() => {
+        if (suppressClickId.current === drag.fromId) suppressClickId.current = null;
+      }, 0);
+      // Encaje: de donde se soltó a su hueco.
+      const el = tabElement(drag.fromId);
+      if (el) {
+        el.style.transition = "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)";
+        el.style.transform = "";
+        window.setTimeout(() => {
+          if (pointerDrag.current?.fromId !== drag.fromId) el.style.transition = "";
+          setDraggingId((cur) => (cur === drag.fromId ? null : cur));
+        }, 220);
+      } else {
+        setDraggingId(null);
+      }
     };
 
     window.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", onPointerUp);
-    window.addEventListener("pointercancel", onPointerCancel);
+    window.addEventListener("pointerup", finish);
+    window.addEventListener("pointercancel", finish);
     return () => {
       window.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("pointerup", onPointerUp);
-      window.removeEventListener("pointercancel", onPointerCancel);
+      window.removeEventListener("pointerup", finish);
+      window.removeEventListener("pointercancel", finish);
     };
-  }, [moveWithAnimation]);
+  }, [moveWithAnimation, placeDragged]);
 
   const meta = useMemo(() => {
     const map = new Map<string, { icon: string | null; name: string }>();
@@ -301,7 +330,7 @@ export function TabsBar({
           <ChevronIcon direction="right" size={17} />
         </button>
       </div>
-      <div role="tablist" aria-label={tr("tabs.list")} onKeyDown={onListKeyDown} className="flex min-w-0 flex-1 items-end gap-1 overflow-x-auto px-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div ref={listRef} role="tablist" aria-label={tr("tabs.list")} onKeyDown={onListKeyDown} className="relative flex min-w-0 flex-1 items-end gap-1 overflow-x-auto px-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {tabs.map((t) => {
           const isCatalogTab = t.type === "catalog";
           const m = meta.get(t.docsetId);
@@ -330,12 +359,15 @@ export function TabsBar({
               onClose={() => closeTab(t.id)}
               onPointerDown={(e) => {
                 if (!e.isPrimary || e.button !== 0 || (e.target instanceof Element && e.target.closest("button"))) return;
+                const rect = e.currentTarget.getBoundingClientRect();
                 pointerDrag.current = {
                   pointerId: e.pointerId,
                   fromId: t.id,
                   startX: e.clientX,
                   startY: e.clientY,
                   dragging: false,
+                  grabOffset: e.clientX - rect.left,
+                  left: (e.currentTarget as HTMLElement).offsetLeft,
                 };
                 e.currentTarget.setPointerCapture(e.pointerId);
               }}

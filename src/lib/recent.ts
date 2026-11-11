@@ -12,7 +12,7 @@ export interface RecentPage {
   at: number;
 }
 
-export const MAX_RECENT = 40;
+export const MAX_RECENT = 200;
 const STORAGE_KEY = "opendoc.recent";
 const MAX_URL = 4096;
 const MAX_TITLE = 200;
@@ -96,4 +96,53 @@ export function relativeParts(at: number, now: number): { value: number; unit: I
   if (abs < 86_400) return { value: Math.round(s / 3600), unit: "hour" };
   if (abs < 86_400 * 7) return { value: Math.round(s / 86_400), unit: "day" };
   return { value: Math.round(s / (86_400 * 7)), unit: "week" };
+}
+
+/** Grupo de días del historial. */
+export type DayGroup = "today" | "yesterday" | "week" | "older";
+
+/** Inicio (00:00 local) del día de `t`. */
+function startOfDay(t: number): number {
+  const d = new Date(t);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+/**
+ * Agrupa por día (hoy, ayer, últimos 7 días, anteriores) respetando el
+ * orden de entrada (la más reciente primero). Omite los grupos vacíos.
+ */
+export function groupByDay(pages: readonly RecentPage[], now: number): { group: DayGroup; pages: RecentPage[] }[] {
+  const today = startOfDay(now);
+  const DAY = 86_400_000;
+  const out: Record<DayGroup, RecentPage[]> = { today: [], yesterday: [], week: [], older: [] };
+  for (const p of pages) {
+    const g: DayGroup = p.at >= today ? "today" : p.at >= today - DAY ? "yesterday" : p.at >= today - 6 * DAY ? "week" : "older";
+    out[g].push(p);
+  }
+  return (["today", "yesterday", "week", "older"] as const)
+    .filter((g) => out[g].length > 0)
+    .map((g) => ({ group: g, pages: out[g] }));
+}
+
+/** Filtra por texto (título, nombre del docset o URL), sin distinguir mayúsculas. */
+export function filterRecent(
+  pages: readonly RecentPage[],
+  query: string,
+  docsetName: (id: string) => string,
+): RecentPage[] {
+  const q = query.trim().toLowerCase();
+  if (q === "") return [...pages];
+  return pages.filter(
+    (p) =>
+      p.title.toLowerCase().includes(q) ||
+      docsetName(p.docsetId).toLowerCase().includes(q) ||
+      p.url.toLowerCase().includes(q),
+  );
+}
+
+/** Quita una página (por URL sin ancla). */
+export function removeRecent(pages: readonly RecentPage[], url: string): RecentPage[] {
+  const key = pageKey(url);
+  return pages.filter((p) => p.url !== key);
 }

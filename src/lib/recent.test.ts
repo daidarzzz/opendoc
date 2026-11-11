@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { MAX_RECENT, addRecent, loadRecentFrom, normalizeRecent, relativeParts, saveRecentTo } from "./recent";
+import {
+  MAX_RECENT,
+  addRecent,
+  filterRecent,
+  groupByDay,
+  loadRecentFrom,
+  normalizeRecent,
+  relativeParts,
+  removeRecent,
+  saveRecentTo,
+} from "./recent";
 
 function memory(): { getItem: (k: string) => string | null; setItem: (k: string, v: string) => void } {
   const data = new Map<string, string>();
@@ -50,5 +60,34 @@ describe("relativeParts", () => {
     expect(relativeParts(0, 5 * 60_000)).toEqual({ value: -5, unit: "minute" });
     expect(relativeParts(0, 3 * 3_600_000)).toEqual({ value: -3, unit: "hour" });
     expect(relativeParts(0, 2 * 86_400_000)).toEqual({ value: -2, unit: "day" });
+  });
+});
+
+describe("historial completo", () => {
+  const now = new Date(2026, 10, 11, 15, 0).getTime();
+  const at = (daysAgo: number, h = 12) => new Date(2026, 10, 11 - daysAgo, h, 0).getTime();
+  const page = (n: string, t: number) => ({ url: `opendoc://py/${n}.html`, title: n, docsetId: "py", at: t });
+
+  it("agrupa por día y omite grupos vacíos", () => {
+    const groups = groupByDay([page("a", at(0)), page("b", at(1)), page("c", at(3)), page("d", at(30))], now);
+    expect(groups.map((g) => [g.group, g.pages.map((p) => p.title)])).toEqual([
+      ["today", ["a"]],
+      ["yesterday", ["b"]],
+      ["week", ["c"]],
+      ["older", ["d"]],
+    ]);
+    expect(groupByDay([page("x", at(0))], now).map((g) => g.group)).toEqual(["today"]);
+  });
+
+  it("filtra por título, docset o URL", () => {
+    const pages = [page("json", now), page("os", now)];
+    expect(filterRecent(pages, "JSO", () => "Python 3").map((p) => p.title)).toEqual(["json"]);
+    expect(filterRecent(pages, "python", () => "Python 3")).toHaveLength(2);
+    expect(filterRecent(pages, "  ", () => "")).toHaveLength(2);
+  });
+
+  it("quita una página ignorando el ancla", () => {
+    const pages = [page("json", now), page("os", now)];
+    expect(removeRecent(pages, "opendoc://py/json.html#dumps").map((p) => p.title)).toEqual(["os"]);
   });
 });

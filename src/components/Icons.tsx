@@ -277,3 +277,12 @@ export const ListIcon = memo(function ListIcon(props: IconProps) {
     </Svg>
   );
 });
+
+export const ClockIcon = memo(function ClockIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </Svg>
+  );
+});

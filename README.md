@@ -36,7 +36,8 @@ While Zeal is a proven community tool, its Qt/C++ interface feels dated and offe
 - **Find in Page (`Ctrl/Cmd+F`):** OpenDoc's own floating find bar replaces the webview's: highlights every match, shows `3 of 12`, and moves with `Enter` / `Shift+Enter`.
 - **Docset Zoom:** `Ctrl/Cmd+mouse wheel`, `Ctrl/Cmd +`/`-`/`0` or the context menu. The level is shared across docsets and remembered between sessions.
 - **Page Outline:** A discreet rail of tick marks on the right edge of the viewer maps the page headings (h1–h4) and highlights the section you are reading. Hover it to open the outline and jump anywhere. Optional (Settings → Reading).
-- **Continue Reading:** The home tab lists the last pages you visited, with relative times. Middle-click opens one in a new tab; the history can be cleared in Settings → Home.
+- **Continue Reading & History:** The home tab shows your last six pages (two rows) with relative times; **View history** opens the full reading history (up to 200 pages) grouped by day, with search, per-page removal and a clear-all button. Middle-click opens a page in a new tab.
+- **Smooth Tab Dragging:** The dragged tab follows the pointer, its neighbours slide out of the way and it settles into place on release.
 - **Configurable Home:** Settings → Home toggles each part of the home tab (greeting, search bar, docset filters, continue reading, library and shortcuts), down to a completely quiet page.
 - **Smooth Scrolling:** Mouse-wheel scrolling inside docsets is animated with easing (trackpad input stays native). On by default; toggle it in Settings.
 - **Custom Context Menu:** The browser's right-click menu is replaced by a minimal OpenDoc menu: copy, search the selection in OpenDoc or in the page, open links in a new tab, back/forward, select all and zoom inside docsets; tab actions (close, close others, reopen) on tabs; cut/copy/paste in text fields.
@@ -125,7 +126,7 @@ Settings → General checks the latest GitHub release (`latest.json`) and instal
 Before submitting changes, ensure all tests, linters, and typechecks pass:
 
 ```bash
-# Frontend tests (Vitest: 161 tests covering stores, session sync, i18n, etc.)
+# Frontend tests (Vitest: 164 tests covering stores, session sync, i18n, etc.)
 npm test
 
 # Frontend typechecking

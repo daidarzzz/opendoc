@@ -2,7 +2,7 @@
 // solo: escucha la entrada actual de la pestaña activa (navegación y título
 // confirmado por el iframe) y la registra. Persistido en localStorage.
 import { create } from "zustand";
-import { addRecent, loadRecentFrom, saveRecentTo, type RecentPage } from "../lib/recent";
+import { addRecent, loadRecentFrom, removeRecent, saveRecentTo, type RecentPage } from "../lib/recent";
 import { currentEntry } from "../lib/tabHistory";
 import { useTabs } from "./tabs";
 
@@ -17,6 +17,7 @@ function storage(): Storage | null {
 interface RecentState {
   pages: RecentPage[];
   record: (url: string, title: string) => void;
+  remove: (url: string) => void;
   clear: () => void;
 }
 
@@ -24,6 +25,11 @@ export const useRecent = create<RecentState>()((set, get) => ({
   pages: loadRecentFrom(storage()),
   record: (url, title) => {
     const pages = addRecent(get().pages, url, title, Date.now());
+    saveRecentTo(storage(), pages);
+    set({ pages });
+  },
+  remove: (url) => {
+    const pages = removeRecent(get().pages, url);
     saveRecentTo(storage(), pages);
     set({ pages });
   },

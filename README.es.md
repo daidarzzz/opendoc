@@ -36,7 +36,8 @@ Aunque Zeal es una herramienta consolidada en la comunidad, su interfaz en C++/Q
 - **Buscar en la página (`Ctrl/Cmd+F`):** Barra de búsqueda flotante propia de OpenDoc en lugar de la del webview: resalta todas las coincidencias, muestra `3 de 12` y se recorre con `Intro` / `Mayús+Intro`.
 - **Zoom de los docsets:** `Ctrl/Cmd+rueda del ratón`, `Ctrl/Cmd +`/`-`/`0` o desde el menú contextual. El nivel es común a todos los docsets y se recuerda entre sesiones.
 - **Índice de la página:** Una guía discreta de rayitas en el borde derecho del visor representa los encabezados (h1–h4) y marca la sección que estás leyendo. Al pasar el ratón se despliega el índice para saltar a cualquier parte. Opcional (Ajustes → Lectura).
-- **Seguir leyendo:** La pestaña de inicio muestra las últimas páginas que visitaste, con tiempos relativos. Con clic central se abren en otra pestaña; el historial se borra en Ajustes → Inicio.
+- **Seguir leyendo e historial:** La pestaña de inicio muestra tus últimas seis páginas (dos filas) con tiempos relativos; **Ver historial** abre el historial de lectura completo (hasta 200 páginas) agrupado por días, con buscador, quitar páginas sueltas y borrar todo. Con clic central se abren en otra pestaña.
+- **Arrastre de pestañas fluido:** La pestaña arrastrada sigue al puntero, las vecinas se apartan deslizándose y encaja con suavidad al soltar.
 - **Inicio configurable:** Ajustes → Inicio activa o desactiva cada parte de la pestaña de inicio (saludo, barra de búsqueda, filtros por docset, seguir leyendo, biblioteca y atajos), hasta dejarla completamente limpia.
 - **Desplazamiento suave:** El scroll con la rueda del ratón dentro de los docsets se anima con suavizado (el trackpad sigue siendo nativo). Activado por defecto; se puede desactivar en Ajustes.
 - **Menú contextual propio:** El clic derecho del navegador se sustituye por un menú minimalista de OpenDoc: copiar, buscar la selección en OpenDoc o en la página, abrir enlaces en pestaña nueva, atrás/adelante, seleccionar todo y zoom dentro de los docsets; acciones de pestaña (cerrar, cerrar las demás, reabrir) sobre las pestañas; cortar/copiar/pegar en los campos de texto.
@@ -125,7 +126,7 @@ Ajustes → General comprueba la última release de GitHub (`latest.json`) e ins
 Antes de dar por completado un cambio, ejecuta la batería de pruebas, linters y comprobaciones de tipo:
 
 ```bash
-# Pruebas de frontend (Vitest: 161 tests sobre stores, sync de sesión, i18n, etc.)
+# Pruebas de frontend (Vitest: 164 tests sobre stores, sync de sesión, i18n, etc.)
 npm test
 
 # Comprobación de tipos de TypeScript

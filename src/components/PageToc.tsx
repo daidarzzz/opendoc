@@ -2,13 +2,15 @@
 // por encabezado, más larga cuanto más alto el nivel; la actual en el
 // color del acento). Al pasar el ratón o enfocarla se despliega la lista
 // para saltar. Opcional (Ajustes → Lectura) y solo con 3+ encabezados.
-import { memo, useMemo } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../hooks/useT";
 import type { TocItem } from "../lib/iframeMessages";
 
 /** Máximo de rayitas: con más encabezados se quedan los niveles altos. */
 const MAX_TICKS = 32;
 const TICK_W: Record<number, number> = { 1: 18, 2: 13, 3: 9, 4: 6 };
+/** Margen antes de cerrar la lista al salir el ratón (da tiempo a elegir). */
+const CLOSE_DELAY_MS = 450;
 
 /** Encabezados representados en la guía (índices del original). */
 function ticksFor(items: TocItem[]): number[] {
@@ -29,6 +31,21 @@ export const PageToc = memo(function PageToc({
   onGo: (index: number) => void;
 }) {
   const { t } = useT();
+  const [open, setOpen] = useState(false);
+  const closeTimer = useRef<number | null>(null);
+  const cancelClose = (): void => {
+    if (closeTimer.current !== null) window.clearTimeout(closeTimer.current);
+    closeTimer.current = null;
+  };
+  const show = (): void => {
+    cancelClose();
+    setOpen(true);
+  };
+  const hideSoon = (): void => {
+    cancelClose();
+    closeTimer.current = window.setTimeout(() => setOpen(false), CLOSE_DELAY_MS);
+  };
+  useEffect(() => cancelClose, []);
   const ticks = useMemo(() => ticksFor(items), [items]);
   const minLevel = useMemo(() => Math.min(...items.map((i) => i.level)), [items]);
   // Rayita «actual»: la última representada que no pasa del activo.
@@ -43,10 +60,21 @@ export const PageToc = memo(function PageToc({
   return (
     <nav
       aria-label={t("toc.rail")}
+      onMouseEnter={show}
+      onMouseLeave={hideSoon}
+      onFocus={show}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) hideSoon();
+      }}
       className="group/toc absolute right-3 top-1/2 z-10 flex -translate-y-1/2 animate-fade-in items-center"
     >
-      {/* Lista desplegable (hover / foco), a la izquierda de la guía. */}
-      <div className="pointer-events-none absolute right-full top-1/2 mr-1 w-72 -translate-y-1/2 translate-x-2 opacity-0 transition-all duration-200 ease-smooth group-focus-within/toc:pointer-events-auto group-focus-within/toc:translate-x-0 group-focus-within/toc:opacity-100 group-hover/toc:pointer-events-auto group-hover/toc:translate-x-0 group-hover/toc:opacity-100">
+      {/* Lista desplegable (hover / foco), a la izquierda de la guía. Un
+          puente invisible (pr-3) la une a la guía para no perder el hover. */}
+      <div
+        className={`absolute right-full top-1/2 w-72 -translate-y-1/2 pr-2 transition-all duration-200 ease-smooth ${
+          open ? "pointer-events-auto translate-x-0 opacity-100" : "pointer-events-none translate-x-2 opacity-0"
+        }`}
+      >
         <div className="max-h-[min(70vh,34rem)] overflow-y-auto rounded-xl border border-line bg-card p-1.5 shadow-pop">
           <p className="label px-2.5 pb-1.5 pt-1.5">{t("toc.label")}</p>
           <ul>
@@ -56,7 +84,10 @@ export const PageToc = memo(function PageToc({
                 <li key={i}>
                   <button
                     type="button"
-                    onClick={() => onGo(i)}
+                    onClick={() => {
+                      onGo(i);
+                      hideSoon();
+                    }}
                     title={it.text}
                     style={{ paddingLeft: 10 + (it.level - minLevel) * 12 }}
                     className={`relative flex w-full items-center rounded-lg py-1 pr-2.5 text-left transition-colors duration-100 ${
@@ -74,14 +105,14 @@ export const PageToc = memo(function PageToc({
       </div>
 
       {/* La guía: rayitas alineadas a la derecha. */}
-      <div aria-hidden className="flex flex-col items-end gap-[7px] rounded-lg px-1.5 py-2 transition-colors duration-200 group-hover/toc:bg-card/80">
+      <div aria-hidden className={`flex flex-col items-end gap-[7px] rounded-lg px-1.5 py-2 transition-colors duration-200 ${open ? "bg-card/80" : ""}`}>
         {ticks.map((i) => {
           const on = i === activeTick;
           return (
             <span
               key={i}
               className={`block h-[2px] rounded-full transition-all duration-300 ease-smooth ${
-                on ? "bg-accent" : "bg-ink/20 group-hover/toc:bg-ink/30"
+                on ? "bg-accent" : open ? "bg-ink/30" : "bg-ink/20"
               }`}
               style={{ width: (TICK_W[items[i]?.level ?? 4] ?? 6) + (on ? 4 : 0) }}
             />

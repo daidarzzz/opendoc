@@ -3,18 +3,19 @@
 // como filtro, la biblioteca en mosaicos y los atajos de teclado.
 // Sin docsets: un estado vacío que lleva al catálogo o a elegir carpeta.
 import { platform } from "@tauri-apps/plugin-os";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../hooks/useT";
 import { type I18nKey } from "../lib/i18n";
 import { relativeParts } from "../lib/recent";
 import { usePrefs } from "../store/prefs";
 import { useRecent } from "../store/recent";
+import { useHistoryUi } from "../store/historyUi";
 import { useDocsets } from "../store/docsets";
 import { usePalette } from "../store/palette";
 import { useTabs } from "../store/tabs";
 import { CatalogIcon } from "./CatalogIcon";
 import { DocsetIcon } from "./DocsetIcon";
-import { FolderIcon, PlusIcon, SearchIcon } from "./Icons";
+import { ClockIcon, FolderIcon, PlusIcon, SearchIcon } from "./Icons";
 
 /** Clave del saludo por hora local. */
 function greetingKey(hour: number): I18nKey {
@@ -52,6 +53,26 @@ export function Welcome({ docCount }: { docCount: number }) {
     const { value, unit } = relativeParts(at, Date.now());
     return value === 0 ? t("welcome.justNow") : rtf.format(value, unit);
   };
+  // Biblioteca: como mucho dos filas (las columnas dependen del ancho).
+  const gridRef = useRef<HTMLUListElement>(null);
+  const [cols, setCols] = useState(4);
+  const [allLibrary, setAllLibrary] = useState(false);
+  useEffect(() => {
+    const el = gridRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const measure = (): void => {
+      const n = getComputedStyle(el).gridTemplateColumns.split(" ").filter((c) => c.trim() !== "").length;
+      setCols(Math.max(1, n));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [show.library, docCount]);
+  const capacity = cols * 2;
+  // +1: la tarjeta de «Añadir docsets».
+  const libraryOverflows = library.length + 1 > capacity;
+  const shownLibrary = allLibrary || !libraryOverflows ? library : library.slice(0, capacity - 1);
   const nothing = !show.greeting && !show.search && !show.filters && !(show.recent && recent.length > 0) && !show.library && !show.shortcuts;
 
   const shortcuts: { keys: string[]; label: I18nKey }[] = [
@@ -148,8 +169,18 @@ export function Welcome({ docCount }: { docCount: number }) {
 
         {show.recent && recent.length > 0 && (
           <section className="mt-12 first:mt-0" aria-label={t("welcome.recent")}>
-            <h2 className="mb-3 heading text-[19px]">{t("welcome.recent")}…</h2>
-            <ul className="grid gap-2.5 [grid-template-columns:repeat(auto-fill,minmax(210px,1fr))]">
+            <div className="mb-3 flex items-baseline justify-between">
+              <h2 className="heading text-[19px]">{t("welcome.recent")}…</h2>
+              <button
+                type="button"
+                onClick={() => useHistoryUi.getState().show()}
+                className="flex items-center gap-1.5 text-[12.5px] font-medium text-accent-text transition-opacity hover:opacity-80"
+              >
+                <ClockIcon size={13} />
+                {t("welcome.history")} →
+              </button>
+            </div>
+            <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
               {recent.map((p, i) => {
                 const d = byId.get(p.docsetId);
                 return (
@@ -196,16 +227,27 @@ export function Welcome({ docCount }: { docCount: number }) {
               {t("sidebar.library")}
               <span className="text-[13px] font-semibold tabular-nums text-faint">{library.length}</span>
             </h2>
-            <button
-              type="button"
-              onClick={openCatalogTab}
-              className="text-[12.5px] font-medium text-accent-text transition-opacity hover:opacity-80"
-            >
-              {t("welcome.searchCatalog")} →
-            </button>
+            <div className="flex items-baseline gap-4">
+              {allLibrary && libraryOverflows && (
+                <button
+                  type="button"
+                  onClick={() => setAllLibrary(false)}
+                  className="text-[12.5px] font-medium text-muted transition-colors hover:text-ink"
+                >
+                  {t("welcome.showLess")}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={openCatalogTab}
+                className="text-[12.5px] font-medium text-accent-text transition-opacity hover:opacity-80"
+              >
+                {t("welcome.searchCatalog")} →
+              </button>
+            </div>
           </div>
-          <ul className="grid gap-2.5 [grid-template-columns:repeat(auto-fill,minmax(150px,1fr))]">
-            {library.map((d) => (
+          <ul ref={gridRef} className="grid gap-2.5 [grid-template-columns:repeat(auto-fill,minmax(150px,1fr))]">
+            {shownLibrary.map((d) => (
               <li key={d.id}>
                 <button
                   type="button"
@@ -232,6 +274,29 @@ export function Welcome({ docCount }: { docCount: number }) {
                 </button>
               </li>
             ))}
+            {libraryOverflows && !allLibrary ? (
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setAllLibrary(true)}
+                  className="group flex h-full w-full flex-col items-start gap-3 rounded-xl border border-line bg-card-2 p-3.5 text-left transition-all duration-200 ease-smooth hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-float"
+                >
+                  <span className="flex -space-x-2">
+                    {library.slice(capacity - 1, capacity + 2).map((d) => (
+                      <span key={d.id} className="flex h-8 w-8 items-center justify-center rounded-lg bg-card ring-2 ring-card-2">
+                        <DocsetIcon icon={d.icon} name={d.name} hint={d.id} size={18} />
+                      </span>
+                    ))}
+                  </span>
+                  <span>
+                    <span className="block text-[13.5px] font-semibold text-ink transition-colors group-hover:text-accent-text">
+                      {t("welcome.showAll", { n: library.length })}
+                    </span>
+                    <span className="mt-0.5 block text-[11.5px] text-muted">+{library.length - shownLibrary.length}</span>
+                  </span>
+                </button>
+              </li>
+            ) : (
             <li>
               <button
                 type="button"
@@ -247,6 +312,7 @@ export function Welcome({ docCount }: { docCount: number }) {
                 </span>
               </button>
             </li>
+            )}
           </ul>
         </section>
         )}
