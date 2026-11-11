@@ -6,7 +6,7 @@
 
 OpenDoc lee el formato estándar **docset** (el mismo creado por Dash y utilizado por Zeal), por lo que puedes configurarlo con tu carpeta de docsets existente y empezar a consultar documentación de inmediato.
 
-> **Versión actual: v0.2.75.** OpenDoc incluye navegación por pestañas con persistencia de sesiones, motor de búsqueda difusa en memoria, navegación de símbolos por tipo, tres estilos visuales con acentos personalizables, índice de la página, seguir leyendo, actualizaciones desde la app y gestión completa de docsets desde feeds configurables.
+> **Versión actual: v0.2.76.** OpenDoc incluye navegación por pestañas con persistencia de sesiones, motor de búsqueda difusa en memoria, navegación de símbolos por tipo, tres estilos visuales con acentos personalizables, índice de la página, seguir leyendo, actualizaciones desde la app y gestión completa de docsets desde feeds configurables.
 
 ---
 
@@ -119,6 +119,10 @@ Los binarios compilados se generan en `src-tauri/target/release/` y los instalad
 ### 4. Actualizaciones desde la app
 
 Ajustes → General comprueba la última release de GitHub (`latest.json`) e instala la actualización firmada con un clic, y luego reinicia. Las releases de CI firman sus paquetes de actualización: el workflow necesita los secretos del repositorio `TAURI_SIGNING_PRIVATE_KEY` (el contenido de la clave privada cuya mitad pública está en `src-tauri/tauri.conf.json`) y `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (vacío si la clave no tiene contraseña). Las compilaciones locales no necesitan la clave: los artefactos del actualizador solo se activan en CI mediante `src-tauri/tauri.release.conf.json`. La instalación automática funciona con los instaladores de Windows, la app de macOS y el AppImage de Linux; las instalaciones `.deb`/`.rpm` reciben un enlace para descargar la versión nueva.
+
+### 5. Microsoft Store (MSIX)
+
+Cada release incluye también `OpenDoc_<versión>_x64.msix`, generado por `.github/workflows/msix.yml` para Microsoft Store. Se compila con `OPENDOC_STORE=1` / `VITE_OPENDOC_STORE=1`, que deja fuera el actualizador propio (las actualizaciones las instala la Store), y lo empaqueta `packaging/msix/build-msix.ps1` con `makeappx` del Windows SDK. El paquete va sin firmar a propósito: la Store lo firma tras la certificación. La identidad del paquete sale de Partner Center a través de las variables del repositorio `MSIX_IDENTITY_NAME`, `MSIX_PUBLISHER` y `MSIX_PUBLISHER_DISPLAY_NAME`; para regenerar el .msix de una release ya publicada, lanza el workflow a mano con su tag.
 
 ---
 

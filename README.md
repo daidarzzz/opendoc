@@ -6,7 +6,7 @@
 
 OpenDoc reads the standard **docset** format (the same one created by Dash and used by Zeal), so you can point it at your existing docsets folder and start browsing immediately.
 
-> **Current version: v0.2.75.** OpenDoc includes tabbed browsing with persistent sessions, an in-memory fuzzy search engine, symbol navigation by type, three visual styles with customizable accents, a page outline, continue reading, in-app updates and complete docset management from configurable feeds.
+> **Current version: v0.2.76.** OpenDoc includes tabbed browsing with persistent sessions, an in-memory fuzzy search engine, symbol navigation by type, three visual styles with customizable accents, a page outline, continue reading, in-app updates and complete docset management from configurable feeds.
 
 ---
 
@@ -119,6 +119,10 @@ Compiled binaries land in `src-tauri/target/release/` and platform installers (.
 ### 4. In-App Updates
 
 Settings → General checks the latest GitHub release (`latest.json`) and installs signed updates with one click, then restarts. Releases built by CI sign their update packages: the workflow needs the repository secrets `TAURI_SIGNING_PRIVATE_KEY` (the contents of the private key whose public half is in `src-tauri/tauri.conf.json`) and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (empty if the key has no password). Local builds don't need the key: the updater artifacts are only enabled in CI through `src-tauri/tauri.release.conf.json`. Automatic installs work with the Windows installers, the macOS app and the Linux AppImage; `.deb`/`.rpm` installs get a link to download the new version instead.
+
+### 5. Microsoft Store (MSIX)
+
+Each release also ships `OpenDoc_<version>_x64.msix`, built by `.github/workflows/msix.yml` for Microsoft Store. It is compiled with `OPENDOC_STORE=1` / `VITE_OPENDOC_STORE=1`, which leaves out the in-app updater (the Store installs updates), and packaged by `packaging/msix/build-msix.ps1` with `makeappx` from the Windows SDK. The package is unsigned on purpose: the Store signs it after certification. The package identity comes from Partner Center through the repository variables `MSIX_IDENTITY_NAME`, `MSIX_PUBLISHER` and `MSIX_PUBLISHER_DISPLAY_NAME`; to rebuild the .msix of an existing release, run the workflow by hand with its tag.
 
 ---
 

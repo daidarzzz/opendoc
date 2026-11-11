@@ -284,8 +284,21 @@ type UpdateState =
 /** Último resultado (vive mientras la app está abierta: no se repite al reabrir Ajustes). */
 let lastUpdateState: UpdateState = { kind: "idle" };
 
+/** Compilación para Microsoft Store: el actualizador propio no se usa. */
+const STORE_BUILD = import.meta.env.VITE_OPENDOC_STORE === "1";
+
+/** En la Store solo se informa de la versión: actualizar es cosa de la tienda. */
+function StoreUpdateRow() {
+  const { t } = useT();
+  return <Row label={t("update.title")} desc={`${t("update.current", { version })} ${t("update.store")}`} />;
+}
+
 /** Fila discreta de actualizaciones: comprueba sola al abrir y actualiza con un clic. */
 function UpdateRow() {
+  return STORE_BUILD ? <StoreUpdateRow /> : <SelfUpdateRow />;
+}
+
+function SelfUpdateRow() {
   const { t } = useT();
   const [state, setStateRaw] = useState<UpdateState>(lastUpdateState);
   const setState = (next: UpdateState): void => {

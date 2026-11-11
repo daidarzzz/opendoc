@@ -137,7 +137,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
         run: |
           NOTES="$(cat <<'EOF'
-          Instaladores: Windows (.exe/.msi), macOS (.dmg, Apple Silicon e Intel), Linux (.deb/.AppImage/.rpm) y Arch Linux (.pkg.tar.zst, instalar con `sudo pacman -U`).
+          Instaladores: Windows (.exe/.msi; el .msix es el paquete para Microsoft Store), macOS (.dmg, Apple Silicon e Intel), Linux (.deb/.AppImage/.rpm) y Arch Linux (.pkg.tar.zst, instalar con `sudo pacman -U`).
 
           Avisos:
           - Los ejecutables no están firmados: Windows SmartScreen y macOS Gatekeeper mostrarán advertencias al instalar o abrir la app. Es normal en esta fase del proyecto.

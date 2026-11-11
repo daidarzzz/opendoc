@@ -57,11 +57,18 @@ fn load_startup_state(app: &mut tauri::App) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let built = tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_os::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_os::init());
+    // En la compilación para Microsoft Store (`OPENDOC_STORE` al compilar)
+    // las actualizaciones las instala la tienda: sin actualizador propio.
+    let builder = if option_env!("OPENDOC_STORE").is_some() {
+        builder
+    } else {
+        builder.plugin(tauri_plugin_updater::Builder::new().build())
+    };
+    let built = builder
         .plugin(tauri_plugin_process::init())
         .manage(AppState::default())
         .register_asynchronous_uri_scheme_protocol("opendoc", protocol::handle)

@@ -1,0 +1,105 @@
+name: MSIX (Microsoft Store)
+
+# Compila la variante para Microsoft Store (sin actualizador propio:
+# OPENDOC_STORE=1) y sube `OpenDoc_<versión>_x64.msix` a la release del tag.
+#
+# - En cada tag `v*` corre junto a `release.yml` y espera a que exista su
+#   borrador de release.
+# - A mano (Actions → MSIX → Run workflow, indicando el tag) regenera el
+#   .msix de una release ya creada y reemplaza el anterior; útil tras
+#   cambiar la identidad del paquete.
+#
+# La identidad sale de Partner Center (Producto → Identidad del producto)
+# y se guarda en variables del repositorio (Settings → Secrets and
+# variables → Actions → Variables):
+#   MSIX_IDENTITY_NAME          Package/Identity/Name
+#   MSIX_PUBLISHER              Package/Identity/Publisher (CN=...)
+#   MSIX_PUBLISHER_DISPLAY_NAME Package/Properties/PublisherDisplayName
+# Sin ellas se usa una identidad provisional que la Store rechazará.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag de la release (p. ej. v0.2.76)"
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: msix-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  msix:
+    runs-on: windows-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build Store binary
+        env:
+          OPENDOC_STORE: "1"
+          VITE_OPENDOC_STORE: "1"
+        run: npm run tauri build -- --no-bundle
+
+      - name: Package MSIX
+        id: pack
+        shell: pwsh
+        env:
+          IDENTITY_NAME: ${{ vars.MSIX_IDENTITY_NAME }}
+          PUBLISHER: ${{ vars.MSIX_PUBLISHER }}
+          PUBLISHER_DISPLAY_NAME: ${{ vars.MSIX_PUBLISHER_DISPLAY_NAME }}
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ("v$version" -ne $env:TAG) { throw "El tag $env:TAG no coincide con package.json ($version)" }
+          $name = $env:IDENTITY_NAME; $pub = $env:PUBLISHER; $display = $env:PUBLISHER_DISPLAY_NAME
+          if (-not $name -or -not $pub -or -not $display) {
+            Write-Host "::warning::Faltan las variables MSIX_* del repositorio: se usa una identidad provisional que Partner Center rechazará."
+            if (-not $name) { $name = "OpenDoc" }
+            if (-not $pub) { $pub = "CN=OpenDoc" }
+            if (-not $display) { $display = "OpenDoc" }
+          }
+          $out = "OpenDoc_${version}_x64.msix"
+          ./packaging/msix/build-msix.ps1 -Version $version -IdentityName $name -Publisher $pub `
+            -PublisherDisplayName $display -OutFile $out
+          "file=$out" >> $env:GITHUB_OUTPUT
+
+      - name: Upload to release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FILE: ${{ steps.pack.outputs.file }}
+        run: |
+          # En un push de tag el borrador lo crea `release.yml`: se espera
+          # hasta 10 min por si aún no existe.
+          for i in $(seq 1 60); do
+            if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+              gh release upload "$TAG" "$FILE" --clobber --repo "$GITHUB_REPOSITORY"
+              echo "Subido $FILE a $TAG"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::No existe la release $TAG"
+          exit 1
