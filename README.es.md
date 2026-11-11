@@ -6,7 +6,7 @@
 
 OpenDoc lee el formato estándar **docset** (el mismo creado por Dash y utilizado por Zeal), por lo que puedes configurarlo con tu carpeta de docsets existente y empezar a consultar documentación de inmediato.
 
-> **Versión actual: v0.2.74.** OpenDoc incluye navegación por pestañas con persistencia de sesiones, motor de búsqueda difusa en memoria, navegación de símbolos por tipo, tres estilos visuales con acentos personalizables, índice de la página, seguir leyendo, actualizaciones desde la app y gestión completa de docsets desde feeds configurables.
+> **Versión actual: v0.2.75.** OpenDoc incluye navegación por pestañas con persistencia de sesiones, motor de búsqueda difusa en memoria, navegación de símbolos por tipo, tres estilos visuales con acentos personalizables, índice de la página, seguir leyendo, actualizaciones desde la app y gestión completa de docsets desde feeds configurables.
 
 ---
 
