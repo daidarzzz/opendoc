@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=OpenDoc
+Comment=Offline documentation viewer
+Exec=opendoc
+Icon=opendoc
+Terminal=false
+Type=Application
+Categories=Development;Documentation;
+StartupWMClass=opendoc

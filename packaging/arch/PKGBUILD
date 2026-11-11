@@ -1,0 +1,26 @@
+# Paquete nativo para Arch Linux (lo genera CI en cada release).
+# Empaqueta el binario compilado en un contenedor Arch, enlazado contra el
+# WebKitGTK del sistema (mejor rendimiento que el AppImage, que lleva el
+# suyo). `@VERSION@` lo sustituye el workflow.
+pkgname=opendoc-bin
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc="Fast, modern offline documentation viewer for Dash and Zeal docsets"
+arch=('x86_64')
+url="https://github.com/daidarzzz/opendoc"
+license=('GPL-3.0-or-later')
+depends=('webkit2gtk-4.1' 'gtk3' 'hicolor-icon-theme')
+provides=('opendoc')
+conflicts=('opendoc')
+options=('!strip' '!debug')
+source=('opendoc' 'opendoc.desktop' 'icon-32.png' 'icon-128.png' 'icon-256.png' 'LICENSE')
+sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP')
+
+package() {
+  install -Dm755 opendoc "$pkgdir/usr/bin/opendoc"
+  install -Dm644 opendoc.desktop "$pkgdir/usr/share/applications/opendoc.desktop"
+  install -Dm644 icon-32.png "$pkgdir/usr/share/icons/hicolor/32x32/apps/opendoc.png"
+  install -Dm644 icon-128.png "$pkgdir/usr/share/icons/hicolor/128x128/apps/opendoc.png"
+  install -Dm644 icon-256.png "$pkgdir/usr/share/icons/hicolor/256x256/apps/opendoc.png"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

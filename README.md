@@ -6,7 +6,7 @@
 
 OpenDoc reads the standard **docset** format (the same one created by Dash and used by Zeal), so you can point it at your existing docsets folder and start browsing immediately.
 
-> **Current version: v0.2.73.** OpenDoc includes tabbed browsing with persistent sessions, an in-memory fuzzy search engine, symbol navigation by type, three visual styles with customizable accents, a page outline, continue reading, in-app updates and complete docset management from configurable feeds.
+> **Current version: v0.2.74.** OpenDoc includes tabbed browsing with persistent sessions, an in-memory fuzzy search engine, symbol navigation by type, three visual styles with customizable accents, a page outline, continue reading, in-app updates and complete docset management from configurable feeds.
 
 ---
 
@@ -162,7 +162,7 @@ Remember to comment the patch block back out before committing.
 - **Content Dark Mode:** Docsets always render with their original light presentation. Dark mode applies exclusively to the OpenDoc UI chrome. (Global CSS filter inversion was disabled due to broken contrast and visual glitches on code snippets and tables; per-docset theme CSS is planned for a future update).
 - **Accent Icon Scope:** Color accents update the UI and the running application icon (taskbar and macOS Dock). The static `.exe` file, installer, and Finder file icons remain in the brand red.
 - **Tarix Disk Usage:** Extracted tarix docsets require significant disk space in `tarix-cache/` (tens or hundreds of megabytes per docset).
-- **Linux WebKitGTK:** Linux rendering behavior depends on the system WebKitGTK version and may exhibit minor visual differences compared to WebView2 (Windows) and WebKit (macOS).
+- **Linux WebKitGTK:** Linux rendering behavior depends on the system WebKitGTK version and may exhibit minor visual differences compared to WebView2 (Windows) and WebKit (macOS). The AppImage bundles its own (older) WebKitGTK and can feel slower; on Arch Linux prefer the native package from each release (`sudo pacman -U opendoc-bin-<version>-1-x86_64.pkg.tar.zst`), which uses the system WebKitGTK. With the proprietary NVIDIA driver on Wayland, OpenDoc sets `WEBKIT_DISABLE_DMABUF_RENDERER=1` at startup (unless you set it yourself) to avoid a known slow rendering path; if it still feels slow, try launching with `WEBKIT_DISABLE_COMPOSITING_MODE=1`. Native (pacman/.deb/.rpm) installs update from the GitHub release page instead of in-app.
 
 ---
 

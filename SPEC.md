@@ -263,7 +263,8 @@ El repositorio implementa una batería integral de pruebas en frontend y backend
 3. **Flujo de Integración Continua (`.github/workflows/release.yml`)**:
    - El trabajo `check` corre en cada push y pull request hacia `master`, validando `npm ci`, `cargo test`, `cargo clippy`, `cargo fmt`, `npx tsc --noEmit` y `npm test`.
    - El trabajo `verify-version` comprueba la coherencia exacta entre la versión de `package.json`, `src-tauri/Cargo.toml` y `src-tauri/tauri.conf.json`.
-   - La compilación de artefactos para Windows (.exe, .msi), macOS (.dmg ARM64 e Intel) y Linux (.deb, .AppImage, .rpm) se ejecuta automáticamente ante tags de versión (`v*`). Con `--config src-tauri/tauri.release.conf.json` se generan además los paquetes firmados del actualizador y `latest.json` (secretos `TAURI_SIGNING_PRIVATE_KEY` y `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`).
+   - La compilación de artefactos para Windows (.exe, .msi), macOS (.dmg ARM64 e Intel), Linux (.deb, .AppImage, .rpm) y Arch Linux (`opendoc-bin-*.pkg.tar.zst`, trabajo `arch` en un contenedor `archlinux:base-devel` con `packaging/arch/PKGBUILD`, enlazado contra el WebKitGTK del sistema) se ejecuta automáticamente ante tags de versión (`v*`).
+   - `linux_gpu.rs`: con el driver propietario de NVIDIA en Wayland se fija `WEBKIT_DISABLE_DMABUF_RENDERER=1` antes de crear el webview (respetando un valor del usuario). Con `--config src-tauri/tauri.release.conf.json` se generan además los paquetes firmados del actualizador y `latest.json` (secretos `TAURI_SIGNING_PRIVATE_KEY` y `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`).
 4. **Actualizaciones**: `tauri-plugin-updater` (clave pública y endpoint `releases/latest/download/latest.json` en `tauri.conf.json`) y `tauri-plugin-process` para reiniciar. El frontend los usa solo a través de `checkForUpdate`, `installUpdate` y `relaunchApp` de `commands.ts`.
 
 ---

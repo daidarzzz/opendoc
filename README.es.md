@@ -6,7 +6,7 @@
 
 OpenDoc lee el formato estándar **docset** (el mismo creado por Dash y utilizado por Zeal), por lo que puedes configurarlo con tu carpeta de docsets existente y empezar a consultar documentación de inmediato.
 
-> **Versión actual: v0.2.73.** OpenDoc incluye navegación por pestañas con persistencia de sesiones, motor de búsqueda difusa en memoria, navegación de símbolos por tipo, tres estilos visuales con acentos personalizables, índice de la página, seguir leyendo, actualizaciones desde la app y gestión completa de docsets desde feeds configurables.
+> **Versión actual: v0.2.74.** OpenDoc incluye navegación por pestañas con persistencia de sesiones, motor de búsqueda difusa en memoria, navegación de símbolos por tipo, tres estilos visuales con acentos personalizables, índice de la página, seguir leyendo, actualizaciones desde la app y gestión completa de docsets desde feeds configurables.
 
 ---
 
@@ -162,7 +162,7 @@ Asegúrate de volver a comentar el bloque de patch antes de realizar un commit.
 - **Modo oscuro en el contenido de docsets:** Los docsets se muestran siempre con su presentación clara original. El modo oscuro aplica exclusivamente a la interfaz nativa de OpenDoc. (La inversión global mediante CSS fue descartada por provocar fallos de contraste y errores visuales en bloques de código, tablas y diagramas; la incorporación de temas CSS personalizados por docset está planificada para fases posteriores).
 - **Alcance del icono de acento:** El acento de color modifica la UI y el icono de la aplicación en ejecución (barra de tareas y Dock de macOS). El archivo ejecutable estático `.exe`, los accesos directos y el icono del instalador permanecen con el rojo de marca.
 - **Espacio en disco con docsets Tarix:** Los docsets tarix extraídos requieren espacio de almacenamiento significativo en `tarix-cache/` (decenas o cientos de megabytes por paquete).
-- **WebKitGTK en Linux:** El comportamiento del motor WebKit en Linux depende de la versión del sistema y puede presentar pequeñas diferencias respecto a WebView2 (Windows) y WebKit (macOS).
+- **WebKitGTK en Linux:** El comportamiento del motor WebKit en Linux depende de la versión del sistema y puede presentar pequeñas diferencias respecto a WebView2 (Windows) y WebKit (macOS). El AppImage lleva su propio WebKitGTK (más antiguo) y puede ir más lento; en Arch Linux mejor el paquete nativo de cada release (`sudo pacman -U opendoc-bin-<versión>-1-x86_64.pkg.tar.zst`), que usa el WebKitGTK del sistema. Con el driver propietario de NVIDIA en Wayland, OpenDoc fija `WEBKIT_DISABLE_DMABUF_RENDERER=1` al arrancar (salvo que ya lo hayas puesto tú) para evitar un modo de render lento conocido; si aun así va lento, prueba a lanzarlo con `WEBKIT_DISABLE_COMPOSITING_MODE=1`. Las instalaciones nativas (pacman/.deb/.rpm) se actualizan desde la página de releases, no desde la app.
 
 ---
 
