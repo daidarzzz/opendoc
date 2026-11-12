@@ -292,3 +292,13 @@ El repositorio implementa una batería integral de pruebas en frontend y backend
 - Índice de contenido (TOC) contextual de la página visualizada.
 - Temas visuales personalizados inyectados por lenguaje o familia de docset.
 - Instancia única garantizada a nivel de sistema operativo (single-instance plugin).
+
+
+## 8. Sitio público y descargas
+
+- `landing/index.html` mantiene la portada editorial. `landing/download.html` añade una página funcional de descarga con paquetes Windows, macOS y Linux (incluido Arch), notas de instalación, actualizaciones y primeros pasos.
+- Ambas páginas usan `landing/assets/site.css`, extraído sin cambios del estilo de la portada, y la preferencia `opendoc-landing` de localStorage para tema, acento e idioma ES/EN.
+- La navegación «Descargar» y el botón principal de la portada abren la página dedicada; la sección de descarga original también enlaza a ella.
+- `assets/downloads.mjs` consulta la última release con un timeout de 7 segundos. `assets/downloads-data.mjs` acepta solo releases estables y URLs de paquetes del repositorio y tag esperados; muestra tamaños únicamente si son válidos. Sin JavaScript, sin red, ante límite de API o si falta un paquete, los enlaces abren la última release, sin inventar archivos ni tamaños.
+- La detección de plataforma solo resalta la fila correspondiente; el usuario elige arquitectura y distribución. Los tests se ejecutan con `node --test landing/checks/downloads.check.mjs`.
+- El despliegue existente de Pages publica toda la carpeta `landing/`, sin nuevo paso de compilación.

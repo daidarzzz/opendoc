@@ -8,6 +8,8 @@ OpenDoc reads the standard **docset** format (the same one created by Dash and u
 
 > **Current version: v0.2.76.** OpenDoc includes tabbed browsing with persistent sessions, an in-memory fuzzy search engine, symbol navigation by type, three visual styles with customizable accents, a page outline, continue reading, in-app updates and complete docset management from configurable feeds.
 
+The [download page](https://opendoc.daida.net/download.html) provides installers by platform, installation notes and first steps. It shares the landing page’s theme, accent and language preferences. Package links and sizes are resolved from the latest GitHub release; if that lookup fails, links open the release page.
+
 ---
 
 ## Why OpenDoc?

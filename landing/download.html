@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-accent="red">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Download OpenDoc — Windows, macOS &amp; Linux</title>
+<meta name="description" content="Download OpenDoc for Windows, macOS and Linux. Installers, release notes and first steps for your offline documentation library.">
+<meta property="og:title" content="Download OpenDoc">
+<meta property="og:description" content="Installers, release notes and first steps. Windows, macOS and Linux.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://opendoc.daida.net/download.html">
+<meta name="theme-color" content="#f2eee5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14130f" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&display=swap" rel="stylesheet">
+<script>
+  /* Theme, accent and language before first paint (no flash). */
+  (function () {
+    var d = document.documentElement, s = {};
+    try { s = JSON.parse(localStorage.getItem("opendoc-landing") || "{}"); } catch (e) {}
+    if (!s || typeof s !== "object" || Array.isArray(s)) s = {};
+    var sys = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    d.dataset.themePref = s.theme || "system";
+    d.dataset.theme = s.theme && s.theme !== "system" ? s.theme : sys;
+    d.dataset.accent = s.accent || "red";
+  })();
+</script>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="logo" viewBox="116.771 206.771 378.458 378.458">
+      <path class="logo-bg" d="M305.873 206.899 L306.127 206.899 C410.565 206.899 495.229 291.562 495.229 396 L495.229 396 C495.229 500.438 410.565 585.101 306.127 585.101 L305.873 585.101 C201.435 585.101 116.771 500.438 116.771 396 L116.771 396 C116.771 291.562 201.435 206.899 305.873 206.899 Z"/>
+      <path fill="#fff" d="M255.244 269.837 C247.691 270.743 179.216 316.964 177.303 338.11 C175.39 359.257 244.676 374.961 243.764 396.717 C242.852 418.473 171.832 451.329 171.832 468.649 C171.832 485.969 234.662 501.852 243.764 500.638 C252.866 499.424 216.069 480.196 226.441 461.365 C236.813 442.535 306.633 409.103 305.996 387.654 C305.358 366.205 231.076 352.309 222.617 332.673 C214.159 313.037 262.796 268.931 255.244 269.837 Z"/>
+      <path fill="#fff" d="M309.065 465.568 C292.55 470.42 292.55 489.233 309.065 494.681 C325.579 500.129 391.638 503.109 408.152 498.257 C424.667 493.404 424.667 471.016 408.152 465.568 C391.638 460.12 325.579 460.715 309.065 465.568 Z"/>
+    </symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v12m0 0-5-5m5 5 5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+
+<header class="runhead">
+  <div class="wrap">
+    <a class="brand" href="./" aria-label="OpenDoc">
+      <svg aria-hidden="true"><use href="#logo"/></svg><span>OpenDoc</span>
+    </a>
+    <nav aria-label="Navigation"><a href="./" data-es="El proyecto">The project</a><a href="https://github.com/daidarzzz/opendoc/releases" data-es="Novedades">Release notes</a><a href="download.html" class="nav-dl" aria-current="page" data-es="Descargar">Download</a></nav>
+    <div class="head-tools">
+      <button class="tool" id="lang-toggle" type="button" aria-label="Cambiar a español">ES</button>
+      <button class="tool" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+<main id="top" class="wrap">
+  <section class="title-page" aria-labelledby="download-title">
+    <div class="kicker"><span class="label">OpenDoc / <span data-es="Descargas">Downloads</span></span><span class="label">GPL-3.0-or-later</span></div>
+    <h1 id="download-title" data-es="Descargas.">Downloads.</h1>
+    <div class="title-grid">
+      <p class="lede" data-es="Elige tu sistema. Instala OpenDoc. Añade tu documentación.">Choose your system. Install OpenDoc. Add your documentation.</p>
+      <div><a class="link-arrow" id="release-link" href="https://github.com/daidarzzz/opendoc/releases/latest"><span data-es="Última versión en GitHub ↗">Latest release on GitHub ↗</span></a><p class="cta-sub" id="release-status" role="status" data-es="Los botones abren la última release. Allí puedes elegir el archivo de tu sistema.">The buttons open the latest release. Choose the file for your system there.</p></div>
+    </div>
+    <table class="dl-table">
+      <caption class="sr-only" data-es="Instaladores de OpenDoc por sistema operativo">OpenDoc installers by operating system</caption>
+      <thead><tr><th scope="col" data-es="Sistema">System</th><th scope="col" data-es="Plataforma">Platform</th><th scope="col" data-es="Descargas">Downloads</th></tr></thead>
+      <tbody><tr id="windows" data-os="windows"><td class="os">Windows<span class="here" data-es="tu sistema">your system</span></td><td class="req"><span data-es="Windows 10 / 11 · x64">Windows 10 / 11 · x64</span></td><td class="files"><a class="get" href="https://apps.microsoft.com/detail/9plwx393jv4c"><b>Microsoft Store</b></a><a class="get" data-asset="exe" href="https://github.com/daidarzzz/opendoc/releases/latest"><b>.exe</b> <span class="sz" data-size="exe"></span></a><a class="get" data-asset="msi" href="https://github.com/daidarzzz/opendoc/releases/latest"><b>.msi</b> <span class="sz" data-size="msi"></span></a></td></tr><tr id="macos" data-os="macos"><td class="os">macOS<span class="here" data-es="tu sistema">your system</span></td><td class="req"><span data-es="Apple Silicon / Intel">Apple Silicon / Intel</span></td><td class="files"><a class="get" data-asset="dmgArm" href="https://github.com/daidarzzz/opendoc/releases/latest"><b>Apple Silicon</b> <span class="sz" data-size="dmgArm"></span></a><a class="get" data-asset="dmgX64" href="https://github.com/daidarzzz/opendoc/releases/latest"><b>Intel</b> <span class="sz" data-size="dmgX64"></span></a></td></tr><tr id="linux" data-os="linux"><td class="os">Linux<span class="here" data-es="tu sistema">your system</span></td><td class="req"><span data-es="x86-64 · Elige tu distribución">x86-64 · Choose your distribution</span></td><td class="files"><a class="get" data-asset="deb" href="https://github.com/daidarzzz/opendoc/releases/latest"><b>.deb</b> <span class="sz" data-size="deb"></span></a><a class="get" data-asset="rpm" href="https://github.com/daidarzzz/opendoc/releases/latest"><b>.rpm</b> <span class="sz" data-size="rpm"></span></a><a class="get" data-asset="appimage" href="https://github.com/daidarzzz/opendoc/releases/latest"><b>.AppImage</b> <span class="sz" data-size="appimage"></span></a><a class="get" data-asset="arch" href="https://github.com/daidarzzz/opendoc/releases/latest"><b>Arch Linux</b> <span class="sz" data-size="arch"></span></a></td></tr></tbody>
+    </table>
+    <p class="unsigned" data-es="Los instaladores de GitHub no tienen firma de código y pueden mostrar avisos de Windows o macOS. La versión de Microsoft Store está firmada por Microsoft.">GitHub installers are not code-signed and may trigger warnings on Windows or macOS. The Microsoft Store version is signed by Microsoft.</p>
+  </section>
+  <section class="chapter" aria-labelledby="install-title">
+    <div class="margin"><div class="margin-inner"><span class="sec">01</span><span class="label sec-name" data-es="Instalación">Installation</span></div></div>
+    <div class="body"><h2 id="install-title" data-es="¿Qué archivo elijo?">Which file do I need?</h2><div class="features">
+      <div class="feature"><h3>Windows</h3><p data-es="Usa Microsoft Store para instalar y recibir sus actualizaciones, o elige el instalador .exe. El paquete .msi es un instalador alternativo para Windows.">Use Microsoft Store for installation and Store updates, or choose the .exe installer. The .msi package is an alternative Windows installer.</p></div>
+      <div class="feature"><h3>macOS</h3><p data-es="Elige Apple Silicon si tu Mac tiene un chip de la serie M, o Intel si tiene un procesador Intel. Abre el .dmg y arrastra OpenDoc a Aplicaciones.">Choose Apple Silicon for M-series chips, or Intel for Intel Macs. Open the .dmg and drag OpenDoc into Applications.</p></div>
+      <div class="feature"><h3>Linux</h3><p data-es="Usa .deb para Debian/Ubuntu, .rpm para distribuciones basadas en RPM o el paquete nativo para Arch Linux. AppImage es una opción portátil; dale permiso de ejecución antes de abrirlo.">Use .deb for Debian/Ubuntu, .rpm for RPM-based distributions, or the native package for Arch Linux. AppImage is a portable option; give it permission to run before opening it.</p></div>
+      <div class="feature"><h3 data-es="Actualizaciones">Updates</h3><p data-es="Comprueba las actualizaciones en Ajustes → General. Microsoft Store gestiona sus propias actualizaciones. Los paquetes nativos de Linux (.deb, .rpm, Arch) se actualizan desde las releases de GitHub.">Check for updates in Settings → General. Microsoft Store manages its own updates. Native Linux packages (.deb, .rpm, Arch) are updated from GitHub releases.</p></div>
+    </div></div>
+  </section>
+  <section class="chapter" aria-labelledby="start-title">
+    <div class="margin"><div class="margin-inner"><span class="sec">02</span><span class="label sec-name" data-es="Primeros pasos">First steps</span></div></div>
+    <div class="body"><h2 id="start-title" data-es="Añade tu biblioteca.">Add your library.</h2><p class="prose" data-es="¿Ya usas Dash o Zeal? Selecciona tu carpeta de docsets en Ajustes. ¿Empiezas desde cero? Abre el catálogo y descarga con conexión la documentación que necesites. Los docsets instalados se pueden consultar offline.">Already use Dash or Zeal? Select your existing docsets folder in Settings. Starting fresh? Open the catalog and download the documentation you need while online. Installed docsets are available offline.</p>
+    <p class="prose"><kbd>Ctrl K</kbd> / <kbd>⌘ K</kbd> — <span data-es="abre la búsqueda.">open search.</span></p>
+    <p class="unsigned" data-es="OpenDoc no incluye ni redistribuye docsets propietarios.">OpenDoc does not bundle or redistribute proprietary docsets.</p>
+    <div class="cta-row"><a class="link-arrow" href="https://github.com/daidarzzz/opendoc#readme" data-es="Guía del proyecto ↗">Project guide ↗</a><a class="link-arrow" href="https://github.com/daidarzzz/opendoc/issues" data-es="Informar de un problema ↗">Report an issue ↗</a></div>
+    </div>
+  </section>
+</main>
+<footer class="wrap"><div class="colophon"><div class="colo-grid">
+  <div><span class="label">OpenDoc</span><p><a href="./" data-es="Sobre el proyecto">About the project</a><br><a href="https://github.com/daidarzzz/opendoc">GitHub</a> · <a href="https://github.com/daidarzzz/opendoc/blob/master/LICENSE">GPL-3.0-or-later</a></p></div>
+  <div><span class="label" data-es="Otras versiones">Other versions</span><p><a href="https://github.com/daidarzzz/opendoc/releases" data-es="Historial de versiones ↗">Release history ↗</a><br><a href="https://github.com/daidarzzz/opendoc#readme" data-es="Compilar desde el código ↗">Build from source ↗</a></p></div>
+  <div><span class="label" data-es="Apariencia">Appearance</span><div class="seg" id="accent-seg" role="group" aria-label="Accent"><button type="button" data-accent="red" data-es="Rojo">Red</button><button type="button" data-accent="blue" data-es="Azul">Blue</button><button type="button" data-accent="amber" data-es="Ámbar">Amber</button><button type="button" data-accent="catppuccin">Catppuccin</button></div></div>
+</div><div class="bottom"><span data-es="Documentación offline para tu escritorio.">Offline documentation for your desktop.</span><a href="./" data-es="← Volver a la portada">← Back to the home page</a></div></div></footer>
+<script type="module" src="assets/downloads.mjs"></script>
+</body></html>
