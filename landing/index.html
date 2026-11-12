@@ -965,7 +965,7 @@ pre.code .p { color: var(--spot); user-select: none; }
           <tr data-os="windows">
             <td class="os">Windows<span class="here" data-i18n="s6.here">your system</span></td>
             <td class="req" data-i18n="s6.win">Windows 10 or 11, 64‑bit</td>
-            <td class="files"><a class="get" data-asset="exe" href="https://github.com/daidarzzz/opendoc/releases/download/v0.2.72/OpenDoc_0.2.72_x64-setup.exe"><b>.exe</b> <span class="sz" data-size="exe">3.6 MB</span></a><a class="get" data-asset="msi" href="https://github.com/daidarzzz/opendoc/releases/download/v0.2.72/OpenDoc_0.2.72_x64_en-US.msi"><b>.msi</b> <span class="sz" data-size="msi">4.8 MB</span></a></td>
+            <td class="files"><a class="get store" href="https://apps.microsoft.com/detail/9plwx393jv4c" target="_blank" rel="noopener"><b>Microsoft Store</b> <span class="sz" data-i18n="s6.store">signed · auto‑updates</span></a><a class="get" data-asset="exe" href="https://github.com/daidarzzz/opendoc/releases/download/v0.2.72/OpenDoc_0.2.72_x64-setup.exe"><b>.exe</b> <span class="sz" data-size="exe">3.6 MB</span></a><a class="get" data-asset="msi" href="https://github.com/daidarzzz/opendoc/releases/download/v0.2.72/OpenDoc_0.2.72_x64_en-US.msi"><b>.msi</b> <span class="sz" data-size="msi">4.8 MB</span></a></td>
           </tr>
           <tr data-os="macos">
             <td class="os">macOS<span class="here" data-i18n="s6.here">your system</span></td>
@@ -979,7 +979,7 @@ pre.code .p { color: var(--spot); user-select: none; }
           </tr>
         </tbody>
       </table>
-      <p class="unsigned" data-i18n="s6.unsigned">Builds aren’t code‑signed yet, so Windows SmartScreen and macOS Gatekeeper will ask you once before the first launch. That’s expected.</p>
+      <p class="unsigned" data-i18n="s6.unsigned">The Microsoft Store version is signed by Microsoft. The other builds aren’t code‑signed yet, so Windows SmartScreen and macOS Gatekeeper will ask you once before the first launch. That’s expected.</p>
 
       <div class="build">
         <p class="label" data-i18n="s6.build">Or build it yourself</p>
@@ -1088,7 +1088,8 @@ pre.code .p { color: var(--spot); user-select: none; }
     "s6.title": "Llévatelo <em>contigo.</em>",
     "s6.platform": "Plataforma", "s6.req": "Requisitos", "s6.files": "Archivos", "s6.here": "tu sistema",
     "s6.win": "Windows 10 u 11, 64 bits", "s6.mac": "Apple Silicon o Intel", "s6.linux": "x86‑64 con WebKitGTK",
-    "s6.unsigned": "Los binarios aún no están firmados, así que SmartScreen en Windows y Gatekeeper en macOS te preguntarán una vez antes del primer arranque. Es normal.",
+    "s6.store": "firmada · se actualiza sola",
+    "s6.unsigned": "La versión de Microsoft Store la firma Microsoft. El resto de binarios aún no están firmados, así que SmartScreen en Windows y Gatekeeper en macOS te preguntarán una vez antes del primer arranque. Es normal.",
     "s6.build": "O compílalo tú",
     "foot.fin": "Feliz lectura.", "foot.colophon": "Colofón",
     "foot.type": "Compuesto en Newsreader e IBM Plex Mono, sobre un papel que solo lo finge.",
@@ -1272,8 +1273,8 @@ pre.code .p { color: var(--spot); user-select: none; }
     if (a && !a.url) a.url = el.getAttribute("href");
   });
   var HERO = {
-    en: { also: "Also as", intel: "Intel Mac?", arm: "Apple Silicon Mac?", get: "Get that build", other: "Other platforms", unknown: "Windows, macOS and Linux builds below." },
-    es: { also: "También en", intel: "¿Mac con Intel?", arm: "¿Mac con Apple Silicon?", get: "Descarga esa versión", other: "Otras plataformas", unknown: "Versiones para Windows, macOS y Linux más abajo." }
+    en: { store: "Microsoft Store", also: "Also as", intel: "Intel Mac?", arm: "Apple Silicon Mac?", get: "Get that build", other: "Other platforms", unknown: "Windows, macOS and Linux builds below." },
+    es: { store: "Microsoft Store", also: "También en", intel: "¿Mac con Intel?", arm: "¿Mac con Apple Silicon?", get: "Descarga esa versión", other: "Otras plataformas", unknown: "Versiones para Windows, macOS y Linux más abajo." }
   };
   var macArch = "arm";
   var version = null;
@@ -1303,7 +1304,7 @@ pre.code .p { color: var(--spot); user-select: none; }
     var file = ASSETS[key].url.split("/").pop();
     var ext = "." + file.split(".").pop();
     var alt;
-    if (os === "windows") alt = t.also + " " + link("msi", ".msi");
+    if (os === "windows") alt = '<a href="https://apps.microsoft.com/detail/9plwx393jv4c" target="_blank" rel="noopener">' + t.store + "</a> · " + t.also + " " + link("msi", ".msi");
     else if (os === "macos") alt = (macArch === "x64" ? t.arm + " " + link("dmgArm", t.get) : t.intel + " " + link("dmgX64", t.get));
     else alt = t.also + " " + link("appimage", ".AppImage") + " · " + link("rpm", ".rpm");
     sub.innerHTML = ext + " · " + mb(ASSETS[key].size) + " · v" + (version || "0.2.72") + "<br>" + alt + ' · <a href="#download">' + t.other + "</a>";
