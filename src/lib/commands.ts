@@ -113,12 +113,13 @@ export async function getCatalogStatus(): Promise<CatalogStatus> {
   return invoke<CatalogStatus>("get_catalog_status");
 }
 
-/** Configura el repo de feeds (`owner/repo` o URL). Valida y persiste. */
+/** Configura los repos de feeds opcionales (uno o varios, separados por coma
+ *  o espacio; vacío = solo DevDocs). Valida y persiste. */
 export async function setFeedRepo(repo: string): Promise<Settings> {
   return invoke<Settings>("set_feed_repo", { repo });
 }
 
-/** Descarga el catálogo (largo, no bloquea). Sin repo → `no_feed_repo`. */
+/** Descarga el catálogo (largo, no bloquea): DevDocs siempre + repos opcionales. */
 export async function refreshCatalog(): Promise<CatalogSummary> {
   return invoke<CatalogSummary>("refresh_catalog");
 }

@@ -137,7 +137,8 @@ export interface Settings {
   version: number;
   docsets_dir: string | null;
   theme: ThemeMode;
-  /** Repo de feeds (`owner/repo`), null = sin configurar. */
+  /** Repos de feeds opcionales (`owner/repo`, separados por coma); null =
+   *  solo DevDocs, que siempre está incluido. */
   feed_url: string | null;
   /** Epoch de la última descarga del catálogo, null = nunca. */
   catalog_fetched_at: number | null;
@@ -206,10 +207,25 @@ export interface FeedEntry {
   name: string;
   version: string;
   urls: string[];
+  /** Presente si viene de DevDocs (se convierte a docset al instalar). */
+  devdocs?: DevDocsInfo | null;
+}
+
+/** Metadatos de una documentación de DevDocs (opendoc_core::devdocs::DevDocsMeta). */
+export interface DevDocsInfo {
+  name: string;
+  slug: string;
+  release?: string | null;
+  version?: string | null;
+  mtime?: number | null;
+  attribution?: string | null;
+  /** Tamaño de `db.json` en bytes. */
+  db_size?: number | null;
 }
 
 /** Estado del catálogo (commands::CatalogStatus). */
 export interface CatalogStatus {
+  /** Repos de feeds opcionales (separados por coma); null = solo DevDocs. */
   repo: string | null;
   fetched_at: number | null;
   count: number;
@@ -223,6 +239,8 @@ export interface CatalogSummary {
   count: number;
   skipped: number;
   fetched_at: number;
+  /** Fuentes que fallaron (se conserva su caché); null = todo bien. */
+  partial_error: string | null;
 }
 
 /** Estado de un feed frente a los instalados (commands::InstallStatus). */

@@ -27,7 +27,7 @@ serde_json = "1"
 thiserror = "2"
 # Núcleo compartido (escaneo, índices, tarix, búsqueda y resolución de
 # rutas). Se consume por etiqueta para que app y CLI compartan versión.
-opendoc-core = { git = "https://github.com/daidarzzz/opendoc-core", tag = "v0.1.2" }
+opendoc-core = { git = "https://github.com/daidarzzz/opendoc-core", tag = "v0.2.0" }
 # Data-URL de iconos (PNG de pocos KB): crate mínima y estándar.
 base64 = "0.22"
 tauri-plugin-os = "2"

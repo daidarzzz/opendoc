@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
+pub mod devdocs;
 pub mod feed;
 
 pub use feed::{FeedEntry, FeedError, RepoRef};
@@ -67,6 +68,7 @@ mod tests {
                 name: "CSS".to_string(),
                 version: "1".to_string(),
                 urls: vec!["https://a.example/CSS.tgz".to_string()],
+                devdocs: None,
             }],
         }
     }

@@ -15,7 +15,7 @@ OpenDoc es un visor y buscador de documentación offline rápido y moderno, escr
 Pilares de diseño:
 1. **Velocidad nativa**: arranque en milisegundos, consumo de RAM contenido (<80 MB en reposo) y búsqueda difusa en memoria interactiva (<50 ms en colecciones de más de 300.000 entradas).
 2. **Experiencia de usuario cuidada**: lienzo teñido por el acento con el contenido en una tarjeta flotante y pestañas conectadas, glifos de tipo de colores e inicio con biblioteca (Bricolage Grotesque + Inter + JetBrains Mono empaquetadas), con tema oscuro, claro y del sistema, 4 colores de acento dinámicos, navegación por pestañas con persistencia de sesión e historial, y Command Palette (`Ctrl+K` / `Cmd+K`).
-3. **Compatibilidad amplia**: soporte para docsets clásicos con índices estándar SQLite (`searchIndex`), esquema Core Data (`ZTOKEN...`), lectura de `Info.plist`, extracción segura de docsets tarix y catálogo integrado configurable.
+3. **Compatibilidad amplia**: soporte para docsets clásicos con índices estándar SQLite (`searchIndex`), esquema Core Data (`ZTOKEN...`), lectura de `Info.plist`, extracción segura de docsets tarix y catálogo integrado con DevDocs como fuente por defecto y enlaces de feeds opcionales.
 4. **Seguridad rigurosa**: visualización en `<iframe>` aislado (`sandbox="allow-scripts"`), protocolo propio `opendoc://` con mitigación de path traversal y validación estricta de cualquier evento emitido por contenido externo.
 
 ---
@@ -69,9 +69,11 @@ graph TD
   - `state.rs`: estructura `AppState` que aloja `Loaded` (docsets cargados, índice `SearchIndex`, historial de incidencias), `settings`, guards de extracción e instalación en curso.
   - `error.rs`: enumerador `ApiError` tipado que mapea fallos de disco, red, formato o lógica hacia el frontend con identificador `kind`.
 - **`docset/`**:
+  - `devdocs.rs`: instalación de documentaciones de DevDocs. Descarga `index.json` + `db.json` (reanudable, tope de tamaño), los convierte a un docset estándar con `opendoc_core::devdocs::convert` (atómico; ante fallo conserva la instalación previa) y devuelve el mismo `InstalledDocset` que `install.rs`. Las URLs salen siempre del slug, nunca del catálogo en caché.
   - `install.rs`: cliente de instalación de paquetes `.tgz` desde feeds. Descarga a temporal `.part`, descomprime y valida estructura clásica (`Contents/Resources/`), reemplaza de forma atómica y conserva copias de seguridad `.old` ante fallos.
   - `devicon.rs`: resolución y almacenamiento en caché de iconos de lenguajes procedentes de la CDN oficial de Devicon.
 - **`catalog/`**:
+  - `devdocs.rs`: catálogo de DevDocs (`https://devdocs.io/docs.json`, una sola petición). Cada documentación es una `FeedEntry` con `devdocs: Some(DevDocsMeta)`, id `devdocs-<slug>` (que es también la carpeta `.docset`), nombre visible `Nombre versión` y versión `release`→`version`→`mtime`.
   - `feed.rs`: parseo de repositorios de feeds en GitHub y feeds XML compatibles con el formato estándar de Kapeli/Zeal. Normalización de URLs y ordenamiento de mirrors.
   - `mod.rs`: serialización y persistencia atómica de la caché `catalog.json`.
 - **`protocol/`**:
@@ -192,7 +194,8 @@ graph TD
 
 ### 4.5 Catálogo y Gestor de Docsets
 
-- **Feeds configurables**: el usuario puede especificar un repositorio de GitHub (p. ej. `zealdocs/feeds`) o una URL compatible.
+- **DevDocs por defecto**: el catálogo siempre incluye DevDocs (844 documentaciones) sin configuración; en el primer arranque, con la caché vacía, se descarga solo. Al instalar, el paquete se convierte a un docset estándar (ver el módulo `devdocs` de `opendoc-core`: rutas saneadas, enlaces reescritos a ficheros `.html`, anclas de cabecera recreadas y equivalentes normalizadas, índice `searchIndex`). Las actualizaciones se detectan comparando el `mtime` del catálogo con `OpenDocDevDocsMtime` del `Info.plist` instalado. La atribución de cada documentación se guarda en `OpenDocAttribution`.
+- **Enlaces de feeds opcionales**: además, el usuario puede añadir uno o varios repositorios de GitHub (p. ej. `zealdocs/feeds`, separados por coma o espacio, máximo 5) o URLs compatibles; vacío = solo DevDocs. Si una fuente falla al refrescar se conservan sus entradas en caché y el resumen informa de `partial_error`.
 - **Caché sin conexión**: `catalog.json` almacena las entradas tras refrescar el catálogo; la búsqueda y filtrado de feeds funciona completamente offline.
 - **Instalación segura**:
   1. Concurrencia limitada con cola FIFO (`commands/install_queue.rs`): máximo de 2 instalaciones simultáneas; el resto espera turno en orden de llegada, emite `docset-progress` con etapa `queued` y puede quitarse de la cola con `cancel_install` (su `install_docset` termina con `install_cancelled`). Las activas y las que esperan se cuentan por separado: antes las que esperaban ocupaban cupo y con 3 o más pedidas a la vez se bloqueaban entre sí para siempre. En la UI, el filtro **En cola** del catálogo (visible solo si hay algo descargando o esperando) las lista en orden con su puesto.
@@ -225,8 +228,8 @@ Todos los comandos se invocan mediante el protocolo IPC de Tauri. La siguiente t
 | `save_session` | `session: Session` | `Result<bool, ApiError>` | Guarda la sesión si ha cambiado; devuelve si hubo escritura en disco. |
 | `extract_tarix` | `docset_id: String` | `Result<ScanReport, ApiError>` | Extrae un docset tarix pendiente a `tarix-cache/`. |
 | `get_catalog_status` | *(ninguno)* | `Result<CatalogStatus, ApiError>` | Consulta el estado local del catálogo (offline). |
-| `set_feed_repo` | `repo: String` | `Result<Settings, ApiError>` | Configura y valida el repositorio de feeds en ajustes. |
-| `refresh_catalog` | *(ninguno)* | `Result<CatalogSummary, ApiError>` | Descarga y parsea la lista de feeds del repositorio configurado. |
+| `set_feed_repo` | `repo: String` | `Result<Settings, ApiError>` | Configura y valida los repos de feeds opcionales (uno o varios; vacío = solo DevDocs). |
+| `refresh_catalog` | *(ninguno)* | `Result<CatalogSummary, ApiError>` | Descarga el catálogo de DevDocs y, si los hay, los repos de feeds opcionales; `CatalogSummary.partial_error` informa de fuentes que fallaron. |
 | `list_catalog` | `query?: String` | `Result<Vec<FeedEntry>, ApiError>` | Consulta las entradas en la caché local del catálogo. |
 | `install_docset` | `feed_id: String, force?: bool` | `Result<InstallSummary, ApiError>` | Descarga e instala un docset emitiendo eventos `docset-progress`. |
 | `cancel_install` | `feed_id: String` | `Result<bool, ApiError>` | Quita de la cola una instalación que aún espera turno (`true` si se quitó); las que ya descargan no se tocan. |
@@ -278,7 +281,7 @@ El repositorio implementa una batería integral de pruebas en frontend y backend
 ### 7.1 Decisiones Técnicas Consolidadas
 - **Modo oscuro en docsets desactivado**: el tema oscuro de la aplicación aplica exclusivamente a la interfaz nativa (chrome, barra lateral, pestañas, modales). Los documentos HTML de los docsets se muestran con su presentación clara original. La inversión mediante filtros CSS globales producía artefactos visuales inaceptables en diagramas, tablas y bloques de código; el mecanismo de inyección permanece reservado para soporte de temas CSS específicos por docset en versiones posteriores.
 - **Iconos de acento en tiempo de ejecución**: el acento de color afecta al logo y a los elementos interactivos de la interfaz, así como al icono de la app en ejecución en la barra de tareas y el Dock. El icono empaquetado en el ejecutable, instalador y Finder permanece en el rojo de marca para mantener la identidad visual del archivo.
-- **Independencia de Kapeli**: OpenDoc no depende de servicios propietarios ni redistribuye documentación ajena; los feeds se consultan desde repositorios comunitarios abiertos.
+- **Independencia de Kapeli**: OpenDoc no depende de servicios propietarios ni redistribuye documentación ajena; el catálogo por defecto es DevDocs (cada documentación conserva su atribución y licencia) y los feeds opcionales se consultan desde repositorios comunitarios abiertos.
 - **Límite de concurrencia en instalaciones**: máximo 2 instalaciones simultáneas para proteger el ancho de banda y evitar contención en disco; el resto espera en una cola FIFO (etapa `queued`, cancelable con `cancel_install`).
 
 ### 7.2 Limitaciones Conocidas

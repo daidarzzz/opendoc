@@ -311,24 +311,21 @@ pub fn get_catalog_status(
     Ok(service::catalog_status(&settings, &data_dir))
 }
 
-/// Configura el repo de feeds (`owner/repo` o URL). Valida y persiste.
+/// Configura los repos de feeds opcionales (`owner/repo` o URL, varios
+/// separados por coma o espacio; vacío = solo DevDocs). Valida y persiste.
 #[tauri::command]
 pub fn set_feed_repo(
     state: State<'_, AppState>,
     app: tauri::AppHandle,
     repo: String,
 ) -> Result<crate::settings::Settings, ApiError> {
-    let normalized = crate::catalog::feed::normalize_repo(&repo)
-        .map_err(|e| ApiError::FeedFailed {
-            message: e.to_string(),
-        })?
-        .path();
+    let normalized = service::repos_setting(&repo)?;
     let data_dir = data_dir_of(&app)?;
     let settings = state
         .settings
         .lock()
         .map(|mut guard| {
-            guard.feed_url = Some(normalized);
+            guard.feed_url = normalized;
             guard.catalog_fetched_at = None;
             guard.clone()
         })
@@ -342,8 +339,8 @@ pub fn set_feed_repo(
     Ok(settings)
 }
 
-/// Descarga el catálogo (largo, no bloquea). Sin repo → `NoFeedRepo`.
-/// En fallo de red se conserva la caché anterior.
+/// Descarga el catálogo (largo, no bloquea): DevDocs siempre, más los repos
+/// de feeds opcionales. En fallo de red se conserva la caché anterior.
 #[tauri::command]
 pub async fn refresh_catalog(
     state: State<'_, AppState>,
@@ -358,10 +355,9 @@ pub async fn refresh_catalog(
             message: e.to_string(),
         })?
         .feed_url
-        .clone()
-        .ok_or(ApiError::NoFeedRepo)?;
-    let (catalog, skipped) = tauri::async_runtime::spawn_blocking(move || {
-        service::refresh_catalog_data(&data_dir, &repo)
+        .clone();
+    let (catalog, skipped, partial_error) = tauri::async_runtime::spawn_blocking(move || {
+        service::refresh_catalog_data(&data_dir, repo.as_deref())
     })
     .await
     .map_err(|e| ApiError::LoadFailed {
@@ -372,6 +368,7 @@ pub async fn refresh_catalog(
         count: catalog.entries.len(),
         skipped,
         fetched_at: catalog.fetched_at,
+        partial_error,
     };
     let settings = state
         .settings
@@ -560,7 +557,13 @@ pub async fn install_docset(
         let emit = |report: crate::docset::ProgressReport| {
             emit_progress(&app_task, &feed_task, None, report);
         };
-        crate::docset::download_and_install(
+        // DevDocs se convierte a docset al instalar; el resto son `.tgz`.
+        let install = if entry.devdocs.is_some() {
+            crate::docset::devdocs::install_devdocs
+        } else {
+            crate::docset::download_and_install
+        };
+        install(
             &client,
             &entry,
             &dir_task,
