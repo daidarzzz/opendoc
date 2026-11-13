@@ -386,7 +386,7 @@ fn try_reuse_valid(
 
 /// Construye `Docset` + entradas desde un `Contents/` ya validado
 /// (común al flujo de descarga y al de reutilización).
-fn assemble_docset(
+pub(super) fn assemble_docset(
     entry: &FeedEntry,
     root_dir: &Path,
     contents_dir: &Path,
@@ -594,7 +594,7 @@ fn download_mirrors(
 
 /// Fichero parcial propio de una URL (un espejo nunca mezcla bytes de
 /// otro): `.dl-<slug>-<hash16(url)>.part`. Determinista entre intentos.
-fn part_path_for(docsets_dir: &Path, slug: &str, url: &str) -> PathBuf {
+pub(super) fn part_path_for(docsets_dir: &Path, slug: &str, url: &str) -> PathBuf {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
     let mut hasher = DefaultHasher::new();
@@ -804,6 +804,26 @@ fn download_one_body(
     Ok(received)
 }
 
+/// Descarga `url` a `dl_path` (reanuda si hay parcial) sin cortar por
+/// lentitud y con hasta 3 intentos. Para fuentes de un solo origen
+/// (DevDocs), donde no hay otro espejo al que saltar.
+pub(super) fn download_url_patient(
+    client: &reqwest::blocking::Client,
+    url: &str,
+    dl_path: &Path,
+    limits: TarixLimits,
+    on_progress: &(dyn Fn(ProgressReport) + Send + Sync),
+) -> Result<u64, String> {
+    let mut last = String::new();
+    for _ in 0..3 {
+        match download_one(client, url, dl_path, limits, on_progress, true) {
+            Ok(bytes) => return Ok(bytes),
+            Err(fail) => last = fail.message,
+        }
+    }
+    Err(last)
+}
+
 /// Sustitución segura: `final→old`, `tmp→final`. Devuelve el respaldo
 /// `.old` pendiente de borrar FUERA del camino crítico (el llamador lo
 /// elimina en fondo o lo barre al arrancar; la versión nueva ya está
@@ -870,7 +890,7 @@ fn unique_temp_path(docsets_dir: &Path, slug: &str) -> PathBuf {
 /// extracciones o respaldos `.old` con más de una hora (nunca los
 /// recientes: podría haber otra instalación en curso en este u otro
 /// proceso). Un `.old` solo se borra si su final existe y es válido.
-fn sweep_stale_temps(docsets_dir: &Path) {
+pub(super) fn sweep_stale_temps(docsets_dir: &Path) {
     // FASE 0: solo medida.
     let t_sweep = std::time::Instant::now();
     let entries = match std::fs::read_dir(docsets_dir) {
@@ -890,8 +910,11 @@ fn sweep_stale_temps(docsets_dir: &Path) {
             continue;
         }
         let name = entry.file_name().to_string_lossy().into_owned();
+        // `.tmp-install-*` (extracción tarix) y `.<X>.docset.tmp-<pid>`
+        // (conversión de DevDocs, ver `opendoc_core::devdocs::convert`).
         let is_tmp_dir = entry.file_type().map(|kind| kind.is_dir()).unwrap_or(false)
-            && name.starts_with(".tmp-install-");
+            && (name.starts_with(".tmp-install-")
+                || (name.starts_with('.') && name.contains(".docset.tmp-")));
         // Respaldo de una instalación anterior: solo si el final sigue
         // en su sitio (el borrado diferido pudo no llegar a correr).
         let is_stale_old =
@@ -1248,6 +1271,7 @@ mod tests {
             name: id.to_string(),
             version: "1.0".to_string(),
             urls,
+            devdocs: None,
         }
     }
 

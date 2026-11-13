@@ -71,8 +71,12 @@ pub struct FeedEntry {
     pub name: String,
     /// `<version>` del feed (comparación de strings, como Dash).
     pub version: String,
-    /// URLs del `.tgz` (mirrors).
+    /// URLs del `.tgz` (mirrors). En DevDocs, la URL de `db.json`.
     pub urls: Vec<String>,
+    /// Metadatos si viene de DevDocs (se convierte a docset al instalar);
+    /// `None` en los feeds estilo Kapeli.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub devdocs: Option<opendoc_core::devdocs::DevDocsMeta>,
 }
 
 /// `<entry>` Kapeli: solo interesa `version` + `url` (el resto se ignora).
@@ -305,6 +309,7 @@ fn fetch_entry(
             name: stem.to_string(),
             version,
             urls,
+            devdocs: None,
         })),
         _ => Ok(None),
     }

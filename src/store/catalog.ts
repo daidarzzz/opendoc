@@ -53,6 +53,8 @@ export interface FeedOp {
 export interface RefreshNote {
   count: number;
   skipped: number;
+  /** Fuentes que no se pudieron descargar (texto del backend). */
+  partialError: string | null;
 }
 
 const idleOp: FeedOp = { busy: false, progress: null, error: null, errorKind: "", done: false, startedAt: null };
@@ -104,6 +106,9 @@ let listening: Promise<void> | null = null;
 /** La vista del catálogo está montada. */
 let viewMounted = false;
 let seq = 0;
+/** La descarga automática del primer arranque ya se intentó (una sola vez
+ *  por sesión: sin red no se reintenta en bucle). */
+let autoRefreshTried = false;
 // FASE 0: eventos de progreso recibidos durante la instalación en curso
 // (se reinicia en cada click; solo diagnóstico).
 let progressEvents = 0;
@@ -158,8 +163,39 @@ export const useCatalog = create<CatalogState>()((set, get) => ({
         repoInput: status.repo ?? "",
         loading: false,
       });
+      // Primer arranque: DevDocs es la fuente por defecto y no pide
+      // configuración, así que el catálogo vacío se descarga solo.
+      if (entries.length === 0 && !autoRefreshTried) {
+        autoRefreshTried = true;
+        void get().refresh();
+      }
     } catch (e) {
       if (mySeq !== seq) return;
+      // Sin caché todavía (primer arranque): no es un error, es el
+      // catálogo vacío; se descarga solo (DevDocs no pide configuración).
+      if (errorKindOf(e) === "catalog_missing") {
+        let status: CatalogStatus | null = null;
+        try {
+          status = await getCatalogStatus();
+        } catch {
+          // Sin estado: la vista se pinta con los valores por defecto.
+        }
+        if (mySeq !== seq) return;
+        set({
+          status,
+          entries: [],
+          installMap: {},
+          updatable: 0,
+          repoInput: status?.repo ?? "",
+          loading: false,
+          error: null,
+        });
+        if (!autoRefreshTried) {
+          autoRefreshTried = true;
+          void get().refresh();
+        }
+        return;
+      }
       set({ loading: false, error: e });
     }
   },
@@ -183,13 +219,17 @@ export const useCatalog = create<CatalogState>()((set, get) => ({
     try {
       const summary = await refreshCatalog();
       set({
-        refreshNote: { count: summary.count, skipped: summary.skipped },
+        refreshNote: {
+          count: summary.count,
+          skipped: summary.skipped,
+          partialError: summary.partial_error,
+        },
       });
       await get().load();
     } catch (e) {
       // La caché anterior se conserva: se muestra el error con los datos.
-      set({ error: e });
       await get().load();
+      set({ error: e });
     } finally {
       set({ refreshing: false });
     }

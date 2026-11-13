@@ -6,6 +6,7 @@
 //! iconos (`devicon`) son específicos de la app: usan red/caché local y
 //! tipos de Tauri.
 
+pub mod devdocs;
 pub mod devicon;
 pub mod install;
 

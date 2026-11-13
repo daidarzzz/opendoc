@@ -2649,8 +2649,8 @@ dependencies = [
 
 [[package]]
 name = "opendoc-core"
-version = "0.1.2"
-source = "git+https://github.com/daidarzzz/opendoc-core?tag=v0.1.2#419f78d343b99a4a4ffa303e1974ff8c701b1661"
+version = "0.2.0"
+source = "git+https://github.com/daidarzzz/opendoc-core?tag=v0.2.0#e3f1d34bb15846cb6b2fbfe2e965db87393c7584"
 dependencies = [
  "base64 0.22.1",
  "flate2",

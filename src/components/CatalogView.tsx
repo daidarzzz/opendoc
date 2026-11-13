@@ -64,7 +64,12 @@ export function CatalogView() {
   const docsets = useDocsets((s) => s.docsets);
   const { t, lang } = useT();
   const [editingRepo, setEditingRepo] = useState(false);
-  const showRepoEditor = editingRepo || !status?.repo || repoError !== null;
+  // DevDocs es la fuente por defecto: el editor de enlaces extra es opcional.
+  const showRepoEditor = editingRepo || repoError !== null;
+  const extraRepos = useMemo(
+    () => (status?.repo ?? "").split(/[\s,;]+/).filter((r) => r !== ""),
+    [status?.repo],
+  );
 
   // Progreso en vivo; se libera al desmontar (al volver al visor).
   // La carga la dispara `open()` del store; aquí solo el listener.
@@ -153,15 +158,25 @@ export function CatalogView() {
               </button>
             </div>
 
-            {/* Fuente (repo de feeds) */}
+            {/* Fuentes: DevDocs (siempre) + enlaces opcionales */}
             <div className="mt-5 text-[12.5px]">
               {!showRepoEditor ? (
                 <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-muted">
                   <span>{t("catalog.source")}</span>
-                  <span className="rounded-md bg-card-2 px-1.5 py-0.5 font-mono text-[11.5px] font-medium text-ink ring-1 ring-line">
-                    {status?.repo}
+                  <span className="rounded-md bg-accent/[0.12] px-1.5 py-0.5 text-[11.5px] font-semibold text-accent-text">
+                    {t("catalog.sourceDevDocs")}
                   </span>
-                  <span>· {t("catalog.updated", { date: formatDateTime(lang, status?.fetched_at ?? null) })}</span>
+                  {extraRepos.map((repo) => (
+                    <span
+                      key={repo}
+                      className="rounded-md bg-card-2 px-1.5 py-0.5 font-mono text-[11.5px] font-medium text-ink ring-1 ring-line"
+                    >
+                      {repo}
+                    </span>
+                  ))}
+                  {status?.fetched_at != null && (
+                    <span>· {t("catalog.updated", { date: formatDateTime(lang, status.fetched_at) })}</span>
+                  )}
                   {refreshNote && (
                     <span>· {t("catalog.refreshedMany", { count: refreshNote.count, skipped: refreshNote.skipped })}</span>
                   )}
@@ -169,24 +184,22 @@ export function CatalogView() {
                     onClick={() => setEditingRepo(true)}
                     className="ml-1 font-semibold text-accent-text hover:underline"
                   >
-                    {t("catalog.changeSource")}
+                    {extraRepos.length > 0 ? t("catalog.changeSource") : t("catalog.addSource")}
                   </button>
                 </p>
               ) : (
                 <div className="max-w-xl animate-fade-in rounded-2xl border border-accent/25 bg-accent/[0.05] p-4">
                   <div className="flex items-center justify-between">
                     <p className="text-[13.5px] font-semibold text-ink">{t("catalog.repoLabel")}</p>
-                    {status?.repo && (
-                      <button
-                        onClick={() => setEditingRepo(false)}
-                        aria-label={t("common.close")}
-                        className="icon-btn p-1"
-                      >
-                        <CloseIcon size={13} />
-                      </button>
-                    )}
+                    <button
+                      onClick={() => setEditingRepo(false)}
+                      aria-label={t("common.close")}
+                      className="icon-btn p-1"
+                    >
+                      <CloseIcon size={13} />
+                    </button>
                   </div>
-                  {!status?.repo && <p className="mt-1 text-[13px] text-muted">{t("catalog.setupHelp")}</p>}
+                  <p className="mt-1 text-[13px] text-muted">{t("catalog.setupHelp")}</p>
                   <form
                     className="mt-2 flex gap-2"
                     onSubmit={(e) => {
@@ -207,6 +220,11 @@ export function CatalogView() {
                   </form>
                   <ErrorDetails error={repoError} />
                 </div>
+              )}
+              {refreshNote?.partialError && (
+                <p className="mt-2 max-w-xl text-[12px] text-amber-800 dark:text-amber-300">
+                  {t("catalog.partialFail", { message: refreshNote.partialError })}
+                </p>
               )}
             </div>
           </div>

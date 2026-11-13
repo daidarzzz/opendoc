@@ -4,7 +4,7 @@
 // Los <img> llevan onError por si el recurso llegara corrupto.
 import { memo, useState } from "react";
 import { useT } from "../hooks/useT";
-import { langIcon, monogram } from "../lib/langIcons";
+import { badge, langIcon, monogram } from "../lib/langIcons";
 
 interface DocsetIconProps {
   icon: string | null;
@@ -45,7 +45,7 @@ export const DocsetIcon = memo(function DocsetIcon({
       />
     );
   }
-  const mono = monogram(name);
+  const mono = badge(hint, name) ?? monogram(name);
   const letters = size < 22 ? mono.text.charAt(0) : mono.text;
   return (
     <span

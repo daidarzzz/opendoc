@@ -16,6 +16,7 @@ import {
   statusBadge,
   versionLine,
   formatProgress,
+  formatBytes,
 } from "../lib/catalogUi";
 import { t as translate, tn, type I18nKey } from "../lib/i18n";
 import type { RowAction } from "../lib/catalogUi";
@@ -72,7 +73,12 @@ export const CatalogRow = memo(function CatalogRow({
   const action = rowAction(status);
   const badge = statusBadge(status);
   const lines = versionLine(status, lang) || translate(lang, "catalog.versionsAvailable", { version: entry.version });
-  const mirrors = tn(lang, entry.urls.length, "catalog.sourcesOne", "catalog.sourcesMany", { n: entry.urls.length });
+  const dbSize = entry.devdocs?.db_size;
+  const mirrors = entry.devdocs
+    ? dbSize
+      ? translate(lang, "catalog.sourceDevDocsSize", { size: formatBytes(lang, dbSize) })
+      : translate(lang, "catalog.sourceDevDocs")
+    : tn(lang, entry.urls.length, "catalog.sourcesOne", "catalog.sourcesMany", { n: entry.urls.length });
   const pct = op.progress ? progressPercent(op.progress) : null;
   const title = displayName(entry.name);
   const installed = status?.installed === true;

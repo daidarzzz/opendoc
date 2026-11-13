@@ -47,9 +47,9 @@ Aunque Zeal es una herramienta consolidada en la comunidad, su interfaz en C++/Q
 - **Protección de enlaces externos:** Los hipervínculos externos (`http://`, `https://`, `mailto:`) se abren automáticamente en el navegador web del sistema operativo en lugar de navegar dentro de la ventana de la aplicación.
 
 ### Gestión de Docsets y Catálogo
-- **Catálogo de feeds configurable:** Configura y actualiza repositorios de feeds personalizados (como `zealdocs/feeds` o feeds XML compatibles).
+- **Catálogo con DevDocs por defecto:** El catálogo incluye [DevDocs](https://devdocs.io/) (844 documentaciones) y no requiere configuración: se descarga solo en el primer arranque, y cada documentación se convierte a un docset normal al instalarla (búsqueda sin conexión, navegación por símbolos y pestañas funcionan igual que con cualquier docset; las actualizaciones se detectan solas). Opcionalmente, añade tus propios repositorios de feeds compatibles con Dash/Zeal (como `zealdocs/feeds`) como fuentes extra.
 - **Explorador del catálogo:** Cuadrícula de tarjetas con los instalados primero, búsqueda en vivo, filtros por estado con recuento (todos / instalados / actualizables / no instalados), progreso de instalación y actualizar o desinstalar con un clic. Puedes instalar varios docsets a la vez: se descargan dos a la vez y el resto espera su turno en la pestaña **En cola**, donde cada tarjeta muestra su puesto y se puede quitar de la cola. Disponible incluso antes de instalar ningún docset.
-- **Iconos de lenguaje en todas partes:** Más de 120 iconos de lenguajes y frameworks ([Devicon](https://devicon.dev/), MIT) vienen con la app, así que el catálogo, las pestañas y la barra lateral muestran un icono reconocible sin conexión, incluso antes de instalar. Los docsets sin icono conocido muestran un monograma de color.
+- **Iconos de lenguaje en todas partes:** Más de 170 iconos de lenguajes y frameworks ([Devicon](https://devicon.dev/), MIT) vienen con la app, así que el catálogo, las pestañas y la barra lateral muestran un icono reconocible sin conexión, incluso antes de instalar. Los lenguajes y herramientas sin Devicon tienen su propia insignia de color, así que toda entrada de DevDocs muestra un icono reconocible.
 - **Instalación con un clic:** Descarga paquetes `.tgz` con reporte del progreso real en bytes y archivos (`docset-progress`), valida la integridad del paquete y realiza sustituciones atómicas de carpetas.
 - **Comprobación de actualizaciones y desinstalación:** Detección de versiones disponibles mediante comparación numérica estricta, con desinstalación segura de docsets desde la carpeta configurada.
 - **Gestión de mirrors y caché de velocidad:** Conexión alternativa a mirrors si uno falla, memorizando el host más rápido (`fast_mirror`) para optimizar descargas posteriores.
@@ -107,7 +107,7 @@ npm run tauri dev
 
 OpenDoc **no redistribuye docsets propietarios**.
 - Si ya utilizas Zeal o Dash, puedes abrir **Ajustes** y apuntar a tu carpeta de docsets existente.
-- Si comienzas desde cero, puedes conservar la carpeta predeterminada (`<app_data>/docsets`) y abrir la pestaña **Catálogo** para descargar docsets desde feeds comunitarios.
+- Si comienzas desde cero, puedes conservar la carpeta predeterminada (`<app_data>/docsets`) y abrir la pestaña **Catálogo** para descargar documentación desde DevDocs o feeds comunitarios.
 - Cualquier carpeta que termine en `.docset` situada en tu directorio configurado será reconocida al arrancar o al guardar cambios.
 
 ### 3. Compilar el Instalador

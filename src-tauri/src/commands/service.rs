@@ -9,7 +9,8 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 use crate::browse::{KindInfo, NavEntry, DEFAULT_BROWSE_LIMIT, MAX_BROWSE_LIMIT};
-use crate::catalog::feed::{fetch_catalog, http_client, normalize_repo, FeedEntry};
+use crate::catalog::devdocs::fetch_devdocs_catalog;
+use crate::catalog::feed::{fetch_catalog, http_client, normalize_repo, FeedEntry, RepoRef};
 use crate::catalog::{catalog_file, load_catalog, now_epoch, save_catalog, Catalog};
 use crate::docset::devicon::icon_for_folder;
 use crate::docset::folder_stem;
@@ -354,7 +355,8 @@ fn find_docset<'a>(docsets: &'a [Docset], docset_id: &str) -> Result<&'a Docset,
 /// Estado del catálogo para la UI (repo, última descarga, entradas).
 #[derive(Debug, Clone, Serialize)]
 pub struct CatalogStatus {
-    /// Repo configurado (`owner/name`).
+    /// Repos de feeds opcionales (`owner/name`, separados por coma). DevDocs
+    /// siempre está incluido y no aparece aquí.
     pub repo: Option<String>,
     /// Epoch de la última descarga.
     pub fetched_at: Option<u64>,
@@ -375,6 +377,9 @@ pub struct CatalogSummary {
     pub skipped: usize,
     /// Epoch de la descarga.
     pub fetched_at: u64,
+    /// Fuentes que no se pudieron descargar (la caché anterior de esas
+    /// fuentes se conserva). `None` si todo fue bien.
+    pub partial_error: Option<String>,
 }
 
 /// Lee el estado sin red (caché local; offline funciona).
@@ -401,27 +406,148 @@ pub fn list_catalog_entries(data_dir: &Path, query: Option<&str>) -> Vec<FeedEnt
     entries
 }
 
+/// Máximo de repos de feeds opcionales (sanidad: cada uno cuesta cientos
+/// de peticiones a GitHub).
+pub const MAX_EXTRA_REPOS: usize = 5;
+
+/// Separa una lista de repos (`a/b, c/d` o separados por espacios/`;`) y
+/// valida cada uno. Vacío → ninguno (DevDocs siempre está).
+pub fn parse_repos(raw: Option<&str>) -> Result<Vec<RepoRef>, ApiError> {
+    let mut repos: Vec<RepoRef> = Vec::new();
+    for part in raw
+        .unwrap_or("")
+        .split(|c: char| c == ',' || c == ';' || c.is_whitespace())
+        .filter(|p| !p.is_empty())
+    {
+        let repo = normalize_repo(part).map_err(|e| ApiError::FeedFailed {
+            message: e.to_string(),
+        })?;
+        if !repos.contains(&repo) {
+            repos.push(repo);
+        }
+    }
+    if repos.len() > MAX_EXTRA_REPOS {
+        return Err(ApiError::FeedFailed {
+            message: format!("too many repositories (max {MAX_EXTRA_REPOS})"),
+        });
+    }
+    Ok(repos)
+}
+
+/// Forma canónica para guardar en ajustes (`a/b,c/d`; vacío → `None`).
+pub fn repos_setting(raw: &str) -> Result<Option<String>, ApiError> {
+    let repos = parse_repos(Some(raw))?;
+    Ok((!repos.is_empty()).then(|| {
+        repos
+            .iter()
+            .map(RepoRef::path)
+            .collect::<Vec<_>>()
+            .join(",")
+    }))
+}
+
+/// Une las fuentes (DevDocs primero; ante un id repetido gana la primera)
+/// y ordena por nombre.
+fn merge_entries(groups: Vec<Vec<FeedEntry>>) -> Vec<FeedEntry> {
+    let mut seen = std::collections::HashSet::new();
+    let mut entries: Vec<FeedEntry> = groups
+        .into_iter()
+        .flatten()
+        .filter(|e| seen.insert(e.id.to_lowercase()))
+        .collect();
+    entries.sort_by(|a, b| {
+        a.name
+            .to_lowercase()
+            .cmp(&b.name.to_lowercase())
+            .then_with(|| a.name.cmp(&b.name))
+    });
+    entries
+}
+
 /// Descarga y guarda el catálogo (lento: solo desde `spawn_blocking`).
-/// No toca ajustes: el comando actualiza `catalog_fetched_at` al guardar.
-pub fn refresh_catalog_data(data_dir: &Path, repo_raw: &str) -> Result<(Catalog, usize), ApiError> {
-    let repo = normalize_repo(repo_raw).map_err(|e| ApiError::FeedFailed {
-        message: e.to_string(),
-    })?;
+/// DevDocs se descarga siempre; `repos_raw` añade feeds estilo Kapeli
+/// opcionales. Si una fuente falla se conservan sus entradas anteriores
+/// (`partial_error` lo cuenta); si fallan todas es un error y la caché
+/// no se toca. No toca ajustes: el comando actualiza `catalog_fetched_at`.
+pub fn refresh_catalog_data(
+    data_dir: &Path,
+    repos_raw: Option<&str>,
+) -> Result<(Catalog, usize, Option<String>), ApiError> {
+    // Valida antes de usar la red.
+    let repos = parse_repos(repos_raw)?;
     let client = http_client().map_err(|e| ApiError::FeedFailed {
         message: e.to_string(),
     })?;
-    let (entries, skipped) = fetch_catalog(&client, &repo).map_err(|e| ApiError::FeedFailed {
-        message: e.to_string(),
-    })?;
+    let previous = load_catalog(&catalog_file(data_dir)).map(|c| c.entries);
+    let mut groups: Vec<Vec<FeedEntry>> = Vec::new();
+    let mut skipped = 0_usize;
+    let mut errors: Vec<String> = Vec::new();
+    let mut succeeded = 0_usize;
+
+    match fetch_devdocs_catalog(&client) {
+        Ok((entries, sk)) => {
+            groups.push(entries);
+            skipped += sk;
+            succeeded += 1;
+        }
+        Err(e) => {
+            errors.push(format!("DevDocs: {e}"));
+            groups.push(
+                previous
+                    .iter()
+                    .flatten()
+                    .filter(|e| e.devdocs.is_some())
+                    .cloned()
+                    .collect(),
+            );
+        }
+    }
+    let mut feeds_failed = false;
+    let mut feeds: Vec<FeedEntry> = Vec::new();
+    for repo in &repos {
+        match fetch_catalog(&client, repo) {
+            Ok((entries, sk)) => {
+                feeds.extend(entries);
+                skipped += sk;
+                succeeded += 1;
+            }
+            Err(e) => {
+                feeds_failed = true;
+                errors.push(format!("{}: {e}", repo.path()));
+            }
+        }
+    }
+    if feeds_failed {
+        // No se sabe de qué repo era cada entrada vieja: se conservan las
+        // que no volvieron a llegar.
+        feeds.extend(
+            previous
+                .iter()
+                .flatten()
+                .filter(|e| e.devdocs.is_none())
+                .cloned(),
+        );
+    }
+    groups.push(feeds);
+    if succeeded == 0 {
+        return Err(ApiError::FeedFailed {
+            message: errors.join("; "),
+        });
+    }
     let catalog = Catalog {
-        repo: repo.path(),
+        repo: repos
+            .iter()
+            .map(RepoRef::path)
+            .collect::<Vec<_>>()
+            .join(","),
         fetched_at: now_epoch(),
-        entries,
+        entries: merge_entries(groups),
     };
     save_catalog(&catalog_file(data_dir), &catalog).map_err(|e| ApiError::FeedFailed {
         message: e.to_string(),
     })?;
-    Ok((catalog, skipped))
+    let partial = (!errors.is_empty()).then(|| errors.join("; "));
+    Ok((catalog, skipped, partial))
 }
 
 /// Estado de un feed frente a los docsets instalados (F2, offline).
@@ -506,7 +632,10 @@ pub fn install_status_for(
                 docset_id: Some(docset.id.clone()),
                 installed_version: docset.version.clone(),
                 available_version: entry.version.clone(),
-                update_available: update_available(docset.version.as_deref(), &entry.version),
+                update_available: match &entry.devdocs {
+                    Some(meta) => devdocs_update_available(&docset.root_path, meta.mtime),
+                    None => update_available(docset.version.as_deref(), &entry.version),
+                },
                 ambiguous: false,
                 ambiguous_ids: Vec::new(),
             },
@@ -524,6 +653,14 @@ pub fn install_status_for(
         });
     }
     Ok(statuses)
+}
+
+/// ¿Hay una documentación de DevDocs más reciente que la instalada? Compara
+/// la fecha de actualización (`mtime`) guardada al convertir con la del
+/// catálogo; `None` si alguna falta.
+fn devdocs_update_available(root: &Path, available_mtime: Option<u64>) -> Option<bool> {
+    let installed = opendoc_core::devdocs::installed_mtime(root)?;
+    Some(available_mtime? > installed)
 }
 
 /// Entrada del catálogo para instalar (caché local, sin red).
@@ -1029,12 +1166,14 @@ mod tests {
                     name: "CSS".to_string(),
                     version: "1".to_string(),
                     urls: vec!["https://a.example/CSS.tgz".to_string()],
+                    devdocs: None,
                 },
                 FeedEntry {
                     id: "Python_3".to_string(),
                     name: "Python_3".to_string(),
                     version: "2".to_string(),
                     urls: vec!["https://a.example/Python.tgz".to_string()],
+                    devdocs: None,
                 },
             ],
         };
@@ -1074,10 +1213,61 @@ mod tests {
     }
 
     #[test]
+    fn repo_lists_are_parsed_deduped_and_capped() {
+        assert!(parse_repos(None).expect("none").is_empty());
+        assert!(parse_repos(Some("  ")).expect("blank").is_empty());
+        let repos = parse_repos(Some("a/b, https://github.com/c/d  a/b;e/f")).expect("list");
+        let paths: Vec<String> = repos.iter().map(RepoRef::path).collect();
+        assert_eq!(paths, ["a/b", "c/d", "e/f"]);
+        assert_eq!(
+            repos_setting("a/b c/d").expect("setting").as_deref(),
+            Some("a/b,c/d")
+        );
+        assert_eq!(repos_setting("").expect("clear"), None);
+        assert!(parse_repos(Some("a/b,solo-uno")).is_err());
+        assert!(parse_repos(Some("a/1 a/2 a/3 a/4 a/5 a/6")).is_err());
+    }
+
+    #[test]
+    fn merge_keeps_first_source_and_sorts() {
+        let e = |id: &str, name: &str| FeedEntry {
+            id: id.into(),
+            name: name.into(),
+            version: "1".into(),
+            urls: vec!["https://x/a.tgz".into()],
+            devdocs: None,
+        };
+        let merged = merge_entries(vec![
+            vec![e("devdocs-css", "CSS"), e("devdocs-go", "Go")],
+            vec![e("Swift", "Swift"), e("DEVDOCS-CSS", "dup")],
+        ]);
+        let ids: Vec<&str> = merged.iter().map(|x| x.id.as_str()).collect();
+        assert_eq!(ids, ["devdocs-css", "devdocs-go", "Swift"]);
+    }
+
+    #[test]
+    fn devdocs_update_compares_mtime() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let root = dir.path().join("devdocs-x.docset");
+        std::fs::create_dir_all(root.join("Contents")).expect("dirs");
+        assert_eq!(devdocs_update_available(&root, Some(5)), None, "sin plist");
+        std::fs::write(
+            root.join("Contents/Info.plist"),
+            r#"<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict>
+<key>OpenDocSource</key><string>devdocs</string>
+<key>OpenDocDevDocsMtime</key><integer>100</integer></dict></plist>"#,
+        )
+        .expect("plist");
+        assert_eq!(devdocs_update_available(&root, Some(100)), Some(false));
+        assert_eq!(devdocs_update_available(&root, Some(101)), Some(true));
+        assert_eq!(devdocs_update_available(&root, None), None);
+    }
+
+    #[test]
     fn refresh_without_network_fails_typed() {
         let dir = tempfile::tempdir().expect("tempdir");
         // Repo con formato imposible: falla antes de tocar la red.
-        let err = refresh_catalog_data(dir.path(), "///").expect_err("repo inválido");
+        let err = refresh_catalog_data(dir.path(), Some("///")).expect_err("repo inválido");
         assert!(matches!(err, ApiError::FeedFailed { .. }));
         // Sin caché previa no se crea nada en el fallo.
         assert!(!crate::catalog::catalog_file(dir.path()).exists());

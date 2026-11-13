@@ -47,9 +47,9 @@ While Zeal is a proven community tool, its Qt/C++ interface feels dated and offe
 - **External Link Protection:** External hyperlinks (`http://`, `https://`, `mailto:`) automatically open in your operating system's default browser rather than navigating the viewer window.
 
 ### Docset Management & Catalog
-- **Configurable Feeds Catalog:** Add and refresh custom feed repositories (such as `zealdocs/feeds` or compatible XML feeds).
+- **DevDocs Catalog by Default:** The catalog ships with [DevDocs](https://devdocs.io/) (844 documentations) and needs no setup: it downloads itself on first launch, and each documentation is converted to a regular docset when installed (fast offline search, symbol browsing and tabs work exactly as with any other docset; updates are detected automatically). Optionally, add your own Dash/Zeal-compatible feed repositories (such as `zealdocs/feeds`) as extra sources.
 - **Catalog Browser:** A card grid with installed docsets first, live search, status filters with counts (all / installed / updatable / not installed), install progress and one-click update or uninstall. Install as many docsets as you like at once: two download at a time and the rest wait their turn in an **In queue** tab, where each card shows its place and can be removed from the queue. Available even before any docset is installed.
-- **Language Icons Everywhere:** Over 120 language and framework icons ([Devicon](https://devicon.dev/), MIT) ship with the app, so catalog entries, tabs and the sidebar show a recognizable icon offline, even before installing. Docsets without a known icon get a colored monogram.
+- **Language Icons Everywhere:** Over 170 language and framework icons ([Devicon](https://devicon.dev/), MIT) ship with the app, so catalog entries, tabs and the sidebar show a recognizable icon offline, even before installing. Languages and tools without a Devicon get their own colored badge, so every DevDocs entry has a recognizable icon.
 - **One-Click Installation:** Downloads `.tgz` archives with real-time byte and file progress notifications (`docset-progress`), validates archive integrity, and performs atomic folder replacements.
 - **Update Checks & Uninstallation:** Tristate version comparisons identify available updates for installed packages, with safe, validated uninstallation from the configured folder.
 - **Mirror Fallbacks & Speed Caching:** Automatically retries alternative download mirrors if a host fails, remembering the fastest responding mirror (`fast_mirror`) for future requests.
@@ -107,7 +107,7 @@ npm run tauri dev
 
 OpenDoc **does not ship with proprietary docsets**.
 - If you already use Zeal or Dash, you can open **Settings** and set your docsets folder to your existing directory.
-- Alternatively, leave the default directory (`<app_data>/docsets`) and open the **Catalog** tab to download docsets from community feeds.
+- Alternatively, leave the default directory (`<app_data>/docsets`) and open the **Catalog** tab to download documentation from DevDocs or community feeds.
 - Any standard folder ending in `.docset` placed in your configured directory will be automatically detected on launch or upon saving changes.
 
 ### 3. Building Installers
