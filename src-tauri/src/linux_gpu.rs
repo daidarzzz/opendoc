@@ -1,34 +1,61 @@
 //! Ajustes de WebKitGTK para el render en Linux.
-//!
-//! Con el driver propietario de NVIDIA en Wayland, el renderizador DMA-BUF
-//! de WebKitGTK suele caer a un camino muy lento (o dejar la ventana en
-//! blanco): la interfaz va a tirones. Desactivarlo con
-//! `WEBKIT_DISABLE_DMABUF_RENDERER=1` mantiene la aceleración por GPU por
-//! la vía clásica. Solo se aplica en esa combinación y nunca pisa un valor
-//! que el usuario ya haya puesto.
 
-/// Variable de WebKitGTK que desactiva el renderizador DMA-BUF.
-pub const DMABUF_VAR: &str = "WEBKIT_DISABLE_DMABUF_RENDERER";
+#[cfg(target_os = "linux")]
+const DMABUF_VAR: &str = "WEBKIT_DISABLE_DMABUF_RENDERER";
+#[cfg(target_os = "linux")]
+const EXPLICIT_SYNC_VAR: &str = "__NV_DISABLE_EXPLICIT_SYNC";
 
-/// Decide si hay que desactivar el renderizador DMA-BUF (lógica pura).
-pub fn needs_dmabuf_workaround(
-    nvidia_proprietary: bool,
-    wayland_display: Option<&str>,
-    user_value: Option<&str>,
-) -> bool {
-    nvidia_proprietary && wayland_display.is_some_and(|d| !d.is_empty()) && user_value.is_none()
+#[cfg(any(target_os = "linux", test))]
+fn uses_wayland(gdk_backend: Option<&str>, wayland_display: Option<&str>) -> bool {
+    if !wayland_display.is_some_and(|display| !display.is_empty()) {
+        return false;
+    }
+
+    // GDK prueba los backends en orden. Un '*' deja que elija el backend.
+    gdk_backend.is_none_or(|backends| {
+        backends
+            .split(',')
+            .map(str::trim)
+            .find(|backend| matches!(*backend, "wayland" | "x11" | "broadway" | "*"))
+            .is_some_and(|backend| matches!(backend, "wayland" | "*"))
+    })
 }
 
-/// Aplica el ajuste al arrancar, antes de crear cualquier webview (el
-/// proceso aún tiene un solo hilo). No hace nada fuera de Linux.
+#[cfg(any(target_os = "linux", test))]
+fn should_disable_explicit_sync(
+    nvidia: bool,
+    gdk_backend: Option<&str>,
+    wayland_display: Option<&str>,
+    has_graphics_override: bool,
+) -> bool {
+    nvidia && !has_graphics_override && uses_wayland(gdk_backend, wayland_display)
+}
+
+/// Aplica el ajuste antes de iniciar GTK y sus procesos auxiliares.
 pub fn apply_webkit_workarounds() {
     #[cfg(target_os = "linux")]
     {
         let nvidia = std::path::Path::new("/proc/driver/nvidia/version").exists();
+        let backend = std::env::var("GDK_BACKEND").ok();
         let wayland = std::env::var("WAYLAND_DISPLAY").ok();
-        let user = std::env::var(DMABUF_VAR).ok();
-        if needs_dmabuf_workaround(nvidia, wayland.as_deref(), user.as_deref()) {
-            std::env::set_var(DMABUF_VAR, "1");
+        let has_graphics_override = [
+            DMABUF_VAR,
+            EXPLICIT_SYNC_VAR,
+            "WEBKIT_DISABLE_COMPOSITING_MODE",
+            "WEBKIT_DMABUF_RENDERER_FORCE_SHM",
+        ]
+        .iter()
+        .any(|name| std::env::var_os(name).is_some());
+
+        if should_disable_explicit_sync(
+            nvidia,
+            backend.as_deref(),
+            wayland.as_deref(),
+            has_graphics_override,
+        ) {
+            // Mantiene DMA-BUF y evita el fallo de sincronización explícita
+            // de NVIDIA al presentar el primer frame en Wayland.
+            std::env::set_var(EXPLICIT_SYNC_VAR, "1");
         }
     }
 }
@@ -38,16 +65,42 @@ mod tests {
     use super::*;
 
     #[test]
-    fn solo_con_nvidia_en_wayland() {
-        assert!(needs_dmabuf_workaround(true, Some("wayland-1"), None));
-        assert!(!needs_dmabuf_workaround(false, Some("wayland-1"), None));
-        assert!(!needs_dmabuf_workaround(true, None, None));
-        assert!(!needs_dmabuf_workaround(true, Some(""), None));
+    fn nvidia_wayland_keeps_dmabuf() {
+        assert!(should_disable_explicit_sync(
+            true,
+            None,
+            Some("wayland-1"),
+            false
+        ));
+        assert!(should_disable_explicit_sync(
+            true,
+            Some("wayland,x11"),
+            Some("wayland-1"),
+            false
+        ));
     }
 
     #[test]
-    fn respeta_el_valor_del_usuario() {
-        assert!(!needs_dmabuf_workaround(true, Some("wayland-1"), Some("0")));
-        assert!(!needs_dmabuf_workaround(true, Some("wayland-1"), Some("1")));
+    fn leaves_other_environments_and_graphics_overrides_alone() {
+        assert!(!should_disable_explicit_sync(
+            false,
+            None,
+            Some("wayland-1"),
+            false
+        ));
+        assert!(!should_disable_explicit_sync(true, None, None, false));
+        assert!(!should_disable_explicit_sync(true, None, Some(""), false));
+        assert!(!should_disable_explicit_sync(
+            true,
+            Some("x11,wayland"),
+            Some("wayland-1"),
+            false
+        ));
+        assert!(!should_disable_explicit_sync(
+            true,
+            None,
+            Some("wayland-1"),
+            true
+        ));
     }
 }
