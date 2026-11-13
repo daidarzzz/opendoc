@@ -1,13 +1,8 @@
-//! Catálogo de DevDocs: la fuente por defecto de OpenDoc.
+//! Maps the DevDocs index to the common catalog model.
 //!
-//! `https://devdocs.io/docs.json` lista todas las documentaciones con su
-//! versión, fecha de actualización, tamaño y atribución. Cada una se ofrece
-//! como una [`FeedEntry`] con `devdocs: Some(..)`; al instalarla, la app
-//! descarga `index.json` + `db.json` y los convierte a un docset estándar
-//! (ver `opendoc_core::devdocs`).
-//!
-//! Es una sola petición (sin límite de la API de GitHub), por eso se
-//! refresca siempre y no necesita configuración.
+//! The source is a single JSON document. Entries retain their DevDocs metadata
+//! so installation can fetch the matching index and page database. The
+//! `devdocs-` prefix keeps these feed IDs distinct from XML feed IDs.
 
 use std::io::Read;
 

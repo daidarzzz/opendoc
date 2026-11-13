@@ -1,11 +1,7 @@
-// Visor de documentación (T8 + pestañas V2-3): el HTML del docset aislado
-// en iframes (sandbox="allow-scripts", origen opaco). Solo la pestaña
-// activa monta sus 3 iframes: el visible, el que guarda la página vecina del
-// historial y uno libre para cargar o precargar la siguiente.
-// El hijo reporta navegaciones/anclas/scroll/teclas por postMessage
-// (inyectado por el protocolo); aquí se valida todo: fuente = el iframe
-// visible, forma exacta, URLs opendoc de docsets cargados, título ≤200 sin
-// controles, scrollY finito en rango y teclas a ≤10/s.
+// Renders the active documentation tab in sandboxed frames with opaque origins.
+// The three slots hold the visible page, a history neighbor and a pending or
+// prefetched page. Frame messages are untrusted. Check the sending window,
+// the active slot where required, and the payload before updating app state.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ErrorDetails } from "./ErrorDetails";
 import { Welcome } from "./Welcome";
@@ -132,8 +128,8 @@ export function Viewer() {
   const { docsets, loading, dirMissing, savedDir, choose, pending, extract, extractingIds } = useDocsets();
   const docsetsError = useDocsets((s) => s.error);
   const { t } = useT();
-  // URLs backend canónicas (`opendoc://…`) por slot; el `src` real se
-  // calcula al renderizar (en Windows es http://opendoc.localhost/…).
+  // Store canonical URLs per slot. Convert to the platform-specific iframe
+  // source at render time.
   const [frameUrls, setFrameUrls] = useState<(string | null)[]>(() => emptySlots<string | null>(null));
   const [frameVersions, setFrameVersions] = useState<number[]>(() => emptySlots(0));
   const [frontFrame, setFrontFrame] = useState<number | null>(null);
@@ -142,8 +138,7 @@ export function Viewer() {
   const tocActive = useToc((s) => (frontFrame === null ? 0 : (s.active[frontFrame] ?? 0)));
   const [transitioning, setTransitioning] = useState(false);
   const frames = useRef<(HTMLIFrameElement | null)[]>(emptySlots<HTMLIFrameElement | null>(null));
-  /** Página que muestra de verdad cada slot (la reporta el propio iframe:
-   *  incluye navegaciones que el docset hace por su cuenta). */
+  /** Document actually displayed in each slot, including iframe-initiated navigation. */
   const loadedFrameUrls = useRef<(string | null)[]>(emptySlots<string | null>(null));
   const frameVersionsRef = useRef<number[]>(emptySlots(0));
   const lastShown = useRef<number[]>(emptySlots(0));
@@ -252,15 +247,14 @@ export function Viewer() {
     }
   }, []);
 
-  // Carga en el iframe oculto. La página actual sigue visible hasta que la
-  // nueva termine de cargar, evitando el destello blanco durante la navegación.
+  // Invalidate retained documents when the library changes. A reinstall can
+  // replace a document while preserving its URL.
   useEffect(() => {
-    // Un docset puede haberse actualizado en disco con las mismas URLs.
     loadedFrameUrls.current = emptySlots<string | null>(null);
     preloadedFrame.current = null;
   }, [docsets]);
 
-  // Monta `url` en el slot `index` (iframe nuevo: key con versión).
+  // Remount the slot with a new version so old load events can be ignored.
   const loadIntoSlot = useCallback((index: number, url: string): { index: number; url: string; version: number } => {
     const versions = [...frameVersionsRef.current];
     versions[index] += 1;
@@ -560,8 +554,8 @@ export function Viewer() {
     useFind.getState().close();
   }, [activeId]);
 
-  // Solo promover la carga que sigue siendo la solicitada; un destino lento
-  // sustituido por otra navegación no debe robar el visor al destino nuevo.
+  // Promote only the currently requested load. A slow, superseded request
+  // must never take over the visible slot.
   const onIframeLoad = (index: number, loadedUrl: string | null, version: number): void => {
     const pending = pendingFrame.current;
     if (!isPendingFrameLoad(pending, index, loadedUrl, version)) {

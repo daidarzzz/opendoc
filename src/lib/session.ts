@@ -1,10 +1,6 @@
-// Sesión de pestañas: forma neutra, recorte y reencuentro (puro, Vitest).
-// La forma neutra es `docsetId` + ruta relativa a Documents/ con ancla:
-// nada de `opendoc://` ni `http://opendoc.localhost` en disco (la URL del
-// iframe se reconstruye al restaurar). Los validadores de título/scroll
-// se reutilizan de iframeMessages (no se duplican); la forma de id/ruta
-// espeja las reglas del backend (session::, que a su vez espeja el
-// protocolo: sin `..`, sin absolutas, sin `C:`, con `%XX` decodificado).
+// Converts between runtime tabs and the portable session format.
+// Stored paths are relative to each docset's Documents directory and may
+// include a fragment. Keep path validation aligned with the Rust session parser.
 import {
   MAX_NAV_URL_LEN,
   sanitizeScrollY,

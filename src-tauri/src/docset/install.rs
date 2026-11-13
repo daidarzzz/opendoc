@@ -1,24 +1,13 @@
-//! Instalación de docsets desde el catálogo (F2).
+//! Downloads and installs catalog entries distributed as classic docset archives.
 //!
-//! - Solo `.tgz` clásico (con `Contents/` dentro): sin dependencias nuevas.
-//! - La validación del tar se reutiliza de `tarix.rs` (`unpack_validated`)
-//!   sin debilitarla: raíz única, sin escapes, sin enlaces, topes por
-//!   bytes reales.
-//! - Flujo seguro: descarga a `.part` → extrae a `.tmp-install-*` → valida
-//!   layout + índice → reemplazo atómico (`final→old`, `tmp→final`). Un
-//!   fallo nunca deja una instalación parcial como válida ni destruye la
-//!   anterior (se restaura el `.old`).
-//! - El progreso se informa por callback (`ProgressReport`); el comando
-//!   Tauri lo reenvía como evento `docset-progress`. Sin porcentajes
-//!   inventados: bytes reales en descarga, conteos en extracción.
-//! - Matching estricto feed ↔ instalado: solo el nombre de la carpeta
-//!   (sin `.docset`, insensible a mayúsculas). El slug/id NO se usa para
-//!   no asociar docsets distintos (p. ej. feed `C` con carpeta
-//!   `C++.docset`). Si varias carpetas coinciden, se informa ambigüedad
-//!   en vez de elegir una.
-//! - Versiones: solo se comparan versiones numéricas punteadas
-//!   (`1.2.10` > `1.2.3`); cualquier otra cosa no es comparable con
-//!   seguridad y da `None` (el estado lo expone como `null`).
+//! A partial download and a staging directory keep incomplete packages outside
+//! the installed library. The archive and its index are validated before the
+//! replacement step, which uses an `.old` directory for recovery.
+//!
+//! Feed matching uses the installed folder name without the `.docset` suffix,
+//! compared case-insensitively. Ambiguous matches are reported to the caller.
+//! Only dotted numeric versions can be ordered reliably. Progress callbacks
+//! report actual bytes or file counts as available.
 
 use std::collections::HashSet;
 use std::io::{Read, Write};

@@ -1,16 +1,8 @@
-//! Icono de la app en ejecución según el acento.
+//! Applies the selected accent to the running application's icon.
 //!
-//! - Los PNG (`src-tauri/gen-icons/accent-*.png` 512px y `accent-*@2x.png` 1024px,
-//!   variante "box") los genera `scripts/gen-accent-icons.*` desde el SVG original;
-//!   los del bundle (`src-tauri/icons/`) no se tocan y la variante roja coincide con
-//!   ellos (mismo SVG de origen).
-//! - Windows/Linux: `Window::set_icon` (ventana y barra de tareas). macOS:
-//!   esa API no está soportada y el icono va al Dock con un `NSImage` multi-resolución
-//!   construido a partir de los PNG 1x (512px) y 2x (1024px).
-//! - Límite: solo cambia el icono en ejecución. El del ejecutable,
-//!   instalador, `.app` en Finder y accesos directos sigue siendo el rojo
-//!   del bundle. Si el Dock vuelve al original al cerrar, es esperado.
-//! - Todo best-effort y sin `unwrap()`: si algo falla, queda el icono del bundle.
+//! Windows and Linux set the window icon. macOS supplies the Dock with a
+//! multi-resolution image. The generated PNGs are embedded in the binary,
+//! and the installer and launcher continue to use the bundled icon.
 
 use crate::settings::Accent;
 

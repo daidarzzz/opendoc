@@ -1,3 +1,3 @@
-//! Profiling FASE 0: re-export del núcleo (`opendoc_core::profile`).
+//! Re-exports the shared diagnostics controlled by `OPENDOC_PROFILE`.
 
 pub use opendoc_core::profile::*;

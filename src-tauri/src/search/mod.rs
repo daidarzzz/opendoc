@@ -1,7 +1,6 @@
-//! Búsqueda en memoria (`search/`): re-export del núcleo compartido
-//! (`opendoc_core::search`).
+//! Re-exports the shared in-memory search index and query engine.
 //!
-//! La búsqueda interactiva se hace en `opendoc-core`, no con `LIKE` en SQL
-//! (SPEC §4.2).
+//! See the search README in this directory for index ownership and the
+//! lifecycle of compressed docsets.
 
 pub use opendoc_core::search::*;

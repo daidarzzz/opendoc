@@ -1,11 +1,8 @@
-//! Feeds de docsets estilo Kapeli (F1): tipos, parse XML y descarga.
+//! Reads Kapeli-compatible XML feeds from a GitHub repository.
 //!
-//! Formato compatible: repositorios con un `.xml` por docset cuya raíz es
-//! `<entry>` con `<version>` y uno o varios `<url>` (`.tgz`). El listado se
-//! obtiene por la API de GitHub (`git/trees?recursive=1` filtrando
-//! `*.xml`); cada XML por `raw.githubusercontent.com`. Sin autenticación
-//! (60 peticiones API/hora: solo 2 por refresco; la caché evita repetir).
-//! `id`/`name` = stem del fichero (`Python_3.xml` → `Python_3`).
+//! The repository tree locates XML files. Each feed supplies a version and
+//! one or more archive URLs, while its filename stem supplies the feed ID.
+//! Fetching and parsing are synchronous and belong on a blocking worker.
 
 use serde::{Deserialize, Serialize};
 

@@ -1,6 +1,5 @@
-// Índice de la página por iframe del visor (los iframes de reserva guardan
-// el suyo: al volver atrás el índice ya está). Los datos llegan validados
-// desde el Viewer (`validateTocMessage` / `validateTocActiveMessage`).
+// Keeps a table of contents per viewer slot so history navigation can reuse it.
+// The Viewer validates incoming heading lists and active-heading messages.
 import { create } from "zustand";
 import type { TocItem } from "../lib/iframeMessages";
 

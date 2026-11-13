@@ -1,6 +1,6 @@
-//! Ajustes persistentes: re-export del núcleo (`opendoc_core::settings`).
+//! Re-exports the persistent settings schema and file operations.
 //!
-//! La ruta real (`app_data_dir`) la resuelve `lib.rs`; aquí solo se
-//! re-exportan los tipos y la carga/guardado puros.
+//! The desktop runtime resolves the application data directory before
+//! calling the shared settings implementation.
 
 pub use opendoc_core::settings::*;

@@ -1,10 +1,7 @@
-//! Cola de instalaciones del catálogo (lógica pura, sin Tauri).
+//! FIFO scheduler for catalog installs, independent of Tauri.
 //!
-//! Antes el tope de descargas simultáneas contaba como "activas" también
-//! las que esperaban hueco: con tres o más pedidas a la vez todas se
-//! veían el cupo lleno y se esperaban entre sí para siempre. Aquí las
-//! activas y las que esperan van por separado, y el orden es FIFO: solo
-//! la primera de la cola puede arrancar cuando queda un hueco.
+//! Only running installs consume the concurrency budget. A waiting install
+//! can take a free slot when it reaches the front of the queue.
 
 use std::collections::{HashSet, VecDeque};
 

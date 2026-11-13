@@ -1,8 +1,7 @@
-//! Catálogo de docsets descargables (F1): caché local en JSON.
+//! On-disk cache for the selected documentation catalog.
 //!
-//! Sin SQLite propia: son cientos de registros y la caché se regenera del
-//! repo (ausente o corrupta → `None`, el siguiente refresco la recrea).
-//! El repo configurado vive en `Settings::feed_url`; aquí solo el fichero.
+//! A missing or unreadable cache is treated as a cache miss. The selected
+//! source is stored separately in settings, and a refresh can recreate the cache.
 
 use std::path::{Path, PathBuf};
 

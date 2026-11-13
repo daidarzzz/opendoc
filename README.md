@@ -130,16 +130,19 @@ Each release also ships `OpenDoc_<version>_x64.msix`, built by `.github/workflow
 
 ## Development & Testing
 
+See [Contributing](CONTRIBUTING.md) for the development workflow and the
+[architecture guide](docs/architecture.md) for the code map and runtime flows.
+
 Before submitting changes, ensure all tests, linters, and typechecks pass:
 
 ```bash
-# Frontend tests (Vitest: 164 tests covering stores, session sync, i18n, etc.)
+# Frontend tests (Vitest)
 npm test
 
 # Frontend typechecking
 npx tsc --noEmit
 
-# Rust test suite (83 unit and integration tests)
+# Rust test suite
 cargo test --manifest-path src-tauri/Cargo.toml
 
 # Rust linter
@@ -149,7 +152,7 @@ cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
 cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
 ```
 
-Tests using real docset fixtures (`CSS.docset`, `Python_3.docset`, `C++.docset`, `Swift.docset`) expect files in `src-tauri/tests/fixtures/`. If fixtures are absent, the corresponding tests are cleanly skipped with a `SKIP` notice, ensuring a fresh `git clone` always passes `cargo test`. See [`src-tauri/tests/fixtures/README.md`](./src-tauri/tests/fixtures/README.md) for details.
+Tests using real docset fixtures (`CSS.docset`, `Python_3.docset`, `C++.docset`, `Swift.docset`) expect files in `src-tauri/tests/fixtures/`. If fixtures are absent, the corresponding tests are cleanly skipped with a `SKIP` notice, so they can run in a fresh checkout without the external fixture downloads. See [`src-tauri/tests/fixtures/README.md`](./src-tauri/tests/fixtures/README.md) for details.
 
 ### Developing Against a Local `opendoc-core`
 

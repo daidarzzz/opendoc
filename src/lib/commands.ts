@@ -1,6 +1,5 @@
-// Wrappers tipados de los comandos Tauri. Único sitio con invoke()
-// (los componentes usan estas funciones, nunca invoke() directo).
-// El diálogo nativo (plugin-dialog) también vive aquí por la misma razón.
+// Typed boundary for Tauri commands, events and native integrations.
+// UI code uses these wrappers so payload and platform handling stay centralized.
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";

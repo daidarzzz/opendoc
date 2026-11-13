@@ -1,15 +1,9 @@
-//! Instalación de documentaciones de DevDocs.
+//! Installs DevDocs entries as standard docsets.
 //!
-//! Descarga `index.json` + `db.json` y los convierte, con
-//! `opendoc_core::devdocs::convert`, en un docset estándar dentro de la
-//! carpeta de docsets (`devdocs-<slug>.docset`). El resultado se integra
-//! igual que cualquier otro (mismo `InstalledDocset`), así que búsqueda,
-//! navegación, pestañas y desinstalación no distinguen su origen.
-//!
-//! - Descarga reanudable y tope de tamaño (`TarixLimits`), como el `.tgz`.
-//! - La conversión es atómica: si falla, la instalación anterior queda
-//!   intacta (la garantiza `convert`).
-//! - Una sola fuente de red (`documents.devdocs.io`): sin espejos.
+//! Resumable downloads fetch the index and page database from DevDocs. The
+//! shared converter stages and validates the result before replacing an
+//! existing installation. The returned `InstalledDocset` goes through the
+//! same library and search integration as a classic archive.
 
 use std::collections::HashSet;
 use std::path::Path;

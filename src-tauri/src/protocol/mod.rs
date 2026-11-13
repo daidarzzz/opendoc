@@ -1,16 +1,11 @@
-//! Esquema personalizado `opendoc://` (T8, SPEC §4.3).
+//! Serves installed documentation through OpenDoc's custom URI scheme.
 //!
-//! Formas aceptadas (todas llevan a lo mismo):
-//! `opendoc://<id>/<ruta>`, `opendoc://localhost/<id>/<ruta>` (macOS/Linux)
-//! y `http://opendoc.localhost/<id>/<ruta>` (Windows/Android).
-//! El contenido se muestra en un `<iframe>` aislado de la UI.
-//!
-//! Handler asíncrono: cada fichero se lee en un hilo bloqueante para no
-//! frenar el hilo de UI ni servir en serie los recursos de una página.
+//! The handler accepts the native and HTTP-mapped URL forms used by Tauri.
+//! Resources are read on blocking workers so a page's assets can load in
+//! parallel. HTML responses include the scripts that bridge the sandboxed
+//! viewer and the application UI. The frontend validates their messages.
 
-// La resolución segura de rutas vive en el núcleo compartido
-// (`opendoc_core::resolve`) para que el CLI use exactamente las mismas
-// reglas.
+// The shared resolver applies the same path rules to the desktop app and CLI.
 pub use opendoc_core::resolve::{content_type_for, resolve_request, ResolveError, ResolvedFile};
 
 use tauri::{Manager, Runtime, UriSchemeContext, UriSchemeResponder};
@@ -18,7 +13,7 @@ use tauri::{Manager, Runtime, UriSchemeContext, UriSchemeResponder};
 use crate::commands::AppState;
 use crate::docset::Docset;
 
-/// Error al servir. Se traduce a estado HTTP, no a `ApiError`.
+/// Resource errors are reported as HTTP statuses at the URI boundary.
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum ServeError {
     /// Ningún docset cargado tiene ese id.
@@ -295,10 +290,8 @@ fn response(status: u16, mime: &'static str, body: Vec<u8>) -> tauri::http::Resp
         .unwrap_or_else(|_| tauri::http::Response::new(Vec::new()))
 }
 
-/// Handler asíncrono registrado en `lib.rs`. La lectura de disco va en un
-/// hilo bloqueante: el hilo de UI (donde WebKit/WebView2 llaman al
-/// handler) no se queda esperando por cada CSS/JS/imagen, y las
-/// peticiones de una página se sirven en paralelo. Nunca pánico.
+/// Dispatches resource reads to a blocking worker. Webview callbacks return
+/// promptly while a page’s CSS, scripts and images are served in parallel.
 pub fn handle<R: Runtime>(
     ctx: UriSchemeContext<'_, R>,
     req: tauri::http::Request<Vec<u8>>,
@@ -311,8 +304,8 @@ pub fn handle<R: Runtime>(
     });
 }
 
-/// Resuelve una URI: el candado de estado solo se toma para copiar el
-/// docset pedido; la lectura del fichero se hace sin él.
+/// Copies the requested docset under the state lock and releases the lock
+/// before resolving and reading its file.
 fn serve_uri<R: Runtime>(
     app: &tauri::AppHandle<R>,
     uri: &tauri::http::Uri,

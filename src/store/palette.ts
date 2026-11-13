@@ -1,4 +1,4 @@
-// Slice de la Command Palette (Ctrl/Cmd+K).
+// Owns the search palette query, result selection and in-flight search state.
 import { create } from "zustand";
 import { searchDocs } from "../lib/commands";
 import { dropTokens } from "../lib/paletteFilter";

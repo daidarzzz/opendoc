@@ -1,15 +1,9 @@
-// Escritor único serializado de la sesión (puro salvo `write`, Vitest).
-// - No guarda nada hasta `markHydrated()` (la bienvenida inicial no debe
-//   pisar session.json mientras se escanean los docsets).
-// - Fusiona pendientes y escribe solo el último: nunca hay dos escrituras
-//   en vuelo, así que dos guardados seguidos no pueden terminar en orden
-//   inverso.
-// - No escribe si el serializado no cambió desde el último envío.
-// - Un fallo de escritura no pierde el pendiente: el próximo `requestSave`
-//   o `flush()` lo reintenta (con el valor más nuevo).
+// Serializes writes so an older session snapshot cannot overwrite a newer one.
+// Saving starts after hydration. Pending writes coalesce, identical snapshots
+// are skipped, and a failed write can be retried with the latest state.
 import type { SessionData } from "./types";
 
-/** Vuelca el JSON al backend (p. ej. `saveSession`). */
+/** Writes a serialized session snapshot through the supplied backend adapter. */
 export type SessionWriter = (json: string) => Promise<unknown>;
 
 export class SessionSaver {

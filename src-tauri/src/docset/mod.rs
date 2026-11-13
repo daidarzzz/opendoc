@@ -1,10 +1,7 @@
-//! Escaneo de carpetas `.docset` (T2). La lectura de `Info.plist` (T3),
-//! de los índices SQLite (T4) y la extracción tarix viven en el núcleo
-//! compartido (`opendoc_core::docset`), re-exportado aquí.
+//! Desktop docset integration and re-exports from `opendoc-core`.
 //!
-//! Solo la instalación desde catálogo (`install`) y el *fallback* de
-//! iconos (`devicon`) son específicos de la app: usan red/caché local y
-//! tipos de Tauri.
+//! The core owns filesystem discovery, metadata, SQLite indexes and tarix
+//! extraction. The desktop crate adds catalog installers and icon fallback.
 
 pub mod devdocs;
 pub mod devicon;

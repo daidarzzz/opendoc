@@ -1,8 +1,7 @@
-//! Lógica de los comandos Tauri como funciones puras y testeables (T6).
+//! Desktop operations shared by the Tauri handlers and Rust tests.
 //!
-//! Sin tipos de Tauri aquí: los `#[tauri::command]` de `mod.rs` solo
-//! delegan. La carga pesada (escaneo + lectura de índices) corre en
-//! `spawn_blocking` desde el comando async.
+//! These functions work without a Tauri runtime. The caller is responsible
+//! for scheduling synchronous disk and network operations off the UI thread.
 
 use std::path::Path;
 

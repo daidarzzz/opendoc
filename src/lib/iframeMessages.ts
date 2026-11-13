@@ -1,7 +1,7 @@
-// Validación de mensajes del iframe (contenido NO fiable: cualquier script
-// del docset puede postear con formato válido). Todo es puro y testeable:
-// el llamador además exige `event.source === iframe.contentWindow`.
-// URLs canónicas de salida: `opendoc://<id>/<ruta>` (con `#ancla`).
+// Pure validators for messages received from documentation frames.
+// A valid payload does not establish trust. The caller must also match
+// `event.source` to the expected iframe. Normalized document URLs use
+// `opendoc://<id>/<path>` with an optional fragment.
 export const MAX_NAV_URL_LEN = 4096;
 export const MAX_TITLE_LEN = 200;
 export const MAX_SCROLL_Y = 10_000_000;

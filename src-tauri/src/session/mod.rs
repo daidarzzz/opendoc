@@ -1,98 +1,80 @@
-//! Sesión de pestañas persistida (`session.json`, separado de
-//! `settings.json`).
+//! Versioned tab session stored separately from desktop settings.
 //!
-//! - Fichero con `"version": 1`. Solo se guardan pestañas con contenido:
-//!   `docset_id`, historial en forma **neutra** (rutas relativas a
-//!   `Documents/` con posible `#ancla`, sin `opendoc://` ni
-//!   `http://opendoc.localhost`), la posición actual, el scroll de la
-//!   entrada actual y dos pistas de reencuentro (`docset_name`,
-//!   `bundle_id`). La URL del iframe se reconstruye al restaurar en el
-//!   frontend.
-//! - El archivo es entrada no confiable: tolerancia por campo (un campo
-//!   inválido solo reinicia ese campo), topes estrictos y descarte de
-//!   entradas con forma inválida. Nunca se construyen rutas del sistema de
-//!   ficheros con nada de aquí: la validación espeja las reglas del
-//!   protocolo (`protocol::resolve`: sin `..`, sin rutas absolutas, sin
-//!   letra de unidad, sin NUL, con `%XX` decodificado antes de validar).
-//! - Corrupto o versión futura: se renombra a `.bak` (rotativo, ver
-//!   `persist`) **una vez** y se arranca con sesión vacía; los guardados
-//!   siguientes escriben un fichero nuevo sin tocar el `.bak`. El arranque
-//!   nunca falla por este archivo (`load` no escribe nada y no devuelve
-//!   errores).
-//! - Recorte de historial a 50 con ventana centrada en el índice actual
-//!   (nunca se pierde la entrada actual).
-//! - Todo recibe la ruta por parámetro: testeable sin Tauri.
+//! The saved format records docset-relative paths and optional fragments.
+//! The frontend reconstructs viewer URLs for the current platform on restore.
+//! Treat persisted data as untrusted and validate individual fields so a
+//! damaged entry does not discard unrelated tabs. The current schema is
+//! version 1. Corrupt or newer session files are backed up on load.
 
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 use crate::persist::{backup_rotating, save_if_changed_json};
 
-/// Versión actual del formato (una mayor conocida → `.bak` + vacía).
+/// Latest supported session version.
 pub const SESSION_VERSION: u32 = 1;
-/// Pestañas simultáneas (igual que en memoria).
+/// Maximum number of saved tabs.
 pub const MAX_SESSION_TABS: usize = 30;
-/// Entradas de historial por pestaña en disco (100 en memoria).
+/// Maximum saved history entries per tab. Live history can hold 100.
 pub const MAX_SESSION_HISTORY: usize = 50;
-/// Longitud máxima de una ruta neutra con ancla (como en el iframe).
+/// Maximum stored path length, including its optional fragment.
 pub const MAX_NAV_URL_LEN: usize = 4096;
-/// Título máximo en caracteres (como en el iframe).
+/// Maximum stored title length in characters.
 pub const MAX_TITLE_LEN: usize = 200;
-/// Scroll máximo (como en el iframe).
+/// Maximum stored vertical scroll offset in CSS pixels.
 pub const MAX_SCROLL_Y: f64 = 10_000_000.0;
-/// Longitud máxima de `docset_id` y de las pistas, en caracteres.
+/// Maximum length of a docset ID or lookup hint in characters.
 pub const MAX_ID_LEN: usize = 200;
 
-/// Una parada del historial en forma neutra (ruta relativa con ancla).
+/// A history entry independent of the platform-specific viewer scheme.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SavedEntry {
-    /// Ruta relativa a `Documents/`, con ancla (`a/b.html#x`).
-    /// Sin esquema, sin host y sin prefijo de id (el id va en la pestaña).
+    /// Path relative to `Documents/`, with an optional fragment (`a/b.html#x`).
+    /// The enclosing tab supplies the docset ID.
     pub path: String,
-    /// Título como texto (sin controles, ≤200).
+    /// Plain text title with control characters removed.
     pub title: String,
 }
 
-/// Una pestaña guardada (sin id estable: al restaurar se generan nuevos).
+/// A saved tab. Restore assigns a new runtime tab ID.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SavedTab {
-    /// Slug del docset (`""` solo en la pestaña vacía de bienvenida).
+    /// Identifier of the docset associated with this tab.
     pub docset_id: String,
-    /// Pista de reencuentro: nombre de la carpeta (solo lectura entre
-    /// docsets cargados, nunca para rutas; insensible a mayúsculas).
+    /// Folder-name hint for case-insensitive lookup among loaded docsets.
+    /// Do not use it to construct filesystem paths.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub docset_name: Option<String>,
-    /// Pista de reencuentro: `CFBundleIdentifier` (solo lectura entre
-    /// docsets cargados, nunca para rutas).
+    /// Bundle identifier hint for lookup among loaded docsets.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bundle_id: Option<String>,
-    /// Historial lineal en forma neutra (≤50, ventana sobre el actual).
+    /// A bounded slice of the linear history around the current entry.
     #[serde(default)]
     pub history: Vec<SavedEntry>,
-    /// Índice de la entrada actual dentro de `history`.
+    /// Index of the current entry within `history`.
     #[serde(default)]
     pub history_index: usize,
-    /// Scroll de la entrada actual (`None` = arriba del todo).
+    /// Vertical scroll offset of the current entry. `None` restores the top.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scroll: Option<f64>,
 }
 
-/// Sesión completa: pestañas en orden + índice de la activa.
+/// Ordered tab snapshot and active-tab index.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Session {
-    /// Versión del formato.
+    /// Schema version.
     #[serde(default)]
     pub version: u32,
-    /// Pestañas en orden (≤30).
+    /// Saved tabs in display order.
     #[serde(default)]
     pub tabs: Vec<SavedTab>,
-    /// Índice de la pestaña activa dentro de `tabs`.
+    /// Index of the active tab within `tabs`.
     #[serde(default)]
     pub active: usize,
 }
 
 impl Session {
-    /// Sesión vacía: arrancar con la bienvenida.
+    /// Empty session for the welcome screen.
     pub fn empty() -> Self {
         Self {
             version: SESSION_VERSION,
@@ -102,13 +84,13 @@ impl Session {
     }
 }
 
-/// Ruta del fichero dentro de un directorio base (datos de la app).
+/// Returns the session file path inside the application data directory.
 pub fn session_file(base_dir: &Path) -> PathBuf {
     base_dir.join("session.json")
 }
 
-/// Lee la sesión. Nunca falla hacia fuera: ausente → vacía sin crear nada;
-/// corrupta o versión futura → `.bak` (rotativo) + vacía.
+/// Loads the session or returns an empty one. Missing files are left alone.
+/// Corrupt or newer files are moved to a rotating backup when possible.
 pub fn load(path: &Path) -> Session {
     let bytes = match std::fs::read(path) {
         Ok(bytes) => bytes,

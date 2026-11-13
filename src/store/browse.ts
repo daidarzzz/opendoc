@@ -1,7 +1,5 @@
-// Slice de navegación por tipos (origen: list_kinds/list_entries).
-// Árbol docset -> tipos -> entradas con carga por páginas. Se invalida
-// con reset() al recargar docsets, cambiar de carpeta o instalar un tarix
-// (lo llama el slice de docsets).
+// Caches the paginated docset → symbol kind → entry tree.
+// The library store resets these pages when the set of installed docsets changes.
 import { create } from "zustand";
 import { listEntries, listKinds } from "../lib/commands";
 import type { KindInfo, NavEntry } from "../lib/types";

@@ -6,7 +6,7 @@ Guía operativa para agentes de código que trabajen en el ecosistema **OpenDoc*
 
 Visor de documentación offline compatible con docsets de Dash y Zeal.
 - **Stack**: Tauri v2 + React 19 + TypeScript + Tailwind CSS v3 + Rust.
-- **Versión actual**: `v0.2.x` (estado consolidado de uso diario: pestañas, historial, catálogo con descargas, búsqueda difusa en memoria, temas y acentos de color).
+- **Versión actual**: `v0.3.x` (estado consolidado de uso diario: pestañas, historial, catálogo con descargas, búsqueda difusa en memoria, temas y acentos de color).
 - **Ecosistema**:
   - `opendoc`: aplicación de escritorio (este repositorio).
   - `opendoc-core`: biblioteca Rust pura y compartida (escaneo, índices, búsqueda, resolución de rutas y tarix), consumida por etiqueta Git.
@@ -68,7 +68,7 @@ Antes de dar una tarea por terminada, ejecuta las comprobaciones pertinentes (`n
 
 La app consume `opendoc-core` por etiqueta Git en `src-tauri/Cargo.toml`:
 ```toml
-opendoc-core = { git = "https://github.com/daidarzzz/opendoc-core", tag = "v0.1.2" }
+opendoc-core = { git = "https://github.com/daidarzzz/opendoc-core", tag = "v0.2.0" }
 ```
 Para trabajar localmente en modificaciones conjuntas entre la app y el núcleo sin publicar tags intermedios, descomenta el bloque `[patch]` al final de `src-tauri/Cargo.toml`:
 ```toml
@@ -102,7 +102,7 @@ Cuando agregues o modifiques un comando Tauri:
 2. Actualiza los tipos en `src/lib/types.ts`.
 3. Crea o actualiza la función wrapper en `src/lib/commands.ts`.
 4. Si introduce nuevos errores, agrégalos a `ApiError` (`commands/error.rs` y `types.ts`) y añade sus traducciones en `src/lib/i18n.ts`.
-5. Actualiza la tabla de comandos y tipos en `SPEC.md` (§4.4).
+5. Actualiza la tabla de comandos y tipos en `SPEC.md` (§5).
 
 ## Datos de prueba y fixtures
 

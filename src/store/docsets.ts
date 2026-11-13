@@ -1,4 +1,4 @@
-// Slice de docsets cargados (origen: commands.ts).
+// Owns the loaded library, pending compressed docsets and scan issues returned by the backend.
 import { create } from "zustand";
 import {
   chooseFolder,

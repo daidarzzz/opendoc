@@ -1,18 +1,7 @@
-// Slice del catálogo de docsets (F3): datos F1 y operaciones F2.
-// - Los datos viven aquí (zustand), no en componentes.
-// - El éxito de una instalación lo confirma el `await installDocset`
-//   (backend), nunca el evento: ante un error no se muestra éxito.
-// - Doble clic: `busy` se fija síncrono antes del primer `await`; si ya
-//   está ocupado, la llamada se ignora (el backend además responde
-//   `install_in_progress`).
-// - El listener de `docset-progress` solo alimenta el progreso visible;
-//   la finalización la resuelve la promesa (sigue valiendo aunque el
-//   componente se desmonte a mitad de una instalación).
-// - Cola: el backend deja descargar a la vez un máximo de instalaciones y
-//   el resto espera turno (etapa `queued`). `startedAt` guarda el orden
-//   de los clics para el filtro "En cola"; `cancel` quita de la cola una
-//   que aún espera (su promesa falla con `install_cancelled` y la tarjeta
-//   vuelve a su estado sin mostrar error).
+// Owns catalog data and install state across component mounts.
+// Progress events describe ongoing work. The command promise determines the
+// outcome. A synchronous busy flag prevents duplicate requests before the
+// first await, while the backend controls concurrency and queued cancellation.
 import { create } from "zustand";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import {

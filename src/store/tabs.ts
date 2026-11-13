@@ -1,10 +1,6 @@
-// Slice de pestañas con historial propio (v0.2 V2-3).
-// La lógica del historial es pura (lib/tabHistory); aquí solo orquesta:
-// - el historial es una secuencia por pestaña con un cursor explícito;
-//   los ecos del iframe actualizan título/ancla sin crear otra parada;
-// - el iframe reporta navegación/scroll/teclas ya validadas por el Viewer;
-// - solo la pestaña activa monta su iframe (las demás guardan URL+scroll).
-// Sin persistencia entre sesiones (siguiente tarea).
+// Owns open tabs and their live navigation state.
+// Pure history operations live in tabHistory. The Viewer validates frame
+// messages before forwarding them, and sessionSync persists the tab snapshot.
 import { create } from "zustand";
 import { getDocsetHome } from "../lib/commands";
 import { docsetEntryUrl, toViewerUrl } from "../lib/opendocUrl";

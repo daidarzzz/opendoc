@@ -1,19 +1,7 @@
-// Orquesta persistir/restaurar pestañas (hidratación única + guardado).
-// - `hydrateSessionOnce()`: tras el escaneo (los docsets cargan de forma
-//   progresiva: no se marca nada como ausente antes). Con restore_tabs
-//   desactivado o sin nada guardado, solo marca hidratado.
-// - Guardado con debounce (~500 ms) tras cambios; al cambiar de pestaña
-//   se vuelca de inmediato (el scroll de la saliente queda guardado).
-//   Nunca se escribe por evento de scroll: el mapa `scrolls` ya está en el
-//   store y solo se serializa al guardar.
-// - Un único `SessionSaver` serializa las escrituras (sin solapes).
-// - Cierre (opción b): el estado vive en el frontend, así que es el
-//   frontend quien hace el último guardado en `onCloseRequested` con
-//   tiempo máximo (~1 s) y luego destruye la ventana. La alternativa (que
-//   Rust cachee el último envío y lo vuelque al cerrar) duplicaría el
-//   estado y arriesgaría escribir algo obsoleto. Si el guardado falla al
-//   cerrar, igual se cierra (nunca se cuelga la ventana): la copia del
-//   debounce (≤500 ms) ya acota la pérdida.
+// Coordinates session hydration and saving around the live tab store.
+// Hydration waits for docset discovery. Ordinary writes are debounced and
+// serialized, tab switches flush promptly, and window close gives the final
+// save a bounded amount of time.
 import { getSession, getSettings, saveSession } from "./commands";
 import { sessionToTabs, tabsToSession } from "./session";
 import { SessionSaver } from "./sessionSaver";
@@ -21,9 +9,9 @@ import { useDocsets } from "../store/docsets";
 import { useTabs } from "../store/tabs";
 import type { SessionData } from "./types";
 
-/** Debounce tras el último cambio antes de guardar. */
+/** Delay after the latest tab update before scheduling a save. */
 export const SESSION_SAVE_DEBOUNCE_MS = 500;
-/** Tiempo máximo del guardado final: la ventana nunca se queda colgada. */
+/** Maximum time the window-close handler waits for the final save. */
 export const CLOSE_SAVE_TIMEOUT_MS = 1000;
 
 const saver = new SessionSaver(async (json: string) => {
@@ -39,7 +27,7 @@ function snapshot(): SessionData {
   return tabsToSession(tabs, activeId, useDocsets.getState().docsets);
 }
 
-/** Restaura una vez (llamar tras `initDocsets()`). Nunca deja sin hidratar. */
+/** Restores once after `initDocsets()` and marks hydration complete on failure. */
 export function hydrateSessionOnce(): Promise<void> {
   if (hydratePromise) return hydratePromise;
   hydratePromise = (async () => {
@@ -70,7 +58,7 @@ export function hydrateSessionOnce(): Promise<void> {
   return hydratePromise;
 }
 
-/** Suscribe el autoguardado. Devolver la limpieza al desmontar. */
+/** Subscribes to tab changes. Call the returned cleanup on unmount. */
 export function startSessionSync(): () => void {
   return useTabs.subscribe((s, prev) => {
     if (s.tabs === prev.tabs && s.activeId === prev.activeId) return;
@@ -92,8 +80,8 @@ export function startSessionSync(): () => void {
 }
 
 /**
- * Activar/desactivar en caliente (interruptor de Ajustes). Al activar no
- * se restaura nada encima: se guarda el estado actual.
+ * Changes session persistence at runtime. Enabling it saves the current
+ * tabs without applying a previously saved snapshot.
  */
 export function setSessionEnabled(on: boolean): void {
   enabled = on;
@@ -109,7 +97,7 @@ export function setSessionEnabled(on: boolean): void {
   saver.requestSave(snapshot());
 }
 
-/** Último guardado (cierre): vuelca lo pendiente y espera (con tope fuera). */
+/** Saves the latest snapshot on close. The caller supplies the timeout. */
 export async function flushSessionForClose(): Promise<void> {
   if (!enabled) return;
   if (debounceTimer) {

@@ -1,4 +1,8 @@
-//! Ajustes de WebKitGTK para el render en Linux.
+//! Configures WebKitGTK before the desktop runtime starts.
+//!
+//! The NVIDIA Wayland workaround preserves the DMA-BUF renderer and disables
+//! explicit synchronization for OpenDoc. Explicit rendering overrides take
+//! precedence so a user can recover from driver-specific failures.
 
 #[cfg(target_os = "linux")]
 const DMABUF_VAR: &str = "WEBKIT_DISABLE_DMABUF_RENDERER";
@@ -11,7 +15,7 @@ fn uses_wayland(gdk_backend: Option<&str>, wayland_display: Option<&str>) -> boo
         return false;
     }
 
-    // GDK prueba los backends en orden. Un '*' deja que elija el backend.
+    // GDK tries backends in order. A wildcard lets GDK choose.
     gdk_backend.is_none_or(|backends| {
         backends
             .split(',')
@@ -31,7 +35,7 @@ fn should_disable_explicit_sync(
     nvidia && !has_graphics_override && uses_wayland(gdk_backend, wayland_display)
 }
 
-/// Aplica el ajuste antes de iniciar GTK y sus procesos auxiliares.
+/// Applies graphics settings before GTK or its helper processes start.
 pub fn apply_webkit_workarounds() {
     #[cfg(target_os = "linux")]
     {
@@ -53,8 +57,8 @@ pub fn apply_webkit_workarounds() {
             wayland.as_deref(),
             has_graphics_override,
         ) {
-            // Mantiene DMA-BUF y evita el fallo de sincronización explícita
-            // de NVIDIA al presentar el primer frame en Wayland.
+            // Keep DMA-BUF available while working around NVIDIA synchronization
+            // failures when presenting the first Wayland frame.
             std::env::set_var(EXPLICIT_SYNC_VAR, "1");
         }
     }

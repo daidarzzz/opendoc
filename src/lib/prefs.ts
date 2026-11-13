@@ -1,5 +1,4 @@
-// Preferencias de interfaz (solo frontend, en localStorage). Tolerante:
-// sin storage, JSON roto o valores fuera de rango → valores por defecto.
+// Frontend-only preferences. Missing or invalid localStorage values fall back to defaults.
 import type { StringStorage } from "./sidebar";
 import { DEFAULT_DESIGN, normalizeDesign, type Design } from "./design";
 

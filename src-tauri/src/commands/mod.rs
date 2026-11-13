@@ -1,13 +1,9 @@
-//! Comandos Tauri finos (contrato SPEC §4.4 + ajustes T9 + navegación v0.2 + F2):
-//! `list_docsets`, `set_docsets_dir`, `search`, `list_kinds`,
-//! `list_entries`, `get_docset_home`, `get_settings`, `set_theme`,
-//! `set_accent`, `set_language`, `set_restore_tabs`, `get_session`, `save_session`, `extract_tarix`,
-//! `get_catalog_status`, `set_feed_repo`, `refresh_catalog`,
-//! `list_catalog`, `install_docset`, `cancel_install`, `get_install_status`,
-//! `uninstall_docset`, `confirm_exit`.
+//! Tauri IPC handlers for the desktop frontend.
 //!
-//! Solo delegan en `service.rs` (testeable sin Tauri). Si se toca este
-//! contrato, actualizar `src/lib/types.ts` y la tabla de SPEC §4.4.
+//! Handlers coordinate shared state, blocking work, persistence and event
+//! delivery. Domain operations live in `service` and the related modules.
+//! Keep the serialized contract in sync with `src/lib/types.ts`,
+//! `src/lib/commands.ts` and SPEC.md §5.
 
 pub mod error;
 pub mod install_queue;

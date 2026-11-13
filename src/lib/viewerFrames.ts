@@ -1,6 +1,4 @@
-/** Iframes del visor: uno visible, uno que guarda la página vecina del
- *  historial (atrás/adelante instantáneo) y uno libre para cargar o
- *  precargar la siguiente sin expulsar a la anterior. */
+/** Viewer slots for the visible page, a history neighbor, and a pending or prefetched page. */
 export const FRAME_SLOTS = 3;
 
 /** Finds an already loaded slot so switching back never waits for another load event. */

@@ -1,3 +1,3 @@
-//! Persistencia atómica: re-export del núcleo (`opendoc_core::persist`).
+//! Re-exports the shared atomic persistence helpers from `opendoc-core`.
 
 pub use opendoc_core::persist::*;

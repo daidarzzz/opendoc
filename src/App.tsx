@@ -1,4 +1,4 @@
-// Layout: sidebar + área central + Command Palette.
+// Root application layout and coordination of startup, session restore and window close.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CommandPalette } from "./components/CommandPalette";
 import { SettingsDialog } from "./components/SettingsDialog";

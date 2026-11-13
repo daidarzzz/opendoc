@@ -1,6 +1,6 @@
 # OpenDoc: Especificación Técnica
 
-Documento de referencia técnica y arquitectura de **OpenDoc** (`v0.2.x`). Define la organización por capas, el flujo de datos, el aislamiento de procesos, el protocolo personalizado y los contratos vigentes entre el frontend y el backend.
+Documento de referencia técnica y arquitectura de **OpenDoc** (`v0.3.x`). Define la organización por capas, el flujo de datos, el aislamiento de procesos, el protocolo personalizado y los contratos vigentes entre el frontend y el backend.
 
 ---
 
@@ -33,7 +33,7 @@ graph TD
     end
 
     CORE -->|Git tag v0.1.1| CLI
-    CORE -->|Git tag v0.1.2| APP
+    CORE -->|Git tag v0.2.0| APP
 
     subgraph Arquitectura de OpenDoc Desktop
         FE["Frontend React 19<br/>(Zustand Stores, Components, Hooks, Typed Wrappers)"]

@@ -1,5 +1,6 @@
-// Historial y pestañas como funciones puras (testeadas con Vitest).
-// URLs canónicas `opendoc://<id>/<ruta>` (con `#ancla` si la hay).
+// Pure tab history operations shared by the tab store and session restoration.
+// History entries use canonical OpenDoc URLs so frame messages can update
+// the current entry without creating duplicate stops.
 import { normalizeBackendUrl } from "./iframeMessages";
 import type { Tab, TabEntry } from "./types";
 

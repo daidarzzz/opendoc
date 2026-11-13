@@ -1,13 +1,8 @@
-//! Política de navegación de la ventana principal (T8).
+//! Navigation policy for the application window and its embedded documents.
 //!
-//! El visor carga HTML de terceros (docsets) en un `<iframe>`: los clics
-//! en enlaces externos (`http(s)` fuera de nuestros hosts) se abren en el
-//! navegador del sistema y nunca en el visor. wry dispara el handler para
-//! navegaciones de iframes también (sin filtrar por frame), así que esto
-//! cubre los enlaces dentro del iframe.
-//!
-//! La decisión es pura y testeable; el cableado con el opener está en
-//! `lib.rs` (`setup` + `on_navigation`).
+//! The decision depends on the URL scheme and host. The Tauri integration
+//! in `lib.rs` applies it to frame navigations and dispatches permitted
+//! external links through the system opener.
 
 /// Qué hacer con una navegación (solo importan esquema y host).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

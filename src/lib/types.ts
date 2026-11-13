@@ -1,5 +1,5 @@
-// Tipos espejo del backend (src-tauri/src/commands + docset::model).
-// Si cambia el contrato Tauri, actualizar a mano (SPEC §4.4).
+// TypeScript representations of the Rust IPC payloads and frontend models.
+// When a serialized command payload changes, update the wrapper and SPEC.md §5.
 
 /** Un docset cargado (docset::Docset). */
 export interface Docset {

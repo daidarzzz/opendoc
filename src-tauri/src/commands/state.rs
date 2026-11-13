@@ -1,9 +1,8 @@
-//! Estado compartido de Tauri (T6): docsets cargados + índice en memoria.
+//! Shared state owned by the desktop runtime.
 //!
-//! Todo vive tras un `Mutex`: la búsqueda necesita `&mut SearchIndex`
-//! (reutiliza el scratch de nucleo) y las cargas sustituyen el contenido.
-//! Los comandos solo leen o sustituyen este estado; la lógica está en
-//! `service.rs`.
+//! The library and search index are replaced together under the loaded-state
+//! mutex. Search also needs mutable access because the matcher reuses scratch
+//! space. Keep the lock scope short when an operation performs disk or network I/O.
 
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -14,17 +13,17 @@ use crate::docset::{Docset, PendingTarix, ScanIssue};
 use crate::search::SearchIndex;
 use crate::settings::Settings;
 
-/// Docsets cargados, issues del escaneo e índice de búsqueda.
+/// A consistent snapshot of the loaded library and its search index.
 pub struct Loaded {
-    /// Carpeta de la que se cargó (persistida en ajustes al cargar OK).
+    /// Library directory, persisted after a successful load.
     pub source_dir: PathBuf,
-    /// Docsets válidos ordenados por nombre.
+    /// Valid docsets sorted by name.
     pub docsets: Vec<Docset>,
-    /// Tarix pendientes de extraer (instalables).
+    /// Compressed docsets waiting to be extracted.
     pub pending: Vec<PendingTarix>,
-    /// Entradas saltadas con su motivo.
+    /// Skipped entries and the reasons they were skipped.
     pub issues: Vec<ScanIssue>,
-    /// Índice en memoria de los docsets abribles.
+    /// In-memory index for docsets available to open.
     pub index: SearchIndex,
 }
 
@@ -52,18 +51,17 @@ impl std::fmt::Debug for Loaded {
     }
 }
 
-/// Estado gestionado por Tauri (`manage` en `lib.rs`).
+/// Application state registered with Tauri during setup.
 pub struct AppState {
-    /// Contenido cargado; vacío hasta el primer `set_docsets_dir`.
+    /// Library contents, initially empty until the first directory load.
     pub loaded: Mutex<Loaded>,
-    /// Ajustes persistentes (T9).
+    /// Persistent application settings.
     pub settings: Mutex<Settings>,
-    /// Ids con extracción en curso (evita duplicadas, desactiva el botón).
+    /// Docset IDs currently being extracted, used to reject duplicates.
     pub extracting: Mutex<HashSet<String>>,
-    /// Feeds con instalación en curso (F2: evita dos instalaciones del
-    /// mismo docset a la vez; las de distintos docsets van en paralelo).
+    /// Reserved feed IDs prevent two concurrent requests for the same feed.
     pub installing: Mutex<HashSet<String>>,
-    /// Cola de instalaciones: activas (tope global) y en espera, en orden.
+    /// Running installs and the FIFO queue of waiting requests.
     pub install_queue: Mutex<InstallQueue>,
 }
 

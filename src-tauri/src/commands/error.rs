@@ -1,8 +1,8 @@
-//! Errores serializables de los comandos Tauri (T6).
+//! Errors crossing the Tauri IPC boundary.
 //!
-//! Unión discriminada por `kind` para que el frontend la distinga sin
-//! parsear strings. Mensajes claros en inglés (el frontend los traduce por
-//! `kind`); nunca `String` genérico.
+//! The serialized `kind` discriminant lets the frontend select localized
+//! messages without parsing error text. Keep the TypeScript union and locale
+//! entries in sync when adding variants.
 
 use serde::Serialize;
 

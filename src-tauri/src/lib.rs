@@ -1,6 +1,7 @@
-// Módulos de lógica de OpenDoc (independientes de Tauri y testeables).
-// F2: `catalog` + `docset::install` (gestor de docsets); quedan
-// pestañas/favoritos (v0.2, frontend).
+//! OpenDoc's desktop runtime and Tauri integration.
+//!
+//! This crate wires the window lifecycle, IPC handlers and documentation URI
+//! scheme together. Shared docset parsing and indexing live in `opendoc-core`.
 pub mod accent_icon;
 pub mod browse;
 pub mod catalog;
