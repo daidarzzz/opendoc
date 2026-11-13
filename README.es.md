@@ -197,6 +197,7 @@ Cada documentación que descargues o consultes pertenece a sus respectivos autor
 
 ## Agradecimientos
 
+- Gracias al equipo y a quienes contribuyen a [DevDocs](https://devdocs.io/) por poner a disposición su catálogo y sus paquetes de documentación, que OpenDoc utiliza como fuente predeterminada.
 - [Zeal](https://zealdocs.org/) y [Dash](https://kapeli.com/dash) por popularizar el ecosistema de docsets offline. OpenDoc es un proyecto independiente y no está afiliado a ninguna de las dos herramientas.
 - [Catppuccin](https://catppuccin.com/) por los valores de paleta Mauve (Latte/Mocha) empleados en el tema de acento (Licencia MIT).
 - [nucleo-matcher](https://github.com/helix-editor/nucleo) por su excelente rendimiento en la búsqueda difusa en memoria.

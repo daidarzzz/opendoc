@@ -14,7 +14,7 @@
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,700&family=JetBrains+Mono:wght@400;500;600&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&display=swap" rel="stylesheet">
 <script>
   /* Theme, accent and language before first paint (no flash). */
   (function () {
@@ -72,13 +72,11 @@
   <section class="title-page">
     <div class="kicker rise">
       <span class="label" data-i18n="hero.kicker1">Offline documentation viewer</span>
-      <span class="label" data-i18n="hero.kicker2">For Dash &amp; Zeal docsets</span>
-      <span class="label">Windows · macOS · Linux</span>
     </div>
     <h1 class="rise d1" data-i18n="hero.title">All your docs, offline. <em>Found in milliseconds.</em></h1>
 
     <div class="title-grid">
-      <p class="lede rise d2" data-i18n="hero.lede">OpenDoc is a fast, open-source desktop reader for the docset format. Search hundreds of thousands of functions, classes and guides in milliseconds — on a plane, in a basement, or just with the Wi‑Fi off.</p>
+      <p class="lede rise d2" data-i18n="hero.lede">OpenDoc is a calm, open-source reader for the documentation you use every day. Search thousands of functions and guides in an instant — on a plane, in a basement, or just with the Wi‑Fi off.</p>
       <div class="rise d3">
         <div class="cta-row">
           <a class="btn" href="download.html" id="hero-dl">
@@ -88,95 +86,84 @@
           <a class="link-arrow" href="https://github.com/daidarzzz/opendoc" data-i18n="hero.source">Source on GitHub →</a>
         </div>
         <p class="cta-sub" id="hero-sub"></p>
-        <dl class="facts">
-          <dt data-i18n="facts.version">Version</dt><dd><span class="ver">0.2.72</span></dd>
-          <dt data-i18n="facts.license">License</dt><dd>GPL‑3.0, <span data-i18n="facts.free">free forever</span></dd>
-          <dt data-i18n="facts.memory">At rest</dt><dd data-i18n="facts.memoryVal">under 80 MB of RAM</dd>
-          <dt data-i18n="facts.built">Built with</dt><dd>Rust · Tauri v2 · React</dd>
-        </dl>
+        <p class="hero-meta"><span data-i18n="hero.meta">Free and open source · No account needed</span></p>
+        
       </div>
     </div>
 
     <!-- Fig. 1 -->
     <figure class="plate rise d4" style="margin-left:0;margin-right:0">
       <div class="fig-frame" role="img" aria-label="Illustration of the OpenDoc window: tabs, docset sidebar, command palette and a documentation page." data-i18n-aria="fig.aria">
-        <div class="app" aria-hidden="true">
-          <div class="app-top">
-            <div class="dots"><i></i><i></i><i></i></div>
-            <div class="tab on"><img src="assets/devicons/python.svg" alt=""><b>json — Python 3</b><span class="x">×</span></div>
-            <div class="tab"><img src="assets/devicons/cplusplus.svg" alt=""><b>std::vector</b><span class="x">×</span></div>
-            <div class="tab"><img src="assets/devicons/css3.svg" alt=""><b>grid-template-areas</b><span class="x">×</span></div>
-            <span class="tab-plus">+</span>
-          </div>
-          <div class="app-main">
-            <div class="app-side">
-              <div class="side-search"><svg><use href="#i-search"/></svg><span data-i18n="app.search">Search docs</span><kbd class="modk">Ctrl K</kbd></div>
-              <div class="side-label">Docsets</div>
-              <div class="ds on"><img src="assets/devicons/python.svg" alt=""><b>Python 3</b><svg class="chev"><use href="#i-chev"/></svg></div>
-              <div class="kinds">
-                <div class="kind"><span data-i18n="app.classes">Classes</span><span>1,204</span></div>
-                <div class="kind on"><span data-i18n="app.functions">Functions</span><span>4,872</span></div>
-                <div class="kind"><span data-i18n="app.methods">Methods</span><span>9,310</span></div>
-                <div class="kind"><span data-i18n="app.modules">Modules</span><span>312</span></div>
+        <div class="od-win" aria-hidden="true">
+          <div class="od-titlebar"><span class="od-lights"><i></i><i></i><i></i></span></div>
+          <div class="od-body">
+            <aside class="od-side">
+              <div class="od-brand"><span class="od-brand-name"><svg><use href="#logo"/></svg>OpenDoc</span><span class="od-ibtn"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M9.5 4.5v15" stroke="currentColor" stroke-width="1.7"/></svg></span></div>
+              <div class="od-search"><svg><use href="#i-search"/></svg><span data-i18n="app.search">Search</span><kbd class="od-kbd modk">Ctrl K</kbd></div>
+              <div class="od-libhead"><span class="od-label" data-i18n="app.library">Library</span><span class="od-count">6</span></div>
+              <div class="od-tree">
+                <div class="od-doc on"><svg class="od-chev open" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg><img src="assets/devicons/python.svg" alt=""><span>Python 3</span></div>
+                <div class="od-kind"><svg class="od-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg><span class="od-g g-type">C</span><span data-i18n="app.classes">Classes</span><span class="od-n">1,204</span></div>
+                <div class="od-kind"><svg class="od-chev open" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg><span class="od-g g-call">F</span><span data-i18n="app.functions">Functions</span><span class="od-n">4,872</span></div>
+                <div class="od-entry">json.dump</div>
+                <div class="od-entry on">json.dumps</div>
+                <div class="od-entry">json.load</div>
+                <div class="od-entry">json.loads</div>
+                <div class="od-kind"><svg class="od-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg><span class="od-g g-member">M</span><span data-i18n="app.methods">Methods</span><span class="od-n">9,310</span></div>
+                <div class="od-kind"><svg class="od-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg><span class="od-g g-module">M</span><span data-i18n="app.modules">Modules</span><span class="od-n">312</span></div>
+                <div class="od-doc"><svg class="od-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg><img src="assets/devicons/react.svg" alt=""><span>React</span></div>
+                <div class="od-doc"><svg class="od-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg><img src="assets/devicons/rust.svg" alt=""><span>Rust</span></div>
+                <div class="od-doc"><svg class="od-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg><img src="assets/devicons/css3.svg" alt=""><span>CSS</span></div>
+                <div class="od-doc"><svg class="od-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg><img src="assets/devicons/typescript.svg" alt=""><span>TypeScript</span></div>
+                <div class="od-doc"><svg class="od-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg><img src="assets/devicons/swift.svg" alt=""><span>Swift</span></div>
               </div>
-              <div class="ds"><img src="assets/devicons/cplusplus.svg" alt=""><b>C++</b></div>
-              <div class="ds"><img src="assets/devicons/rust.svg" alt=""><b>Rust</b></div>
-              <div class="ds"><img src="assets/devicons/css3.svg" alt=""><b>CSS</b></div>
-              <div class="ds"><img src="assets/devicons/swift.svg" alt=""><b>Swift</b></div>
-              <div class="side-foot"><span data-i18n="app.catalog">Catalog</span><span>v<span class="ver">0.2.72</span></span></div>
-            </div>
-            <div class="app-view">
-              <div class="docpage">
-                <div class="crumb">Python 3 › The Python Standard Library › Internet Data Handling</div>
-                <h4>json — JSON encoder and decoder</h4>
-                <div class="bar" style="width:92%"></div>
-                <div class="bar" style="width:86%"></div>
-                <div class="bar" style="width:64%"></div>
-                <div class="sig"><b>json.dumps</b>(obj, *, skipkeys=False, ensure_ascii=True, indent=None, sort_keys=False)</div>
-                <div class="bar" style="width:88%"></div>
-                <div class="bar" style="width:72%"></div>
-                <h5>Basic usage</h5>
-                <div class="bar" style="width:90%"></div>
-                <div class="bar" style="width:58%"></div>
-                <div class="sig"><b>json.loads</b>(s, *, cls=None, object_hook=None, parse_float=None)</div>
-                <div class="bar" style="width:84%"></div>
-                <div class="bar" style="width:93%"></div>
-                <div class="bar" style="width:46%"></div>
-                <h5>Encoders and decoders</h5>
-                <div class="bar" style="width:80%"></div>
-                <div class="bar" style="width:67%"></div>
+              <div class="od-foot">
+                <span class="od-catalog"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg><span data-i18n="app.catalog">Catalog</span></span>
+                <span class="od-ver">v<span class="ver">0.3.0</span></span>
+                <span class="od-ibtn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
+              </div>
+            </aside>
+            <div class="od-main">
+              <div class="od-tabs">
+                <span class="od-nav"><span class="od-ibtn"><svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></span><span class="od-ibtn off"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></span></span>
+                <span class="od-tab on"><img src="assets/devicons/python.svg" alt=""><b>json — JSON encoder and decoder</b><span class="od-x">×</span></span>
+                <span class="od-tab"><img src="assets/devicons/react.svg" alt=""><b>useEffect</b></span>
+                <span class="od-tab"><img src="assets/devicons/rust.svg" alt=""><b>std::vec::Vec</b></span>
+                <span class="od-plus">+</span>
+              </div>
+              <div class="od-card">
+                <div class="od-page">
+                  <div class="od-crumb">Python 3 › The Python Standard Library › Internet Data Handling</div>
+                  <h4>json — JSON encoder and decoder</h4>
+                  <p class="od-src">Source code: <u>Lib/json/__init__.py</u></p>
+                  <p>Turns Python objects into JSON text and back again. The interface will feel familiar if you have used <code>pickle</code> or <code>marshal</code>.</p>
+                  <pre><span class="k">import</span> json
+json.dumps([<span class="s">'foo'</span>, {<span class="s">'bar'</span>: (<span class="s">'baz'</span>, <span class="k">None</span>, <span class="n">1.0</span>, <span class="n">2</span>)}])</pre>
+                  <h5>Basic usage</h5>
+                  <dl><dt><b>json.dumps</b>(<i>obj</i>, *, <i>skipkeys=False</i>, <i>ensure_ascii=True</i>, <i>indent=None</i>, <i>sort_keys=False</i>)</dt>
+                  <dd>Serialize <i>obj</i> to a JSON formatted string. Pass <i>indent</i> to pretty-print the result.</dd>
+                  <dt><b>json.loads</b>(<i>s</i>, *, <i>cls=None</i>, <i>object_hook=None</i>, <i>parse_float=None</i>)</dt>
+                  <dd>Deserialize <i>s</i>, a string or bytes holding a JSON document, back into a Python object.</dd></dl>
+                </div>
+                <span class="od-toc" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i><i></i></span>
               </div>
             </div>
           </div>
-          <div class="veil"></div>
-          <div class="palette">
-            <div class="pal-input">
-              <svg><use href="#i-search"/></svg>
-              <span class="chip"><img src="assets/devicons/python.svg" alt="">Python 3 ×</span>
-              <span class="typed"><span id="typed">dumps</span><span class="caret"></span></span>
-            </div>
-            <ul class="results" id="results">
-              <li class="res on"><img src="assets/devicons/python.svg" alt=""><b><mark>dumps</mark></b><span class="meta"><span class="badge" data-i18n="app.function">Function</span>json</span></li>
-              <li class="res"><img src="assets/devicons/python.svg" alt=""><b>json.<mark>dumps</mark></b><span class="meta"><span class="badge" data-i18n="app.function">Function</span>json</span></li>
-              <li class="res"><img src="assets/devicons/python.svg" alt=""><b>pickle.<mark>dumps</mark></b><span class="meta"><span class="badge" data-i18n="app.function">Function</span>pickle</span></li>
-              <li class="res"><img src="assets/devicons/python.svg" alt=""><b>marshal.<mark>dumps</mark></b><span class="meta"><span class="badge" data-i18n="app.function">Function</span>marshal</span></li>
-              <li class="res"><img src="assets/devicons/python.svg" alt=""><b>Pickler.<mark>dump</mark></b><span class="meta"><span class="badge" data-i18n="app.method">Method</span>pickle</span></li>
+          <div class="od-veil"></div>
+          <div class="od-pal">
+            <div class="od-chips"><span class="od-chip"><img src="assets/devicons/python.svg" alt="">Python 3<span>×</span></span></div>
+            <div class="od-input"><svg><use href="#i-search"/></svg><span class="od-typed"><span id="typed">dumps</span><span class="caret"></span></span></div>
+            <ul class="od-results" id="results">
+              <li class="on"><span class="od-g g-call">F</span><b>json.dumps</b><span class="od-meta"><span class="od-k">Function</span><span class="od-pill"><img src="assets/devicons/python.svg" alt="">Python 3</span><span class="od-enter">↵</span></span></li>
+              <li><span class="od-g g-call">F</span><b>json.dump</b><span class="od-meta"><span class="od-k">Function</span><span class="od-pill"><img src="assets/devicons/python.svg" alt="">Python 3</span></span></li>
+              <li><span class="od-g g-call">F</span><b>pickle.dumps</b><span class="od-meta"><span class="od-k">Function</span><span class="od-pill"><img src="assets/devicons/python.svg" alt="">Python 3</span></span></li>
+              <li><span class="od-g g-call">F</span><b>marshal.dumps</b><span class="od-meta"><span class="od-k">Function</span><span class="od-pill"><img src="assets/devicons/python.svg" alt="">Python 3</span></span></li>
+              <li><span class="od-g g-member">M</span><b>pickle.Pickler.dump</b><span class="od-meta"><span class="od-k">Method</span><span class="od-pill"><img src="assets/devicons/python.svg" alt="">Python 3</span></span></li>
             </ul>
-            <div class="pal-foot"><span><kbd>↑</kbd> <kbd>↓</kbd> <span data-i18n="app.nav">navigate</span></span><span><kbd>↵</kbd> <span data-i18n="app.open">open</span></span><span><kbd>esc</kbd> <span data-i18n="app.close">close</span></span></div>
+            <div class="od-hints"><span><kbd class="od-kbd">↑</kbd><kbd class="od-kbd">↓</kbd><span data-i18n="app.nav">navigate</span></span><span><kbd class="od-kbd">↵</kbd><span data-i18n="app.open">open</span></span><span><kbd class="od-kbd modk">Ctrl ↵</kbd><span data-i18n="app.newTab">new tab</span></span><span class="end"><kbd class="od-kbd">esc</kbd><span data-i18n="app.close">close</span></span></div>
           </div>
-          <span class="callout" style="left:22.4em;top:.7em">1</span>
-          <span class="callout" style="left:18.2em;top:27.5em">2</span>
-          <span class="callout" style="left:75.6em;top:8.1em">3</span>
-          <span class="callout" style="left:79em;top:50em">4</span>
         </div>
       </div>
-      <figcaption class="legend">
-        <span class="fig-no" data-i18n="fig.no">Fig. 1 — The workspace</span>
-        <span><span class="n">1</span><span data-i18n="fig.1">Tabs, each with its own back and forward history.</span></span>
-        <span><span class="n">2</span><span data-i18n="fig.2">Your docsets, browsable by symbol type, with live counts.</span></span>
-        <span><span class="n">3</span><span data-i18n="fig.3">The command palette, narrowed to Python&nbsp;3 by typing <code>py:</code></span></span>
-        <span><span class="n">4</span><span data-i18n="fig.4">Pages render as their authors made them, inside a sandbox.</span></span>
-      </figcaption>
     </figure>
   </section>
 
@@ -187,7 +174,7 @@
       <p class="mnote" data-i18n="pre.note">Free software under GPL‑3.0. Read it, fork it, make it better.</p>
     </div></div>
     <div class="body">
-      <p class="prose dropcap" style="margin-top:1.6rem" data-i18n="pre.text">Offline documentation is a solved problem; the docset format settled that years ago. What was missing was a reader that feels as quick as your editor and as calm as a good book. OpenDoc starts in an instant, keeps every index in memory and stays out of the way, so you can get back to the thing you were actually building.</p>
+      <p class="prose dropcap" style="margin-top:1.6rem" data-i18n="pre.text">Offline documentation is nothing new. What was missing was a reader that feels as quick as your editor and as calm as a good book. OpenDoc opens in an instant and stays out of the way, so you can get back to the thing you were actually building.</p>
     </div>
   </section>
 
@@ -199,29 +186,17 @@
     </div></div>
     <div class="body">
       <h2 id="search-h" data-i18n="s1.title">Results before you <em>finish typing.</em></h2>
-      <div class="split">
+      <div class="solo">
         <div>
-          <p class="prose prose-lg" data-i18n="s1.text">Press <kbd class="k modk">Ctrl</kbd> <kbd class="k">K</kbd> anywhere. The palette searches every docset you own through an in‑memory fuzzy index, ranks the results the way you would, and opens the right page with <kbd class="k">↵</kbd>.</p>
+          <p class="prose prose-lg" data-i18n="s1.text">Press <kbd class="k modk">Ctrl</kbd> <kbd class="k">K</kbd> anywhere and type what you’re looking for. OpenDoc looks through all your docs at once and puts the best match first.</p>
           <div class="stat">
             <span class="num">&lt;50<small>ms</small></span>
             <span class="cap" data-i18n="s1.stat">to search across 300,000 entries<sup>1</sup></span>
           </div>
         </div>
-        <div class="entry">
-          <div><span class="hw">docset<span>:</span>query</span><span class="pron">/ˈdɒk·sɛt ˈkwɪə·ri/</span></div>
-          <p class="def" data-i18n="s1.def"><i>n.</i> A prefix filter. Type a docset’s short name and a colon to search only inside it; separate several with commas. The prefix turns into a chip, so you can keep typing.</p>
-          <div class="ex"><code><b>cpp:</b>vector</code><code><b>py:</b>dumps</code><code><b>rust,go:</b>channel</code></div>
         </div>
-      </div>
 
-      <p class="label ranks-title" data-i18n="s1.rankTitle">How results are ranked</p>
-      <ol class="ranks">
-        <li><span class="rn">i.</span><h3 data-i18n="s1.r1">Exact match</h3><p><code>dumps</code> → <code>dumps</code></p></li>
-        <li><span class="rn">ii.</span><h3 data-i18n="s1.r2">Prefix</h3><p><code>dum</code> → <code>dumps</code></p></li>
-        <li><span class="rn">iii.</span><h3 data-i18n="s1.r3">Fuzzy</h3><p><code>jsdmp</code> → <code>json.dumps</code></p></li>
-        <li><span class="rn">iv.</span><h3 data-i18n="s1.r4">Last segment</h3><p><code>vector</code> → <code>std::vector</code></p></li>
-      </ol>
-      <p class="boost" data-i18n="s1.boost">Within each tier, classes and functions step ahead of guides and sections.</p>
+      
 
       <!-- Fig. 2 -->
       <figure class="bench pending" id="bench" style="margin-left:0;margin-right:0">
@@ -236,8 +211,11 @@
         </figcaption>
       </figure>
 
-      <p class="footnote" data-i18n="s1.fn"><sup>1</sup> Matching by <em>nucleo-matcher</em>, the engine behind the Helix editor’s picker. Times depend on your hardware and the size of your library.</p>
+      <details class="more">
+        <summary data-i18n="more.bench">How was this measured?</summary>
+        <p class="footnote" data-i18n="s1.fn"><sup>1</sup> Matching by <em>nucleo-matcher</em>, the engine behind the Helix editor’s picker. Times depend on your hardware and the size of your library.</p>
       <p class="footnote" data-i18n="s1.fn2"><sup>2</sup> Zeal’s search rebuilt from its source code (fzy scoring inside SQLite, docsets in parallel) and run beside opendoc-core&nbsp;0.1.2 on the same machine: Windows, 12 threads, median of three runs. Six queries typed letter by letter over the real CSS, C++, Python&nbsp;3 and Swift indexes; the larger libraries are copies of them. This times the search engines, not the windows around them. The trade-off: OpenDoc reads every index into memory when it starts, about 0.06&nbsp;s for these four docsets.</p>
+      </details>
     </div>
   </section>
 
@@ -251,13 +229,13 @@
       <h2 id="reading-h" data-i18n="s2.title">Made for reading, <em>not just looking things up.</em></h2>
       <div class="features">
         <div class="feature"><h3 data-i18n="s2.f1t">Tabs with a memory</h3><p data-i18n="s2.f1">Every tab keeps its own back and forward history. Drag to reorder; middle‑click a link to open it right beside the one you’re reading.</p></div>
-        <div class="feature"><h3 data-i18n="s2.f2t">Picks up where you left off</h3><p data-i18n="s2.f2">Tabs, history and scroll positions survive a restart, written to disk atomically with a backup kept on the side.</p></div>
-        <div class="feature"><h3 data-i18n="s2.f3t">No white flashes</h3><p data-i18n="s2.f3">Links are prefetched on hover, so the next page is usually ready before you click — and going back stays instant.</p></div>
-        <div class="feature"><h3 data-i18n="s2.f4t">Find, zoom, scroll</h3><p data-i18n="s2.f4">A real find bar that counts matches, zoom that’s remembered between sessions, eased wheel scrolling and a trackpad that still feels native.</p></div>
+        <div class="feature"><h3 data-i18n="s2.f2t">Picks up where you left off</h3><p data-i18n="s2.f2">Close the app and open it tomorrow: your tabs, history and place on the page are right where you left them.</p></div>
+        <div class="feature"><h3 data-i18n="s2.f3t">No white flashes</h3><p data-i18n="s2.f3">Pages load before you click, so moving around feels instant — and going back too.</p></div>
+        <div class="feature"><h3 data-i18n="s2.f4t">Find, zoom, scroll</h3><p data-i18n="s2.f4">Find words on the page, zoom that it remembers, and smooth scrolling that feels at home on any trackpad.</p></div>
       </div>
 
-      <div class="toc">
-        <p class="label" data-i18n="s2.keys">Keyboard index</p>
+      <details class="more toc">
+        <summary data-i18n="more.keys">Keyboard shortcuts</summary>
         <ol>
           <li><span data-i18n="k.search">Search documentation</span><span class="lead"></span><span class="keys"><kbd class="k modk">Ctrl</kbd><kbd class="k">K</kbd></span></li>
           <li><span data-i18n="k.find">Find in page</span><span class="lead"></span><span class="keys"><kbd class="k modk">Ctrl</kbd><kbd class="k">F</kbd></span></li>
@@ -268,7 +246,7 @@
           <li><span data-i18n="k.tabN">Go to tab 1–9</span><span class="lead"></span><span class="keys"><kbd class="k modk">Ctrl</kbd><kbd class="k">1–9</kbd></span></li>
           <li><span data-i18n="k.catalog">Open catalog</span><span class="lead"></span><span class="keys"><kbd class="k">F3</kbd></span></li>
         </ol>
-      </div>
+      </details>
     </div>
   </section>
 
@@ -280,15 +258,10 @@
     </div></div>
     <div class="body">
       <h2 id="library-h" data-i18n="s3.title">A catalog built in, <em>a library in one click.</em></h2>
-      <p class="mnote-mobile" data-i18n="s3.note">Already have docsets in a folder? Point OpenDoc at it and you’re done.</p>
-      <p class="prose prose-lg" data-i18n="s3.text">OpenDoc comes with a default catalog of docsets, powered by DevDocs — open it and start reading. Want more? Connect any feeds repository you trust (any GitHub repo in the standard feed format). Either way it’s a one‑click library: install with live progress, update, uninstall. Slow mirror? It tries another. <em>tarix</em> archives are unpacked without ever touching your originals.</p>
+            <p class="prose prose-lg" data-i18n="s3.textShort">OpenDoc comes with a catalog of docsets built in. Open it, pick what you need, and it installs with one click. Already have docsets in a folder? Point OpenDoc at it.</p>
 
-      <div class="index-head">
-        <span class="label" data-i18n="s3.index">What the catalog can hold — a sample</span>
-        <span class="legend-keys"><span><span class="dot"></span><span data-i18n="s3.installed">installed</span></span><span><span class="dot ring"></span><span data-i18n="s3.update">update available</span></span></span>
-      </div>
-      <div class="index" id="index"></div>
-      <p class="lib-note" data-i18n="s3.icons">More than 120 language icons ship inside the app, so every entry is recognisable before you’ve downloaded a byte.</p>
+      <div class="wall" id="wall" role="img" aria-label="Icons of the languages and tools available in the catalog" data-i18n-aria="s3.wallAria"></div>
+      <p class="wall-note"><span class="wall-name" id="wall-name" aria-hidden="true"></span><span data-i18n="s3.wallNote">And hundreds more in the catalog. Hover over any icon to see its name.</span></p>
     </div>
   </section>
 
@@ -300,7 +273,9 @@
     </div></div>
     <div class="body">
       <h2 id="internals-h" data-i18n="s4.title">Small, quick, and <em>careful with what it opens.</em></h2>
-      <p class="prose prose-lg" data-i18n="s4.text">Docsets are HTML from the internet, and OpenDoc treats them that way. Pages render inside a sandboxed frame, served through a dedicated <code>opendoc://</code> protocol that refuses path traversal, odd encodings and stray symlinks.</p>
+      <p class="prose prose-lg" data-i18n="s4.textShort">Docs come from the internet, so every page opens in a sealed‑off frame and links to other sites open in your own browser. The whole app weighs a few megabytes.</p>
+      <details class="more">
+        <summary data-i18n="more.tech">Technical details</summary>
       <dl class="spec">
         <dt data-i18n="s4.shell">Shell</dt><dd>Tauri v2</dd>
         <dt data-i18n="s4.ui">Interface</dt><dd>React 19 · TypeScript · Tailwind</dd>
@@ -317,6 +292,7 @@
         <div><span class="nm">opendoc-core</span><p data-i18n="s4.e2">The headless Rust engine: scanning, indexes, search and safe path resolution.</p><a href="https://github.com/daidarzzz/opendoc-core">github →</a></div>
         <div><span class="nm">opendoc-cli <small>· odc</small></span><p data-i18n="s4.e3">The same engine, straight from your terminal.</p><a href="https://github.com/daidarzzz/opendoc-cli">github →</a></div>
       </div>
+      </details>
     </div>
   </section>
 
@@ -396,13 +372,13 @@
       </table>
       <p class="unsigned" data-i18n="s6.unsigned">The Microsoft Store version is signed by Microsoft. The other builds aren’t code‑signed yet, so Windows SmartScreen and macOS Gatekeeper will ask you once before the first launch. That’s expected.</p>
 
-      <div class="build">
-        <p class="label" data-i18n="s6.build">Or build it yourself</p>
+      <details class="more build">
+        <summary data-i18n="s6.build">Or build it yourself</summary>
 <pre class="code"><span class="c"># Node 22+, stable Rust and the Tauri v2 prerequisites</span>
 <span class="p">$ </span>git clone https://github.com/daidarzzz/opendoc.git
 <span class="p">$ </span>cd opendoc &amp;&amp; npm install
 <span class="p">$ </span>npm run tauri build</pre>
-      </div>
+      </details>
     </div>
   </section>
 
@@ -439,14 +415,18 @@
   /* ───── Spanish dictionary (English is read from the markup) ───── */
   var ES = {
     "s6.page": "Página de descargas y notas de instalación →",
+    "hero.meta": "Libre y de código abierto · Sin crear cuenta",
+    "more.bench": "¿Cómo se ha medido?", "more.keys": "Atajos de teclado", "more.tech": "Detalles técnicos",
+    "s3.textShort": "OpenDoc trae un catálogo de docsets incluido. Ábrelo, elige lo que necesites y se instala con un clic. ¿Ya tienes docsets en una carpeta? Apunta OpenDoc a ella.",
+    "s4.textShort": "La documentación viene de internet, así que cada página se abre en un marco aislado y los enlaces a otras webs se abren en tu propio navegador. La app entera ocupa unos pocos megas.",
     "nav.search": "Búsqueda", "nav.reading": "Lectura", "nav.library": "Biblioteca", "nav.internals": "Por dentro", "nav.download": "Descargar",
     "hero.kicker1": "Visor de documentación offline", "hero.kicker2": "Para docsets de Dash y Zeal",
     "hero.title": "Toda tu documentación, offline. <em>Encontrada en milisegundos.</em>",
-    "hero.lede": "OpenDoc es un lector de escritorio rápido y de código abierto para el formato docset. Busca entre cientos de miles de funciones, clases y guías en milisegundos — en un avión, en un sótano o simplemente con el Wi‑Fi apagado.",
+    "hero.lede": "OpenDoc es un lector tranquilo y de código abierto para la documentación que usas cada día. Busca entre miles de funciones y guías al instante — en un avión, en un sótano o simplemente con el Wi‑Fi apagado.",
     "hero.cta": "Descargar OpenDoc", "hero.source": "Código en GitHub →",
     "facts.version": "Versión", "facts.license": "Licencia", "facts.free": "libre para siempre", "facts.memory": "En reposo", "facts.memoryVal": "menos de 80 MB de RAM", "facts.built": "Hecho con",
     "fig.aria": "Ilustración de la ventana de OpenDoc: pestañas, barra lateral de docsets, paleta de comandos y una página de documentación.",
-    "app.search": "Buscar docs", "app.classes": "Clases", "app.functions": "Funciones", "app.methods": "Métodos", "app.modules": "Módulos", "app.catalog": "Catálogo",
+    "app.search": "Buscar", "app.library": "Biblioteca", "app.newTab": "nueva pestaña", "app.classes": "Clases", "app.functions": "Funciones", "app.methods": "Métodos", "app.modules": "Módulos", "app.catalog": "Catálogo",
     "app.function": "Función", "app.method": "Método", "app.nav": "navegar", "app.open": "abrir", "app.close": "cerrar",
     "fig.no": "Fig. 1 — El espacio de trabajo",
     "fig.1": "Pestañas, cada una con su propio historial de atrás y adelante.",
@@ -454,10 +434,10 @@
     "fig.3": "La paleta de comandos, acotada a Python&nbsp;3 escribiendo <code>py:</code>",
     "fig.4": "Las páginas se ven tal como las hicieron sus autores, dentro de un sandbox.",
     "pre.name": "Prefacio", "pre.note": "Software libre bajo GPL‑3.0. Léelo, haz un fork, mejóralo.",
-    "pre.text": "La documentación offline es un problema resuelto: el formato docset lo dejó claro hace años. Lo que faltaba era un lector tan rápido como tu editor y tan sereno como un buen libro. OpenDoc arranca al instante, mantiene todos los índices en memoria y no se interpone, para que vuelvas a lo que de verdad estabas construyendo.",
+    "pre.text": "La documentación offline no es nada nuevo. Lo que faltaba era un lector tan rápido como tu editor y tan sereno como un buen libro. OpenDoc se abre al instante y no se interpone, para que vuelvas a lo que de verdad estabas construyendo.",
     "s1.note": "Prueba <code>cpp:vector</code>, o <code>rust,go:channel</code> para buscar en dos docsets a la vez.",
     "s1.title": "Resultados antes de que <em>termines de escribir.</em>",
-    "s1.text": "Pulsa <kbd class=\"k modk\">Ctrl</kbd> <kbd class=\"k\">K</kbd> donde sea. La paleta busca en todos tus docsets con un índice difuso en memoria, ordena los resultados como lo harías tú y abre la página correcta con <kbd class=\"k\">↵</kbd>.",
+    "s1.text": "Pulsa <kbd class=\"k modk\">Ctrl</kbd> <kbd class=\"k\">K</kbd> donde sea y escribe lo que buscas. OpenDoc mira en toda tu documentación a la vez y te pone primero lo mejor.",
     "s1.stat": "para buscar entre 300.000 entradas<sup>1</sup>",
     "s1.def": "<i>s.</i> Filtro por prefijo. Escribe el nombre corto de un docset y dos puntos para buscar solo en él; separa varios con comas. El prefijo se convierte en una etiqueta y puedes seguir escribiendo.",
     "s1.rankTitle": "Cómo se ordenan los resultados",
@@ -471,16 +451,17 @@
     "s2.note": "Clic derecho en cualquier parte: un menú pequeño y discreto en lugar del del navegador.",
     "s2.title": "Hecho para leer, <em>no solo para consultar.</em>",
     "s2.f1t": "Pestañas con memoria", "s2.f1": "Cada pestaña guarda su propio historial. Arrástralas para reordenarlas; con clic central abres un enlace justo al lado del que estás leyendo.",
-    "s2.f2t": "Retoma donde lo dejaste", "s2.f2": "Pestañas, historial y posición de scroll sobreviven a un reinicio, guardados de forma atómica y con una copia de seguridad al lado.",
-    "s2.f3t": "Sin destellos en blanco", "s2.f3": "Los enlaces se precargan al pasar el ratón: la página siguiente suele estar lista antes del clic, y volver atrás sigue siendo instantáneo.",
-    "s2.f4t": "Buscar, ampliar, desplazar", "s2.f4": "Una barra de búsqueda de verdad que cuenta coincidencias, un zoom que se recuerda entre sesiones, rueda con desplazamiento suave y un trackpad que sigue sintiéndose nativo.",
+    "s2.f2t": "Retoma donde lo dejaste", "s2.f2": "Cierra la app y ábrela mañana: tus pestañas, tu historial y el punto exacto de la página siguen donde los dejaste.",
+    "s2.f3t": "Sin destellos en blanco", "s2.f3": "Las páginas se cargan antes del clic, así que moverte es instantáneo — y volver atrás también.",
+    "s2.f4t": "Buscar, ampliar, desplazar", "s2.f4": "Busca palabras en la página, un zoom que se recuerda y un desplazamiento suave que se siente natural en cualquier trackpad.",
     "s2.keys": "Índice de atajos",
     "k.search": "Buscar en la documentación", "k.find": "Buscar en la página", "k.newTab": "Nueva pestaña", "k.zoom": "Ampliar / reducir",
     "k.reopen": "Reabrir pestaña cerrada", "k.back": "Atrás / adelante", "k.tabN": "Ir a la pestaña 1–9", "k.catalog": "Abrir catálogo",
     "s3.note": "¿Ya tienes docsets en una carpeta? Apunta OpenDoc a ella y listo.",
     "s3.title": "Catálogo incluido, <em>biblioteca a un clic.</em>",
     "s3.text": "OpenDoc incluye un catálogo de docsets por defecto, gracias a DevDocs: ábrelo y empieza a leer. ¿Quieres más? Conecta cualquier repositorio de feeds de tu confianza (cualquier repo de GitHub con el formato de feeds estándar). En ambos casos es una biblioteca a un clic: instala viendo el progreso, actualiza y desinstala. ¿Un mirror va lento? Prueba con otro. Los archivos <em>tarix</em> se descomprimen sin tocar nunca tus originales.",
-    "s3.index": "Lo que puede contener el catálogo — una muestra", "s3.installed": "instalado", "s3.update": "actualización disponible",
+    "s3.wallAria": "Iconos de los lenguajes y herramientas disponibles en el catálogo",
+    "s3.wallNote": "Y cientos más en el catálogo. Pasa el ratón por cualquier icono para ver su nombre.",
     "s3.icons": "La app incluye más de 120 iconos de lenguajes, así que cada entrada se reconoce antes de descargar un solo byte.",
     "s4.note": "Los enlaces externos se abren siempre en tu navegador, nunca dentro del visor.",
     "s4.title": "Pequeño, rápido y <em>prudente con lo que abre.</em>",
@@ -516,47 +497,33 @@
   };
 
   /* ───── docset index ───── */
-  var DOCS = [
-    ["Angular","angular"],["Ansible","ansible"],["Apache","apache"],["Arduino","arduino"],
-    ["Bash","bash","i"],["Bootstrap","bootstrap"],
-    ["C","c"],["C++","cplusplus","i"],["C#","csharp"],["CMake","cmake","u"],["CSS","css3","i"],
-    ["D3.js","d3js"],["Dart","dart"],["Django","django"],["Docker","docker","i"],
-    ["Elixir","elixir"],["Erlang","erlang"],
-    ["Flask","flask"],["Flutter","flutter"],
-    ["Git","git","i"],["Go","go","u"],
-    ["Haskell","haskell"],["HTML","html5","i"],
-    ["Java","java"],["JavaScript","javascript","i"],["jQuery","jquery"],["Julia","julia"],
-    ["Kotlin","kotlin"],["Kubernetes","kubernetes"],
-    ["Laravel","laravel"],["LaTeX","latex"],["Lua","lua"],
-    ["Markdown","markdown"],["MongoDB","mongodb"],["MySQL","mysql"],
-    ["Node.js","nodejs","i"],["NumPy","numpy","u"],
-    ["OCaml","ocaml"],
-    ["Pandas","pandas"],["Perl","perl"],["PHP","php"],["PostgreSQL","postgresql","i"],["Python 3","python","i"],["PyTorch","pytorch"],
-    ["Qt","qt"],
-    ["R","r"],["React","react","i"],["Redis","redis"],["Ruby","ruby"],["Ruby on Rails","rails"],["Rust","rust","i"],
-    ["Sass","sass"],["Scala","scala"],["SQLite","sqlite"],["Svelte","svelte"],["Swift","swift","i"],
-    ["Tailwind CSS","tailwindcss","u"],["TensorFlow","tensorflow"],["Terraform","terraform"],["TypeScript","typescript","i"],
-    ["Vim","vim"],["Vue.js","vuejs"],
-    ["Zig","zig"]
-  ];
-  var idx = document.getElementById("index");
-  if (idx) {
-    var groups = {}, order = [];
-    DOCS.forEach(function (d) {
-      var L = d[0].charAt(0).toUpperCase();
-      if (!groups[L]) { groups[L] = []; order.push(L); }
-      groups[L].push(d);
+  var WALL = [["akka","Akka"],["amazonwebservices","AWS"],["android","Android"],["angular","Angular"],["angularjs","AngularJS"],["ansible","Ansible"],["apache","Apache"],["appcelerator","Titanium"],["apple","Apple"],["arduino","Arduino"],["astro","Astro"],["axios","Axios"],["babel","Babel"],["backbonejs","Backbone.js"],["bash","Bash"],["bazel","Bazel"],["bootstrap","Bootstrap"],["bower","Bower"],["bun","Bun"],["c","C"],["cakephp","CakePHP"],["chrome","Chrome"],["clojure","Clojure"],["cmake","CMake"],["cobol","Cobol"],["codeigniter","CodeIgniter"],["coffeescript","CoffeeScript"],["composer","Composer"],["couchdb","CouchDB"],["cplusplus","C++"],["crystal","Crystal"],["csharp","C#"],["css3","CSS"],["cypressio","Cypress"],["d3js","D3.js"],["dart","Dart"],["denojs","Deno"],["django","Django"],["docker","Docker"],["doctrine","Doctrine"],["drupal","Drupal"],["duckdb","DuckDB"],["elasticsearch","Elasticsearch"],["electron","Electron"],["elixir","Elixir"],["emacs","Emacs"],["ember","Ember.js"],["erlang","Erlang"],["eslint","ESLint"],["express","Express"],["fastapi","FastAPI"],["firefox","Firefox"],["flask","Flask"],["flutter","Flutter"],["fortran","Fortran"],["foundation","Foundation"],["gcc","GCC"],["git","Git"],["go","Go"],["godot","Godot"],["gradle","Gradle"],["grails","Grails"],["groovy","Groovy"],["grunt","Grunt"],["gulp","gulp"],["handlebars","Handlebars"],["haskell","Haskell"],["haxe","Haxe"],["homebrew","Homebrew"],["html5","HTML"],["htmx","htmx"],["influxdb","InfluxDB"],["ionic","Ionic"],["jasmine","Jasmine"],["java","Java"],["javascript","JavaScript"],["jekyll","Jekyll"],["jest","Jest"],["jquery","jQuery"],["julia","Julia"],["knockout","Knockout"],["kotlin","Kotlin"],["kubernetes","Kubernetes"],["laravel","Laravel"],["latex","LaTeX"],["less","Less"],["linux","Linux"],["lodash","Lodash"],["love2d","LÖVE"],["lua","Lua"],["mariadb","MariaDB"],["markdown","Markdown"],["matlab","MATLAB"],["matplotlib","Matplotlib"],["meteor","Meteor"],["mocha","Mocha"],["mongodb","MongoDB"],["mongoose","Mongoose"],["mysql","MySQL"],["nextjs","Next.js"],["nginx","Nginx"],["nim","Nim"],["nixos","NixOS"],["nodejs","Node.js"],["npm","npm"],["numpy","NumPy"],["ocaml","OCaml"],["opencv","OpenCV"],["opengl","OpenGL"],["pandas","Pandas"],["perl","Perl"],["phalcon","Phalcon"],["phoenix","Phoenix"],["php","PHP"],["playwright","Playwright"],["postgresql","PostgreSQL"],["powershell","PowerShell"],["processing","Processing"],["pug","Pug"],["puppeteer","Puppeteer"],["pytest","pytest"],["python","Python"],["pytorch","PyTorch"],["qt","Qt"],["r","R"],["rabbitmq","RabbitMQ"],["racket","Racket"],["rails","Ruby on Rails"],["react","React"],["reactnative","React Native"],["redis","Redis"],["redux","Redux"],["ruby","Ruby"],["rust","Rust"],["rxjs","RxJS"],["sass","Sass"],["scala","Scala"],["scikitlearn","scikit-learn"],["sequelize","Sequelize"],["socketio","Socket.IO"],["spring","Spring"],["sqlalchemy","SQLAlchemy"],["sqlite","SQLite"],["stylus","Stylus"],["svelte","Svelte"],["swift","Swift"],["symfony","Symfony"],["tailwindcss","Tailwind CSS"],["tensorflow","TensorFlow"],["terraform","Terraform"],["threejs","three.js"],["typescript","TypeScript"],["typo3","TYPO3"],["unity","Unity"],["vagrant","Vagrant"],["vertx","Vert.x"],["vim","Vim"],["vite","Vite"],["vitest","Vitest"],["vsphere","vSphere"],["vuejs","Vue.js"],["vulkan","Vulkan"],["webpack","webpack"],["wordpress","WordPress"],["xml","XML"],["yaml","YAML"],["yarn","Yarn"],["yii","Yii"],["zend","Zend"],["zig","Zig"],["zsh","Zsh"]];
+  var wall = document.getElementById("wall");
+  if (wall) {
+    /* Same mixed order on every visit, so neighbours differ in colour and shape. */
+    var seed = 7;
+    function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+    for (var wi = WALL.length - 1; wi > 0; wi--) { var wj = Math.floor(rnd() * (wi + 1)); var tmp = WALL[wi]; WALL[wi] = WALL[wj]; WALL[wj] = tmp; }
+    wall.innerHTML = WALL.map(function (d) {
+      return '<span class="w" title="' + d[1] + '"><img src="assets/devicons/' + d[0] + '.svg" alt="" loading="lazy" width="28" height="28"></span>';
+    }).join("");
+    var wname = document.getElementById("wall-name");
+    wall.addEventListener("mouseover", function (e) {
+      var t = e.target.closest && e.target.closest(".w");
+      if (t && wname) { wname.textContent = t.title; wname.classList.add("on"); }
     });
-    var html = "";
-    order.forEach(function (L) {
-      html += '<div class="ix"><span class="ix-l" aria-hidden="true">' + L + "</span><ul>";
-      groups[L].forEach(function (d) {
-        var mark = d[2] === "i" ? '<span class="dot" title="installed"></span>' : d[2] === "u" ? '<span class="dot ring" title="update available"></span>' : "";
-        html += '<li><img src="assets/devicons/' + d[1] + '.svg" alt="" loading="lazy" width="22" height="22">' + d[0] + mark + "</li>";
-      });
-      html += "</ul></div>";
-    });
-    idx.innerHTML = html;
+    wall.addEventListener("mouseleave", function () { if (wname) wname.classList.remove("on"); });
+    /* A few icons quietly light up in colour, one at a time. */
+    var still = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!still) {
+      var tiles = wall.querySelectorAll(".w");
+      setInterval(function () {
+        if (document.hidden) return;
+        var t = tiles[Math.floor(Math.random() * tiles.length)];
+        t.classList.add("glow");
+        setTimeout(function () { t.classList.remove("glow"); }, 2600);
+      }, 650);
+    }
   }
 
   /* ───── OS detection & modifier keys ───── */
@@ -781,7 +748,7 @@
         if (i < word.length) setTimeout(step, 110 + Math.random() * 90);
       }, 700);
     }, { threshold: 0.45 });
-    io.observe(typed.closest(".app"));
+    io.observe(typed.closest(".od-win"));
   }
 
   /* ───── Fig. 2: bars grow once when the chart scrolls into view ───── */

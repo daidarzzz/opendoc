@@ -200,6 +200,7 @@ Each documentation set you load remains the intellectual property of its respect
 
 ## Acknowledgments
 
+- Thanks to the [DevDocs](https://devdocs.io/) maintainers and contributors for making their documentation catalog and packages available. They power OpenDoc’s default catalog.
 - [Zeal](https://zealdocs.org/) and [Dash](https://kapeli.com/dash) for establishing the offline docset ecosystem. OpenDoc is an independent project and is not affiliated with either tool.
 - [Catppuccin](https://catppuccin.com/) for the Mauve palette values (Latte/Mocha) utilized in the accent color scheme (MIT License).
 - [nucleo-matcher](https://github.com/helix-editor/nucleo) for high-performance in-memory fuzzy matching.
