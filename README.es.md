@@ -6,7 +6,7 @@
 
 OpenDoc lee el formato estándar **docset** (el mismo creado por Dash y utilizado por Zeal), por lo que puedes configurarlo con tu carpeta de docsets existente y empezar a consultar documentación de inmediato.
 
-> **Versión actual: v0.2.76.** OpenDoc incluye navegación por pestañas con persistencia de sesiones, motor de búsqueda difusa en memoria, navegación de símbolos por tipo, tres estilos visuales con acentos personalizables, índice de la página, seguir leyendo, actualizaciones desde la app y gestión completa de docsets desde feeds configurables.
+> **Versión actual: v0.3.0.** OpenDoc incluye el catálogo de DevDocs por defecto (844 documentaciones, convertidas a docsets normales al instalar), navegación por pestañas con persistencia de sesiones, motor de búsqueda difusa en memoria, navegación de símbolos por tipo, tres estilos visuales con acentos personalizables, índice de la página, seguir leyendo, actualizaciones desde la app y gestión completa de docsets.
 
 La [página de descargas](https://opendoc.daida.net/download.html) reúne los instaladores por plataforma, notas de instalación y primeros pasos. Comparte las preferencias de tema, acento e idioma de la landing. Los enlaces y tamaños se consultan en la última release de GitHub; si la consulta falla, los enlaces abren la página de la release.
 
