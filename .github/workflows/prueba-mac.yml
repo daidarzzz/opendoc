@@ -49,15 +49,15 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          dmgs=(src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg)
-          test "${#dmgs[@]}" -eq 1
+          target_dir="src-tauri/target/aarch64-apple-darwin/release"
+          dmgs=("$target_dir"/bundle/dmg/*.dmg)
+          if [ "${#dmgs[@]}" -ne 1 ]; then
+            echo "::error::Expected one DMG, found ${#dmgs[@]}"
+            exit 1
+          fi
+          # Tauri leaves the release executable on disk after bundling.
+          test "$(lipo -archs "$target_dir/opendoc")" = arm64
           hdiutil verify "${dmgs[0]}"
-          mount_dir="$(mktemp -d)"
-          trap 'hdiutil detach "$mount_dir" >/dev/null || true; rmdir "$mount_dir" || true' EXIT
-          hdiutil attach "${dmgs[0]}" -readonly -nobrowse -mountpoint "$mount_dir" >/dev/null
-          app="$mount_dir/OpenDoc Preview.app"
-          executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Contents/Info.plist")
-          test "$(lipo -archs "$app/Contents/MacOS/$executable")" = arm64
           cp "${dmgs[0]}" "OpenDoc-pruebaMac-arm64.dmg"
 
       - uses: actions/upload-artifact@v4
