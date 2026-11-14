@@ -1092,3 +1092,8 @@ pub fn set_accent(
 pub fn confirm_exit(app: tauri::AppHandle) {
     app.exit(0);
 }
+
+#[tauri::command]
+pub fn sync_mac_glass(window: tauri::WebviewWindow, state: service::MacGlassState) {
+    service::sync_mac_glass(&window, state);
+}
