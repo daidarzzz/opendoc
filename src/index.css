@@ -413,3 +413,43 @@ html.dark:root[data-design="classic"] {
     animation: none !important;
   }
 }
+
+/* AppKit draws the glass through transparent slots in the WKWebView. */
+html[data-design="liquid-glass"] {
+  --font-display: -apple-system, BlinkMacSystemFont, sans-serif;
+  --display-tracking: -0.02em;
+}
+html[data-design="liquid-glass"] body,
+html[data-design="liquid-glass"] .opendoc-window {
+  @apply bg-transparent transition-none;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+html[data-design="liquid-glass"] .opendoc-window [data-mac-sidebar-content] {
+  @apply px-2 pt-1 pb-2;
+}
+
+html[data-design="liquid-glass"] .mac-tabs {
+  @apply items-center pb-2;
+}
+
+html[data-design="liquid-glass"] .mac-tabs [role="tab"] {
+  @apply rounded-[14px];
+}
+
+html[data-design="liquid-glass"] .mac-tabs .tab-connected {
+  @apply bg-transparent;
+}
+
+html[data-design="liquid-glass"] .mac-tabs .tab-connected::before,
+html[data-design="liquid-glass"] .mac-tabs .tab-connected::after {
+  @apply hidden;
+}
+
+html[data-design="liquid-glass"] [data-mac-rendered="true"] {
+  @apply opacity-0;
+}
+
+html[data-design="liquid-glass"] [data-mac-rendered="true"]:focus-visible {
+  @apply opacity-100;
+}
