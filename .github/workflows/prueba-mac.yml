@@ -1,0 +1,65 @@
+name: pruebaMac · Apple Silicon DMG
+
+on:
+  push:
+    branches: [pruebaMac]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prueba-mac-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dmg:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Verify AppKit SDK and runner
+        run: |
+          test "$(uname -m)" = arm64
+          SDK_VERSION="$(xcrun --sdk macosx --show-sdk-version)"
+          test "${SDK_VERSION%%.*}" -ge 26
+
+      - run: npm ci
+      - run: npm test
+
+      - name: Build Apple Silicon DMG
+        run: |
+          npx tauri build --target aarch64-apple-darwin --bundles dmg --ci \
+            --config '{"productName":"OpenDoc Preview","identifier":"com.opendoc.app.pruebamac"}'
+
+      - name: Verify and name the disk image
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          dmgs=(src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg)
+          test "${#dmgs[@]}" -eq 1
+          app="src-tauri/target/aarch64-apple-darwin/release/bundle/macos/OpenDoc Preview.app"
+          executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Contents/Info.plist")
+          test "$(lipo -archs "$app/Contents/MacOS/$executable")" = arm64
+          hdiutil verify "${dmgs[0]}"
+          cp "${dmgs[0]}" "OpenDoc-pruebaMac-arm64.dmg"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OpenDoc-pruebaMac-arm64
+          path: OpenDoc-pruebaMac-arm64.dmg
+          if-no-files-found: error
+          compression-level: 0
