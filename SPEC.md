@@ -219,6 +219,7 @@ Todos los comandos se invocan mediante el protocolo IPC de Tauri. La siguiente t
 | `list_kinds` | `docset_id: String` | `Result<Vec<KindInfo>, ApiError>` | Tipos de símbolo y conteos disponibles en un docset. |
 | `list_entries` | `docset_id: String, kind: String, offset?: usize, limit?: usize` | `Result<Vec<NavEntry>, ApiError>` | Lista paginada de símbolos de un tipo específico. |
 | `get_docset_home` | `docset_id: String` | `Result<String, ApiError>` | Obtiene la URL canónica `opendoc://` de inicio del docset. |
+| `sync_mac_glass` | `state: MacGlassState` | `()` | Sincroniza geometría, controles y apariencia de AppKit en la ventana principal (macOS 26+). |
 | `get_settings` | *(ninguno)* | `Settings` | Lee los ajustes persistentes actuales. |
 | `set_theme` | `theme: ThemeMode` | `Result<Settings, ApiError>` | Cambia el modo de tema (`light`, `dark`, `system`). |
 | `set_accent` | `accent: Accent` | `Result<Settings, ApiError>` | Cambia el acento (`red`, `blue`, `amber`, `catppuccin`) y actualiza el icono. |
@@ -254,6 +255,12 @@ Todos los comandos se invocan mediante el protocolo IPC de Tauri. La siguiente t
 - **`opendoc-exit-requested`**: emitido por el backend cuando el sistema operativo solicita el cierre de la app (p. ej. `Cmd+Q` en macOS) para que el frontend ejecute el guardado final antes de salir.
 
 ---
+
+### 5.2 Interfaz Liquid Glass de macOS
+
+En macOS 26 o posterior, la ventana principal usa la barra de título superpuesta de Tauri y un WKWebView transparente. El estilo `liquid-glass` es el predeterminado cuando no hay otro guardado. `mac_glass.m` coloca superficies `NSGlassEffectView` bajo la barra lateral y la pestaña activa. Sobre el webview se colocan botones AppKit con símbolos del sistema y controles de Ajustes como `NSSwitch`. Los clics vuelven al control React correspondiente. Las pestañas conservan su flujo de arrastre, navegación y sesión en el frontend.
+
+En macOS se compila el puente con el SDK 26 y se comprueba la disponibilidad de AppKit en ejecución. El workflow `prueba-mac.yml` se dispara con pushes a `pruebaMac`, compila para `aarch64-apple-darwin` y sube solo el DMG como artefacto.
 
 ## 6. Aseguramiento de Calidad y CI/CD
 
