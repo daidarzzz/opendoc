@@ -37,7 +37,7 @@
 - (NSView *)viewForModel:(NSDictionary *)model API_AVAILABLE(macos(26.0)) {
     NSString *kind = model[@"kind"];
     if ([kind isEqualToString:@"sidebar"] || [kind isEqualToString:@"tab"]) {
-        NSGlassEffectView *glass = [[NSGlassEffectView alloc] initWithFrame:NSZeroRect];
+        NSGlassEffectView *glass = [[NSClassFromString(@"NSGlassEffectView") alloc] initWithFrame:NSZeroRect];
         glass.cornerRadius = [kind isEqualToString:@"sidebar"] ? 24 : 14;
         return glass;
     }
@@ -67,7 +67,7 @@
     button.toolTip = title;
     [button setAccessibilityLabel:title];
 
-    NSGlassEffectView *glass = [[NSGlassEffectView alloc] initWithFrame:NSZeroRect];
+    NSGlassEffectView *glass = [[NSClassFromString(@"NSGlassEffectView") alloc] initWithFrame:NSZeroRect];
     glass.cornerRadius = 14;
     // Earlier macOS 26 releases may not expose the interactive setter yet.
     SEL interactive = NSSelectorFromString(@"setEffectIsInteractive:");
@@ -171,25 +171,23 @@
 @end
 
 bool opendoc_glass_available(void) {
-    if (@available(macOS 26.0, *)) return YES;
-    return NO;
+    return NSClassFromString(@"NSGlassEffectView") != Nil;
 }
 
 void opendoc_glass_sync(void *handle, const char *json, size_t length) {
-    if (@available(macOS 26.0, *)) {
-        static char association;
-        WKWebView *webView = (__bridge WKWebView *)handle;
-        NSData *data = [NSData dataWithBytes:json length:length];
-        NSDictionary *state = [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL];
-        if (!state || !webView) return;
-        ODGlass *bridge = objc_getAssociatedObject(webView, &association);
-        if (!bridge) {
-            bridge = [ODGlass new];
-            bridge.webView = webView;
-            bridge.views = [NSMutableDictionary dictionary];
-            bridge.models = [NSMutableDictionary dictionary];
-            objc_setAssociatedObject(webView, &association, bridge, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        }
-        [bridge sync:state];
+    if (!opendoc_glass_available()) return;
+    static char association;
+    WKWebView *webView = (__bridge WKWebView *)handle;
+    NSData *data = [NSData dataWithBytes:json length:length];
+    NSDictionary *state = [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL];
+    if (!state || !webView) return;
+    ODGlass *bridge = objc_getAssociatedObject(webView, &association);
+    if (!bridge) {
+        bridge = [ODGlass new];
+        bridge.webView = webView;
+        bridge.views = [NSMutableDictionary dictionary];
+        bridge.models = [NSMutableDictionary dictionary];
+        objc_setAssociatedObject(webView, &association, bridge, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
+    [bridge sync:state];
 }
