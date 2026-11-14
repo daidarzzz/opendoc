@@ -12,6 +12,10 @@ La [página de descargas](https://opendoc.daida.net/download.html) reúne los in
 
 ---
 
+## Prueba Liquid Glass para Mac
+
+En macOS 26 o posterior, los perfiles nuevos usan Liquid Glass. AppKit dibuja el vidrio del panel lateral y la pestaña activa, los botones de navegación y varios controles de Ajustes. El workflow de la rama `pruebaMac` sube un único DMG para Apple Silicon a GitHub Actions.
+
 ## ¿Por qué OpenDoc?
 
 Aunque Zeal es una herramienta consolidada en la comunidad, su interfaz en C++/Qt se siente desfasada y ofrece pocas opciones de personalización moderna. OpenDoc nace desde cero como una alternativa moderna construida sobre cuatro principios:
