@@ -293,3 +293,24 @@ export interface UpdateInfo {
   notes: string | null;
   date: string | null;
 }
+
+export interface MacGlassState {
+  enabled: boolean;
+  appearance: ThemeMode;
+  items: {
+    id: number;
+    kind: "sidebar" | "tab" | "button" | "switch";
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    model: {
+      id: number;
+      kind: "sidebar" | "tab" | "button" | "switch";
+      label: string;
+      symbol: string;
+      disabled: boolean;
+      selected: boolean;
+    };
+  }[];
+}
