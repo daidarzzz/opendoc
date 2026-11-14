@@ -40,11 +40,13 @@ export function Sidebar({
 
   return (
     <aside
+      data-mac-surface={collapsed ? undefined : "sidebar"}
       style={collapsed ? { width: 0, flexBasis: 0 } : style}
       inert={collapsed}
       className={`flex h-full shrink-0 overflow-hidden ${animate ? "transition-[width,flex-basis] duration-300 ease-smooth" : ""}`}
     >
       <div
+        data-mac-sidebar-content
         style={{ width: expandedWidth }}
         className={`flex h-full min-w-0 shrink-0 flex-col transition-opacity duration-200 ${collapsed ? "opacity-0" : "opacity-100"}`}
       >
@@ -54,7 +56,8 @@ export function Sidebar({
             OpenDoc
           </h1>
           <button
-            onClick={onCollapse}
+            data-mac-control data-mac-symbol="sidebar.left"
+          onClick={onCollapse}
             title={t("settings.collapseSidebar")}
             aria-label={t("settings.collapseSidebar")}
             className="icon-btn"
@@ -65,6 +68,7 @@ export function Sidebar({
 
         <button
           type="button"
+          data-mac-control
           onClick={() => usePalette.getState().setOpen(true)}
           aria-label={t("welcome.searchDocs", { mod })}
           className="group mx-3 flex items-center gap-2 rounded-xl bg-card/70 px-3 py-2 text-left shadow-soft ring-1 ring-canvas-line transition-all duration-150 hover:bg-card hover:shadow-float"
