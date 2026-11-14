@@ -62,6 +62,7 @@ While Zeal is a proven community tool, its Qt/C++ interface feels dated and offe
 - **Accent Colors:** Choose between **Red**, **Blue**, **Amber**, or **Catppuccin** (Latte/Mocha Mauve). Updates UI highlights, branded buttons, the app logo, and the running window/Dock icon in real time.
 - **Settings Panel (`Ctrl/Cmd+,`):** A full settings window organized in sections — General (language, tab restore, number of search results), Appearance (theme previews, accent color, reduce motion), Reading (smooth scrolling, docset zoom, link preloading on hover, dark docsets beta), Docsets (folder, rescan, installed list, pending installs, catalog), a keyboard shortcuts reference and About (version, links, reset preferences).
 - **Bilingual Interface:** Fully localized in **English** (default) and **Spanish**, switchable live from Settings with 100% dictionary key parity.
+- **Liquid Glass preview (macOS 26+):** Default on a fresh profile on supported Macs. The sidebar and active tab use Apple’s AppKit glass, and navigation and selected Settings controls are native. The `pruebaMac` Actions workflow uploads a single Apple Silicon DMG.
 
 ---
 
