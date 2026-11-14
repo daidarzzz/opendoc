@@ -264,3 +264,8 @@ export async function installUpdate(onProgress: (received: number, total: number
 export async function relaunchApp(): Promise<void> {
   await relaunch();
 }
+
+/** Places AppKit controls over their slots in the main window. */
+export async function syncMacGlass(state: import("./types").MacGlassState): Promise<void> {
+  return invoke("sync_mac_glass", { state });
+}
