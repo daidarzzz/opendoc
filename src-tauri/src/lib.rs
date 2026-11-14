@@ -8,6 +8,8 @@ pub mod catalog;
 pub mod commands;
 pub mod docset;
 pub mod linux_gpu;
+#[cfg(target_os = "macos")]
+mod mac_glass;
 pub mod navigation;
 pub mod persist;
 pub mod profile;
@@ -22,7 +24,8 @@ use commands::{
     cancel_install, confirm_exit, extract_tarix, get_catalog_status, get_docset_home,
     get_install_status, get_session, get_settings, install_docset, list_catalog, list_docsets,
     list_entries, list_kinds, refresh_catalog, save_session, search, set_accent, set_docsets_dir,
-    set_feed_repo, set_language, set_restore_tabs, set_theme, uninstall_docset, AppState,
+    set_feed_repo, set_language, set_restore_tabs, set_theme, sync_mac_glass, uninstall_docset,
+    AppState,
 };
 
 /// Carga ajustes al arrancar. Si no hay carpeta configurada, asigna
@@ -82,7 +85,7 @@ pub fn run() {
             // enganchar on_navigation: los enlaces externos del iframe van
             // al navegador del sistema y nunca se cargan en el visor.
             let handle = app.handle().clone();
-            tauri::WebviewWindowBuilder::new(
+            let window = tauri::WebviewWindowBuilder::new(
                 app,
                 "main",
                 tauri::WebviewUrl::App("index.html".into()),
@@ -103,8 +106,18 @@ pub fn run() {
                         false
                     }
                 }
-            })
-            .build()?;
+            });
+            #[cfg(target_os = "macos")]
+            let window = if mac_glass::available() {
+                window
+                    .title_bar_style(tauri::TitleBarStyle::Overlay)
+                    .hidden_title(true)
+                    .transparent(true)
+                    .initialization_script("window.__OPENDOC_MAC_GLASS__ = true;")
+            } else {
+                window
+            };
+            window.build()?;
             // Icono en ejecución según el acento guardado (barra de tareas
             // o Dock; en macOS el `setup` corre en el hilo principal). Es lo
             // primero tras crear la ventana; si falla, queda el rojo del bundle.
@@ -125,6 +138,7 @@ pub fn run() {
             list_entries,
             get_docset_home,
             get_settings,
+            sync_mac_glass,
             set_theme,
             set_accent,
             set_language,
