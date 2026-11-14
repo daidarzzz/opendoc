@@ -8,6 +8,9 @@ import { useAppContextMenu } from "./hooks/useAppContextMenu";
 import { Sidebar } from "./components/Sidebar";
 import { TabsBar } from "./components/TabsBar";
 import { Viewer } from "./components/Viewer";
+import { useMacGlass } from "./hooks/useMacGlass";
+import { usePrefs } from "./store/prefs";
+import { HAS_MAC_GLASS } from "./lib/design";
 import { useGlobalKeys } from "./hooks/useGlobalKeys";
 import { destroyWindow, onCloseRequested, onExitRequested, confirmExit } from "./lib/commands";
 import {
@@ -53,6 +56,9 @@ export default function App() {
   const [sidebarAnimating, setSidebarAnimating] = useState(false);
   const sidebarAnimTimer = useRef<number | null>(null);
   const { t } = useT();
+  const liquidGlass = usePrefs((s) => s.design === "liquid-glass");
+  const theme = useTheme((s) => s.mode);
+  useMacGlass(liquidGlass, theme, langLoaded);
   useGlobalKeys();
   useAppContextMenu();
 
@@ -177,62 +183,65 @@ export default function App() {
   if (!langLoaded) return null;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-canvas text-ink">
-      <Sidebar
-        style={{ width: sidebarWidth, flexBasis: sidebarWidth }}
-        collapsed={sidebarCollapsed}
-        expandedWidth={sidebarWidth}
-        onCollapse={() => toggleSidebar(true)}
-        animate={sidebarAnimating}
-      />
-      {!sidebarCollapsed && (
-      <div
-        role="separator"
-        aria-label={t("app.resizeSidebar")}
-        aria-orientation="vertical"
-        aria-valuemin={SIDEBAR_MIN}
-        aria-valuemax={SIDEBAR_MAX}
-        aria-valuenow={sidebarWidth}
-        tabIndex={0}
-        className="group z-10 -ml-[2px] flex w-[6px] shrink-0 cursor-col-resize touch-none items-center justify-center outline-none focus-visible:bg-accent/30"
-        onPointerDown={(event) => {
-          event.preventDefault();
-          event.currentTarget.setPointerCapture(event.pointerId);
-          resizeSidebar(event.clientX);
-        }}
-        onPointerMove={(event) => {
-          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-            resizeSidebar(event.clientX);
-          }
-        }}
-        onKeyDown={(event) => {
-          if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-            event.preventDefault();
-            resizeSidebar(sidebarWidth + (event.key === "ArrowRight" ? 16 : -16));
-          } else if (event.key === "Home") {
-            event.preventDefault();
-            resizeSidebar(SIDEBAR_MIN);
-          } else if (event.key === "End") {
-            event.preventDefault();
-            resizeSidebar(SIDEBAR_MAX);
-          }
-        }}
-      >
-        <span className="my-auto h-10 w-[3px] rounded-full bg-transparent transition-colors duration-200 group-hover:bg-accent/50 group-focus-visible:bg-accent group-active:bg-accent" />
-      </div>
-      )}
-      {/* La cabecera vive fuera del visor para que nunca se desmonte al
-          cambiar de página. */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <TabsBar
-          sidebarCollapsed={sidebarCollapsed}
-          onExpandSidebar={() => toggleSidebar(false)}
+    <div className="opendoc-window flex h-screen flex-col overflow-hidden bg-canvas text-ink">
+      <div data-tauri-drag-region className={HAS_MAC_GLASS ? "h-10 shrink-0" : "hidden"} aria-hidden="true" />
+      <div className="flex min-h-0 flex-1">
+        <Sidebar
+          style={{ width: sidebarWidth, flexBasis: sidebarWidth }}
+          collapsed={sidebarCollapsed}
+          expandedWidth={sidebarWidth}
+          onCollapse={() => toggleSidebar(true)}
+          animate={sidebarAnimating}
         />
-        {/* La tarjeta: el contenido flota sobre el lienzo teñido. */}
+        {!sidebarCollapsed && (
         <div
-          className={`relative mb-2 mr-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-card shadow-card ${sidebarCollapsed ? "ml-2" : ""}`}
+          role="separator"
+          aria-label={t("app.resizeSidebar")}
+          aria-orientation="vertical"
+          aria-valuemin={SIDEBAR_MIN}
+          aria-valuemax={SIDEBAR_MAX}
+          aria-valuenow={sidebarWidth}
+          tabIndex={0}
+          className="group z-10 -ml-[2px] flex w-[6px] shrink-0 cursor-col-resize touch-none items-center justify-center outline-none focus-visible:bg-accent/30"
+          onPointerDown={(event) => {
+            event.preventDefault();
+            event.currentTarget.setPointerCapture(event.pointerId);
+            resizeSidebar(event.clientX);
+          }}
+          onPointerMove={(event) => {
+            if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+              resizeSidebar(event.clientX);
+            }
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+              event.preventDefault();
+              resizeSidebar(sidebarWidth + (event.key === "ArrowRight" ? 16 : -16));
+            } else if (event.key === "Home") {
+              event.preventDefault();
+              resizeSidebar(SIDEBAR_MIN);
+            } else if (event.key === "End") {
+              event.preventDefault();
+              resizeSidebar(SIDEBAR_MAX);
+            }
+          }}
         >
-          <Viewer />
+          <span className="my-auto h-10 w-[3px] rounded-full bg-transparent transition-colors duration-200 group-hover:bg-accent/50 group-focus-visible:bg-accent group-active:bg-accent" />
+        </div>
+        )}
+        {/* La cabecera vive fuera del visor para que nunca se desmonte al
+            cambiar de página. */}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <TabsBar
+            sidebarCollapsed={sidebarCollapsed}
+            onExpandSidebar={() => toggleSidebar(false)}
+          />
+          {/* La tarjeta: el contenido flota sobre el lienzo teñido. */}
+          <div
+            className={`relative mb-2 mr-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-card shadow-card ${sidebarCollapsed ? "ml-2" : ""}`}
+          >
+            <Viewer />
+          </div>
         </div>
       </div>
       <SettingsDialog />
