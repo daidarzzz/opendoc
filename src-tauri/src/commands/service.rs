@@ -1700,3 +1700,50 @@ mod tests {
         assert_eq!(loaded.index.len(), 1);
     }
 }
+
+/// AppKit overlays are limited to the layout and controls of the main webview.
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct MacGlassState {
+    enabled: bool,
+    appearance: crate::settings::ThemeMode,
+    items: Vec<MacGlassItem>,
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+struct MacGlassItem {
+    id: u32,
+    kind: MacGlassKind,
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+    model: MacGlassModel,
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+enum MacGlassKind {
+    Sidebar,
+    Tab,
+    Button,
+    Switch,
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+struct MacGlassModel {
+    id: u32,
+    kind: MacGlassKind,
+    label: String,
+    symbol: String,
+    disabled: bool,
+    selected: bool,
+}
+
+pub fn sync_mac_glass(window: &tauri::WebviewWindow, state: MacGlassState) {
+    #[cfg(target_os = "macos")]
+    if window.label() == "main" && state.items.len() <= 96 {
+        crate::mac_glass::sync(window, state);
+    }
+    #[cfg(not(target_os = "macos"))]
+    let _ = (window, state);
+}
