@@ -14,6 +14,21 @@ export type Design = "color" | "paper" | "classic" | "liquid-glass";
 export const HAS_MAC_GLASS = typeof window !== "undefined" &&
   (window as Window & { __OPENDOC_MAC_GLASS__?: boolean }).__OPENDOC_MAC_GLASS__ === true;
 
+// En macOS 26 la barra de título va superpuesta en todos los estilos: el
+// documento lo sabe para dejar hueco a los semáforos (ver `index.css`).
+// En pantalla completa no hay semáforos: `data-fullscreen` suelta el hueco.
+if (HAS_MAC_GLASS && typeof document !== "undefined") {
+  const root = document.documentElement;
+  root.dataset.macWindow = "";
+  const syncFullscreen = () => {
+    const full = window.innerWidth >= screen.width && window.innerHeight >= screen.height;
+    if (full) root.dataset.fullscreen = "";
+    else delete root.dataset.fullscreen;
+  };
+  syncFullscreen();
+  window.addEventListener("resize", syncFullscreen);
+}
+
 export const DESIGNS: readonly Design[] = HAS_MAC_GLASS
   ? ["liquid-glass", "color", "paper", "classic"]
   : ["color", "paper", "classic"];

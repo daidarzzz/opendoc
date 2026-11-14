@@ -172,7 +172,6 @@ function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: 
     <button
       type="button"
       role="switch"
-      data-mac-control
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}
@@ -207,7 +206,6 @@ function Segmented<T extends string | number>({
             key={String(o.value)}
             type="button"
             aria-pressed={on}
-            data-mac-control
             onClick={() => onChange(o.value)}
             className={`min-w-[3.25rem] rounded-lg px-3 py-1 text-[12.5px] transition-all duration-150 ease-smooth ${
               on
@@ -1027,7 +1025,7 @@ export function SettingsDialog() {
       >
         <nav
           aria-label={t("settings.title")}
-          className="flex w-56 shrink-0 flex-col bg-canvas px-3 pb-4 pt-5"
+          className="settings-nav flex w-56 shrink-0 flex-col bg-canvas px-3 pb-4 pt-5"
         >
           <div className="flex items-center gap-2.5 px-2 pb-5">
             <AppLogo size={28} />
@@ -1043,10 +1041,9 @@ export function SettingsDialog() {
                 <li key={id}>
                   <button
                     type="button"
-                    data-mac-control
                     aria-current={on ? "page" : undefined}
                     onClick={() => setSection(id)}
-                    className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition-all duration-150 ease-smooth ${
+                    className={`settings-nav-item flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition-all duration-150 ease-smooth ${
                       on ? "bg-card font-semibold text-ink shadow-soft" : "font-medium text-ink-2 hover:bg-canvas-2 hover:text-ink"
                     }`}
                   >
@@ -1066,7 +1063,7 @@ export function SettingsDialog() {
               <h2 className="heading text-[26px] leading-tight">{t(NAV_KEY[section])}</h2>
               <p className="mt-0.5 text-[13.5px] text-muted">{t(DESC_KEY[section])}</p>
             </div>
-            <button data-mac-control data-mac-symbol="xmark" aria-label={t("settings.close")} title={t("settings.close")} onClick={close} className="icon-btn -mr-2" autoFocus>
+            <button aria-label={t("settings.close")} title={t("settings.close")} onClick={close} className="icon-btn -mr-2" autoFocus>
               <CloseIcon size={16} />
             </button>
           </header>

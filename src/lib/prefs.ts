@@ -45,8 +45,15 @@ export interface UiPrefs {
   docDarkOff: string[];
 }
 
+/** macOS: el desplazamiento suave va a tirones con WKWebView, así que viene
+ *  apagado. Se guarda en su propia clave (`smoothScrollMac`) para que los
+ *  Mac que ya tenían el valor antiguo (activado por defecto) pasen a
+ *  desactivado sin perder una elección hecha después. */
+const IS_MAC = typeof navigator !== "undefined" && /Mac/i.test(navigator.platform || navigator.userAgent || "");
+const SMOOTH_KEY = IS_MAC ? "smoothScrollMac" : "smoothScroll";
+
 export const DEFAULT_PREFS: UiPrefs = {
-  smoothScroll: true,
+  smoothScroll: !IS_MAC,
   linkPrefetch: true,
   reduceMotion: false,
   paletteLimit: 20,
@@ -83,7 +90,7 @@ export function normalizePrefs(raw: unknown): UiPrefs {
   const r = raw as Record<string, unknown>;
   const limit = PALETTE_LIMITS.find((l) => l === r["paletteLimit"]);
   return {
-    smoothScroll: bool(r["smoothScroll"], DEFAULT_PREFS.smoothScroll),
+    smoothScroll: bool(r[SMOOTH_KEY], DEFAULT_PREFS.smoothScroll),
     linkPrefetch: bool(r["linkPrefetch"], DEFAULT_PREFS.linkPrefetch),
     reduceMotion: bool(r["reduceMotion"], DEFAULT_PREFS.reduceMotion),
     paletteLimit: limit ?? DEFAULT_PREFS.paletteLimit,
@@ -113,7 +120,7 @@ export function loadPrefsFrom(store: StringStorage | null | undefined): UiPrefs 
 
 export function savePrefsTo(store: StringStorage | null | undefined, prefs: UiPrefs): void {
   try {
-    store?.setItem(STORAGE_KEY, JSON.stringify(prefs));
+    store?.setItem(STORAGE_KEY, JSON.stringify({ ...prefs, [SMOOTH_KEY]: prefs.smoothScroll }));
   } catch {
     // Sigue activo en esta sesión aunque no se pueda guardar.
   }

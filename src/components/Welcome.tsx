@@ -85,7 +85,7 @@ export function Welcome({ docCount }: { docCount: number }) {
 
   if (docCount === 0) {
     return (
-      <div className="flex min-h-0 w-full flex-1 overflow-y-auto">
+      <div data-native-scroll className="mac-welcome flex min-h-0 w-full flex-1 overflow-y-auto">
         <div className="m-auto w-full max-w-lg animate-rise-in px-8 py-12 text-center">
           <EmptyShelf />
           <p className="mt-8 text-[13px] font-semibold text-accent-text">{greeting}</p>
@@ -110,7 +110,7 @@ export function Welcome({ docCount }: { docCount: number }) {
   }
 
   return (
-    <div className="flex min-h-0 w-full flex-1 overflow-y-auto">
+    <div data-native-scroll className="mac-welcome flex min-h-0 w-full flex-1 overflow-y-auto">
       <div className="mx-auto w-full max-w-[46rem] animate-rise-in px-10 pb-12 pt-[min(12vh,6rem)]">
         {nothing && (
           <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-center">

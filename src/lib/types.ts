@@ -299,14 +299,14 @@ export interface MacGlassState {
   appearance: ThemeMode;
   items: {
     id: number;
-    kind: "sidebar" | "tab" | "button" | "switch";
+    kind: "sidebar";
     x: number;
     y: number;
     width: number;
     height: number;
     model: {
       id: number;
-      kind: "sidebar" | "tab" | "button" | "switch";
+      kind: "sidebar";
       label: string;
       symbol: string;
       disabled: boolean;

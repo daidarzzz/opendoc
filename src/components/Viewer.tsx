@@ -173,6 +173,8 @@ export function Viewer() {
     if (!viewer) return;
     const wheelZoom = makeWheelZoom();
     const relayWheel = (event: WheelEvent): void => {
+      // La portada y demás vistas HTML hacen scroll nativo: no se reenvía.
+      if (!event.ctrlKey && !event.metaKey && event.target instanceof Element && event.target.closest("[data-native-scroll]")) return;
       if (event.ctrlKey || event.metaKey) {
         event.preventDefault();
         if (frontFrameRef.current !== null) wheelZoom(event);
@@ -217,6 +219,43 @@ export function Viewer() {
         ? "pending"
         : "missing";
 
+  // WKWebView (macOS) a veces deja un iframe en blanco al mostrarlo o al
+  // volver a la ventana hasta que algo lo desplaza. Se le pide repintar:
+  // el documento se marca a sí mismo (`opendoc-repaint`) y el <iframe>
+  // alterna su capa de composición un frame.
+  const repaintFront = useCallback((): void => {
+    const index = frontFrameRef.current;
+    const frame = index === null ? null : frames.current[index];
+    if (!frame) return;
+    frame.contentWindow?.postMessage({ type: "opendoc-repaint" }, "*");
+    frame.style.transform = "translateZ(0)";
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        frame.style.transform = "";
+      });
+    });
+  }, []);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") repaintFront();
+    };
+    let resizeTimer = 0;
+    const onResize = () => {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(repaintFront, 120);
+    };
+    window.addEventListener("focus", repaintFront);
+    window.addEventListener("resize", onResize);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearTimeout(resizeTimer);
+      window.removeEventListener("focus", repaintFront);
+      window.removeEventListener("resize", onResize);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [repaintFront]);
+
   // Activa un iframe ya cargado o recién terminado y restaura su estado.
   const activateFrame = useCallback((index: number): void => {
     const frame = frames.current[index];
@@ -239,13 +278,15 @@ export function Viewer() {
     win.postMessage({ type: "opendoc-zoom", level: useZoom.getState().level }, "*");
     win.postMessage({ type: "opendoc-smooth-scroll", enabled: usePrefs.getState().smoothScroll }, "*");
     sendFind(win, 0);
+    // Tras el fundido (150 ms) el iframe recién visible se repinta.
+    window.setTimeout(repaintFront, 180);
     const tab = useTabs.getState().active();
     const url = tab ? currentEntry(tab)?.url : undefined;
     if (url) {
       const y = tab?.scrolls[url];
       if (y !== undefined) win.postMessage({ type: "opendoc-scroll-to", y }, "*");
     }
-  }, []);
+  }, [repaintFront]);
 
   // Invalidate retained documents when the library changes. A reinstall can
   // replace a document while preserving its URL.

@@ -13,6 +13,8 @@ import { useDocsets } from "../store/docsets";
 import { usePalette } from "../store/palette";
 import { useSettingsUi } from "../store/settingsUi";
 import { useTabs } from "../store/tabs";
+import { usePrefs } from "../store/prefs";
+import { HAS_MAC_GLASS } from "../lib/design";
 import { version } from "../../package.json";
 import type { CSSProperties } from "react";
 
@@ -37,6 +39,9 @@ export function Sidebar({
   const { docsets, pending, extractingIds, extract } = useDocsets();
   const catalogOpen = useTabs((s) => s.tabs.find((tab) => tab.id === s.activeId)?.type === "catalog");
   const mod = platform() === "macos" ? "⌘" : "Ctrl";
+  // Liquid Glass: el contenido es un panel flotante con 8 px de margen
+  // (lo recubre el cristal nativo, ver `useMacGlass`).
+  const glass = usePrefs((s) => s.design === "liquid-glass");
 
   return (
     <aside
@@ -46,18 +51,17 @@ export function Sidebar({
       className={`flex h-full shrink-0 overflow-hidden ${animate ? "transition-[width,flex-basis] duration-300 ease-smooth" : ""}`}
     >
       <div
-        data-mac-sidebar-content
-        style={{ width: expandedWidth }}
+        data-mac-glass-panel={glass ? "" : undefined}
+        style={{ width: glass ? expandedWidth - 8 : expandedWidth }}
         className={`flex h-full min-w-0 shrink-0 flex-col transition-opacity duration-200 ${collapsed ? "opacity-0" : "opacity-100"}`}
       >
-        <div className="flex items-center justify-between pb-3 pl-4 pr-2 pt-3">
+        <div data-tauri-drag-region={HAS_MAC_GLASS || undefined} className="sidebar-head flex items-center justify-between pb-3 pl-4 pr-2 pt-3">
           <h1 className="flex items-center gap-2 heading text-[17px]">
             <AppLogo size={22} />
             OpenDoc
           </h1>
           <button
-            data-mac-control data-mac-symbol="sidebar.left"
-          onClick={onCollapse}
+            onClick={onCollapse}
             title={t("settings.collapseSidebar")}
             aria-label={t("settings.collapseSidebar")}
             className="icon-btn"
@@ -68,10 +72,9 @@ export function Sidebar({
 
         <button
           type="button"
-          data-mac-control
           onClick={() => usePalette.getState().setOpen(true)}
           aria-label={t("welcome.searchDocs", { mod })}
-          className="group mx-3 flex items-center gap-2 rounded-xl bg-card/70 px-3 py-2 text-left shadow-soft ring-1 ring-canvas-line transition-all duration-150 hover:bg-card hover:shadow-float"
+          className="sidebar-search group mx-3 flex items-center gap-2 rounded-xl bg-card/70 px-3 py-2 text-left shadow-soft ring-1 ring-canvas-line transition-all duration-150 hover:bg-card hover:shadow-float"
         >
           <SearchIcon size={15} className="shrink-0 text-muted transition-colors group-hover:text-accent-text" />
           <span className="min-w-0 flex-1 truncate text-[13px] text-muted">{t("welcome.search")}</span>
@@ -81,7 +84,7 @@ export function Sidebar({
         <div className="flex items-center justify-between px-4 pb-1 pt-5">
           <span className="label">{t("sidebar.library")}</span>
           {docsets.length > 0 && (
-            <span className="rounded-full bg-canvas-2 px-1.5 text-[10.5px] font-semibold tabular-nums leading-[18px] text-muted">
+            <span className="sidebar-badge rounded-full bg-canvas-2 px-1.5 text-[10.5px] font-semibold tabular-nums leading-[18px] text-muted">
               {docsets.length}
             </span>
           )}
@@ -123,7 +126,7 @@ export function Sidebar({
           <button
             type="button"
             onClick={() => useTabs.getState().openCatalogTab()}
-            className={`flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition-colors ${
+            className={`sidebar-item flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition-colors ${
               catalogOpen ? "bg-card text-ink shadow-soft" : "text-ink-2 hover:bg-canvas-2 hover:text-ink"
             }`}
           >

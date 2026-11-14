@@ -4,83 +4,100 @@
 #import <QuartzCore/QuartzCore.h>
 #include <stdbool.h>
 
-// Only the controls participate in hit testing. Everything else, including the
-// tab strip gestures and the sidebar splitter, goes to the existing web view.
-@interface ODControlLayer : NSView
-@end
-@implementation ODControlLayer
-- (BOOL)isFlipped { return YES; }
-- (NSView *)hitTest:(NSPoint)point {
-    NSView *hit = [super hitTest:point];
-    return hit == self ? nil : hit;
-}
-@end
+// Liquid Glass para la ventana principal (macOS 26+).
+//
+// La ventana es transparente y el WKWebView no pinta fondo, así que AppKit
+// dibuja dos capas por debajo del contenido web:
+//   1. `backdrop`: un NSVisualEffectView a ventana completa, para que el
+//      escritorio se vea desenfocado y nunca "en crudo" entre superficies.
+//   2. `sidebar`: un NSGlassEffectView flotante en el hueco de la barra
+//      lateral, con la geometría que envía `useMacGlass`.
+// Los controles son HTML/CSS: nada nativo intercepta clics.
+
+static const CGFloat kSidebarRadius = 18;
 
 @interface ODGlass : NSObject
 @property(nonatomic, weak) WKWebView *webView;
-@property(nonatomic, strong) ODControlLayer *controls;
-@property(nonatomic, strong) NSMutableDictionary<NSString *, NSView *> *views;
-@property(nonatomic, strong) NSMutableDictionary<NSString *, NSDictionary *> *models;
-@property(nonatomic, strong) NSVisualEffectView *sidebarBackdrop;
+@property(nonatomic, strong) NSVisualEffectView *backdrop;
+@property(nonatomic, strong) NSView *sidebar;
+@property(nonatomic) BOOL enabled;
+@property(nonatomic) BOOL observing;
 @end
 
 @implementation ODGlass
-- (void)clicked:(NSControl *)sender {
-    NSString *script = [NSString stringWithFormat:
-        @"window.dispatchEvent(new CustomEvent('opendoc:mac-control', {detail:%ld}))",
-        (long)sender.identifier.integerValue];
-    [self.webView evaluateJavaScript:script completionHandler:nil];
-    // Keep the existing app-wide shortcuts active after a pointer click.
-    [self.webView.window makeFirstResponder:self.webView];
+
+// Una barra de herramientas unificada y vacía hace que macOS 26 dibuje la
+// ventana con el radio grande de las apps con barra lateral (como el
+// Finder) y centre los semáforos en una franja de 52 pt, alineados con las
+// pestañas. Así el panel lateral (radio 18 pt a 8 pt del borde) queda
+// concéntrico con la esquina de la ventana.
+- (BOOL)isFullScreen {
+    return (self.webView.window.styleMask & NSWindowStyleMaskFullScreen) != 0;
 }
 
-- (NSView *)viewForModel:(NSDictionary *)model API_AVAILABLE(macos(26.0)) {
-    NSString *kind = model[@"kind"];
-    if ([kind isEqualToString:@"sidebar"] || [kind isEqualToString:@"tab"]) {
-        NSGlassEffectView *glass = [[NSClassFromString(@"NSGlassEffectView") alloc] initWithFrame:NSZeroRect];
-        glass.cornerRadius = [kind isEqualToString:@"sidebar"] ? 24 : 14;
-        return glass;
-    }
+// En pantalla completa la barra vacía se volvería una franja opaca que
+// empuja el contenido y tapa las pestañas: se quita al entrar y vuelve al
+// salir (la web detecta la pantalla completa por su cuenta, `design.ts`).
+- (void)observeFullScreen {
+    if (self.observing || !self.webView.window) return;
+    self.observing = YES;
+    NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
+    NSWindow *window = self.webView.window;
+    __weak ODGlass *weakSelf = self;
+    [center addObserverForName:NSWindowWillEnterFullScreenNotification object:window queue:nil
+                    usingBlock:^(NSNotification *note) { [weakSelf fullScreenChanged:YES]; }];
+    [center addObserverForName:NSWindowDidExitFullScreenNotification object:window queue:nil
+                    usingBlock:^(NSNotification *note) { [weakSelf fullScreenChanged:NO]; }];
+}
 
-    NSString *identifier = [model[@"id"] stringValue];
-    NSString *title = model[@"label"];
-    if ([kind isEqualToString:@"switch"]) {
-        NSSwitch *toggle = [[NSSwitch alloc] initWithFrame:NSZeroRect];
-        toggle.target = self;
-        toggle.action = @selector(clicked:);
-        toggle.identifier = identifier;
-        toggle.state = [model[@"selected"] boolValue] ? NSControlStateValueOn : NSControlStateValueOff;
-        [toggle setAccessibilityLabel:title];
-        return toggle;
-    }
+- (void)fullScreenChanged:(BOOL)fullScreen {
+    if (self.enabled) [self applyToolbar:!fullScreen];
+}
 
-    NSButton *button = [NSButton buttonWithTitle:title target:self action:@selector(clicked:)];
-    NSString *symbol = model[@"symbol"];
-    if (symbol.length) {
-        button.title = @"";
-        button.image = [NSImage imageWithSystemSymbolName:symbol accessibilityDescription:title];
-        button.imagePosition = NSImageOnly;
+- (void)applyToolbar:(BOOL)enabled {
+    NSWindow *window = self.webView.window;
+    if (!window) return;
+    if (enabled && [self isFullScreen]) enabled = NO;
+    if (enabled && !window.toolbar) {
+        NSToolbar *toolbar = [[NSToolbar alloc] initWithIdentifier:@"com.opendoc.glass"];
+        toolbar.displayMode = NSToolbarDisplayModeIconOnly;
+        toolbar.allowsUserCustomization = NO;
+        window.toolbar = toolbar;
+        window.toolbarStyle = NSWindowToolbarStyleUnified;
+        window.titlebarSeparatorStyle = NSTitlebarSeparatorStyleNone;
+    } else if (!enabled && [window.toolbar.identifier isEqualToString:@"com.opendoc.glass"]) {
+        window.toolbar = nil;
+        window.titlebarSeparatorStyle = NSTitlebarSeparatorStyleAutomatic;
     }
-    button.lineBreakMode = NSLineBreakByTruncatingTail;
-    button.identifier = identifier;
-    button.enabled = ![model[@"disabled"] boolValue];
-    button.toolTip = title;
-    [button setAccessibilityLabel:title];
+}
 
+- (void)teardown {
+    self.enabled = NO;
+    [self applyToolbar:NO];
+    [self.sidebar removeFromSuperview];
+    self.sidebar = nil;
+    [self.backdrop removeFromSuperview];
+    self.backdrop = nil;
+    self.webView.window.appearance = nil;
+}
+
+- (void)ensureBackdropIn:(NSView *)parent {
+    if (self.backdrop) return;
+    NSVisualEffectView *backdrop = [[NSVisualEffectView alloc] initWithFrame:parent.bounds];
+    backdrop.material = NSVisualEffectMaterialUnderWindowBackground;
+    backdrop.blendingMode = NSVisualEffectBlendingModeBehindWindow;
+    backdrop.state = NSVisualEffectStateFollowsWindowActiveState;
+    backdrop.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+    [parent addSubview:backdrop positioned:NSWindowBelow relativeTo:nil];
+    self.backdrop = backdrop;
+}
+
+- (void)ensureSidebarIn:(NSView *)parent API_AVAILABLE(macos(26.0)) {
+    if (self.sidebar) return;
     NSGlassEffectView *glass = [[NSClassFromString(@"NSGlassEffectView") alloc] initWithFrame:NSZeroRect];
-    glass.cornerRadius = 14;
-    // Earlier macOS 26 releases may not expose the interactive setter yet.
-    SEL interactive = NSSelectorFromString(@"setEffectIsInteractive:");
-    if ([glass respondsToSelector:interactive]) {
-        [glass setValue:@YES forKey:@"effectIsInteractive"];
-    }
-    button.bordered = NO;
-    if ([model[@"selected"] boolValue]) {
-        glass.tintColor = NSColor.controlAccentColor;
-        button.contentTintColor = NSColor.controlTextColor;
-    }
-    glass.contentView = button;
-    return glass;
+    glass.cornerRadius = kSidebarRadius;
+    [parent addSubview:glass positioned:NSWindowAbove relativeTo:self.backdrop];
+    self.sidebar = glass;
 }
 
 - (void)sync:(NSDictionary *)state API_AVAILABLE(macos(26.0)) {
@@ -89,14 +106,7 @@
     if (!parent) return;
 
     if (![state[@"enabled"] boolValue]) {
-        for (NSView *view in self.views.allValues) [view removeFromSuperview];
-        [self.views removeAllObjects];
-        [self.models removeAllObjects];
-        [self.controls removeFromSuperview];
-        self.controls = nil;
-        [self.sidebarBackdrop removeFromSuperview];
-        self.sidebarBackdrop = nil;
-        webView.window.appearance = nil;
+        [self teardown];
         return;
     }
 
@@ -105,68 +115,31 @@
         [NSAppearance appearanceNamed:[appearance isEqualToString:@"dark"] ?
           NSAppearanceNameDarkAqua : NSAppearanceNameAqua];
 
-    if (!self.controls) {
-        self.controls = [[ODControlLayer alloc] initWithFrame:webView.frame];
-        self.controls.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
-        [parent addSubview:self.controls positioned:NSWindowAbove relativeTo:webView];
-    }
-    self.controls.frame = webView.frame;
-    NSMutableSet<NSString *> *unused = [NSMutableSet setWithArray:self.views.allKeys];
-    BOOL hasSidebar = NO;
-    for (NSDictionary *item in state[@"items"]) {
-        NSString *key = [item[@"id"] stringValue];
-        [unused removeObject:key];
-        NSString *kind = item[@"kind"];
-        BOOL sidebar = [kind isEqualToString:@"sidebar"];
-        BOOL background = sidebar || [kind isEqualToString:@"tab"];
-        NSDictionary *model = item[@"model"];
-        NSView *view = self.views[key];
-        if (!view || ![model isEqual:self.models[key]]) {
-            NSView *replacement = [self viewForModel:model];
-            if (view) {
-                [view.superview replaceSubview:view with:replacement];
-            } else if (background) {
-                [parent addSubview:replacement positioned:NSWindowBelow relativeTo:webView];
-            } else {
-                [self.controls addSubview:replacement];
-            }
-            view = replacement;
-            self.views[key] = view;
-            self.models[key] = model;
-        }
+    self.enabled = YES;
+    [self observeFullScreen];
+    [self ensureBackdropIn:parent];
+    [self applyToolbar:YES];
 
-        NSRect rect = NSMakeRect([item[@"x"] doubleValue], [item[@"y"] doubleValue],
-                                 [item[@"width"] doubleValue], [item[@"height"] doubleValue]);
-        if (background) {
-            NSRect localRect = rect;
-            if (!webView.isFlipped) {
-                localRect.origin.y = NSHeight(webView.bounds) - NSMaxY(rect);
-            }
-            view.frame = [webView convertRect:localRect toView:parent];
-        } else {
-            view.frame = rect;
-        }
-        if (sidebar) {
-            hasSidebar = YES;
-            if (!self.sidebarBackdrop) {
-                self.sidebarBackdrop = [[NSVisualEffectView alloc] initWithFrame:NSZeroRect];
-                self.sidebarBackdrop.material = NSVisualEffectMaterialSidebar;
-                self.sidebarBackdrop.blendingMode = NSVisualEffectBlendingModeBehindWindow;
-                self.sidebarBackdrop.state = NSVisualEffectStateFollowsWindowActiveState;
-                self.sidebarBackdrop.wantsLayer = YES;
-                self.sidebarBackdrop.layer.cornerRadius = 24;
-                self.sidebarBackdrop.layer.masksToBounds = YES;
-                [parent addSubview:self.sidebarBackdrop positioned:NSWindowBelow relativeTo:view];
-            }
-            self.sidebarBackdrop.frame = view.frame;
-        }
+    NSDictionary *sidebarItem = nil;
+    for (NSDictionary *item in state[@"items"]) {
+        if ([item[@"kind"] isEqualToString:@"sidebar"]) sidebarItem = item;
     }
-    self.sidebarBackdrop.hidden = !hasSidebar;
-    for (NSString *key in unused) {
-        [self.views[key] removeFromSuperview];
-        [self.views removeObjectForKey:key];
-        [self.models removeObjectForKey:key];
+    if (!sidebarItem) {
+        self.sidebar.hidden = YES;
+        return;
     }
+
+    [self ensureSidebarIn:parent];
+    NSRect rect = NSMakeRect([sidebarItem[@"x"] doubleValue], [sidebarItem[@"y"] doubleValue],
+                             [sidebarItem[@"width"] doubleValue], [sidebarItem[@"height"] doubleValue]);
+    if (!webView.isFlipped) {
+        rect.origin.y = NSHeight(webView.bounds) - NSMaxY(rect);
+    }
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+    self.sidebar.frame = [webView convertRect:rect toView:parent];
+    self.sidebar.hidden = NO;
+    [CATransaction commit];
 }
 @end
 
@@ -185,9 +158,9 @@ void opendoc_glass_sync(void *handle, const char *json, size_t length) {
     if (!bridge) {
         bridge = [ODGlass new];
         bridge.webView = webView;
-        bridge.views = [NSMutableDictionary dictionary];
-        bridge.models = [NSMutableDictionary dictionary];
         objc_setAssociatedObject(webView, &association, bridge, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
-    [bridge sync:state];
+    if (@available(macOS 26.0, *)) {
+        [bridge sync:state];
+    }
 }

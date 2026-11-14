@@ -1701,7 +1701,7 @@ mod tests {
     }
 }
 
-/// AppKit overlays are limited to the layout and controls of the main webview.
+/// Geometría del cristal nativo (solo la barra lateral) de la ventana principal.
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct MacGlassState {
     enabled: bool,
@@ -1724,9 +1724,6 @@ struct MacGlassItem {
 #[serde(rename_all = "snake_case")]
 enum MacGlassKind {
     Sidebar,
-    Tab,
-    Button,
-    Switch,
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -1741,7 +1738,7 @@ struct MacGlassModel {
 
 pub fn sync_mac_glass(window: &tauri::WebviewWindow, state: MacGlassState) {
     #[cfg(target_os = "macos")]
-    if window.label() == "main" && state.items.len() <= 96 {
+    if window.label() == "main" && state.items.len() <= 4 {
         crate::mac_glass::sync(window, state);
     }
     #[cfg(not(target_os = "macos"))]

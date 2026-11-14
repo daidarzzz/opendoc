@@ -414,42 +414,384 @@ html.dark:root[data-design="classic"] {
   }
 }
 
-/* AppKit draws the glass through transparent slots in the WKWebView. */
-html[data-design="liquid-glass"] {
-  --font-display: -apple-system, BlinkMacSystemFont, sans-serif;
-  --display-tracking: -0.02em;
+
+/* ── Liquid Glass (macOS 26) ───────────────────────────────────────────
+   AppKit pinta debajo del WKWebView un fondo vibrante a ventana completa
+   y un panel de cristal en la barra lateral (`mac_glass.m`). Aquí solo
+   va la piel: tipografía del sistema, superficies translúcidas que
+   respetan el cristal, cápsulas en la barra de herramientas y una hoja de
+   ajustes al estilo de Ajustes del Sistema. Nada de controles nativos
+   superpuestos: todo es HTML y responde igual que en los otros estilos. */
+:root[data-design="liquid-glass"] {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --display-weight: 700;
+  --display-tracking: -0.022em;
+  --radius-scale: 1.2;
+  --tab-r: 999px;
+  --canvas-ch: 236 236 240;
+  --canvas-2-ch: 226 226 231;
+  --canvas-line-ch: 214 214 220;
+  --card-ch: 255 255 255;
+  --card-2-ch: 245 245 247;
+  --line-ch: 226 226 231;
+  --ink-ch: 29 29 31;
+  --ink-2-ch: 58 58 60;
+  --muted-ch: 110 110 115;
+  --faint-ch: 152 152 157;
+  --shadow-ch: 0 0 0;
+  --glass-fill: 255 255 255 / 0.55;
+  --glass-edge: 255 255 255 / 0.7;
+  --glass-stroke: 0 0 0 / 0.08;
+  --glass-hover: 0 0 0 / 0.05;
+  --glass-press: 0 0 0 / 0.09;
+  font-feature-settings: normal;
 }
+
+html.dark:root[data-design="liquid-glass"] {
+  --canvas-ch: 28 28 30;
+  --canvas-2-ch: 44 44 46;
+  --canvas-line-ch: 58 58 60;
+  --card-ch: 28 28 30;
+  --card-2-ch: 40 40 43;
+  --line-ch: 50 50 54;
+  --ink-ch: 245 245 247;
+  --ink-2-ch: 214 214 219;
+  --muted-ch: 152 152 159;
+  --faint-ch: 104 104 110;
+  --glass-fill: 255 255 255 / 0.09;
+  --glass-edge: 255 255 255 / 0.16;
+  --glass-stroke: 0 0 0 / 0.35;
+  --glass-hover: 255 255 255 / 0.07;
+  --glass-press: 255 255 255 / 0.12;
+}
+
+/* La ventana deja ver el fondo vibrante nativo. */
 html[data-design="liquid-glass"] body,
 html[data-design="liquid-glass"] .opendoc-window {
-  @apply bg-transparent transition-none;
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: transparent;
+  transition: none;
 }
 
-html[data-design="liquid-glass"] .opendoc-window [data-mac-sidebar-content] {
-  @apply px-2 pt-1 pb-2;
+/* Cristal en CSS para piezas pequeñas (cápsulas, pestaña activa, hojas).
+   WebKit en macOS desenfoca con soltura; en otros sistemas el estilo no
+   existe. */
+html[data-design="liquid-glass"] .glass,
+html[data-design="liquid-glass"] .mac-nav,
+html[data-design="liquid-glass"] .mac-new-tab,
+html[data-design="liquid-glass"] .mac-tabs [role="tab"][aria-selected="true"] {
+  background: rgb(var(--glass-fill));
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  box-shadow:
+    inset 0 0.5px 0 rgb(var(--glass-edge)),
+    inset 0 0 0 0.5px rgb(var(--glass-stroke)),
+    0 1px 2px rgb(0 0 0 / 0.06),
+    0 6px 16px -8px rgb(0 0 0 / 0.22);
 }
 
+/* ── Barra lateral: panel flotante ── */
+html[data-design="liquid-glass"] [data-mac-glass-panel] {
+  margin: 8px 0 8px 8px;
+  height: calc(100% - 16px);
+  border-radius: 18px;
+  /* El cristal nativo pinta debajo; solo un filete para recortarlo. */
+  box-shadow: inset 0 0 0 0.5px rgb(var(--glass-edge) / 0.6);
+}
+
+/* Hueco para los semáforos de la ventana, que quedan dentro del panel. */
+html[data-design="liquid-glass"] .sidebar-head {
+  padding-top: 42px;
+  padding-bottom: 10px;
+}
+
+html[data-design="liquid-glass"] .sidebar-head h1 {
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+
+html[data-design="liquid-glass"] .sidebar-search {
+  margin-inline: 10px;
+  border-radius: 10px;
+  padding-block: 6px;
+  background: rgb(var(--glass-hover));
+  box-shadow: inset 0 0 0 0.5px rgb(var(--glass-stroke));
+}
+
+html[data-design="liquid-glass"] .sidebar-search:hover {
+  background: rgb(var(--glass-press));
+  box-shadow: inset 0 0 0 0.5px rgb(var(--glass-stroke));
+}
+
+html[data-design="liquid-glass"] .sidebar-search .kbd {
+  background: transparent;
+  border-color: rgb(var(--ink-ch) / 0.12);
+  box-shadow: none;
+}
+
+html[data-design="liquid-glass"] [data-mac-glass-panel] .label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: rgb(var(--muted-ch) / 0.85);
+}
+
+html[data-design="liquid-glass"] .sidebar-badge {
+  background: rgb(var(--glass-hover));
+}
+
+/* Filas: selección y hover como en el Finder (velo neutro, sin tinte). */
+html[data-design="liquid-glass"] [data-mac-glass-panel] [class*="hover:bg-canvas-2"]:hover {
+  background-color: rgb(var(--glass-hover));
+}
+
+html[data-design="liquid-glass"] [data-mac-glass-panel] [class*="group-focus/tree:bg-canvas-2"] {
+  background-color: rgb(var(--glass-press));
+}
+
+html[data-design="liquid-glass"] [data-mac-glass-panel] .bg-canvas-line {
+  background-color: rgb(var(--ink-ch) / 0.1);
+}
+
+html[data-design="liquid-glass"] .sidebar-item.bg-card {
+  background: rgb(var(--glass-press));
+  box-shadow: none;
+}
+
+/* ── Barra de herramientas y pestañas ── */
 html[data-design="liquid-glass"] .mac-tabs {
-  @apply items-center pb-2;
+  align-items: center;
+  height: 52px;
+  padding: 0 8px 0 10px;
+}
+
+/* Panel plegado: los semáforos pasan a la barra de pestañas. */
+html[data-design="liquid-glass"] .mac-tabs-collapsed {
+  padding-left: 84px;
+}
+
+html[data-design="liquid-glass"] .mac-nav {
+  margin: 0 6px 0 0;
+  height: 32px;
+  padding: 0 2px;
+  border-radius: 999px;
+}
+
+html[data-design="liquid-glass"] .mac-nav .icon-btn,
+html[data-design="liquid-glass"] .mac-new-tab {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 999px;
+  color: rgb(var(--ink-2-ch));
+}
+
+html[data-design="liquid-glass"] .mac-new-tab {
+  width: 32px;
+  height: 32px;
+  margin: 0;
+}
+
+html[data-design="liquid-glass"] .mac-nav .icon-btn:hover,
+html[data-design="liquid-glass"] .mac-new-tab:hover {
+  background: rgb(var(--glass-hover));
+  color: rgb(var(--ink-ch));
+}
+
+html[data-design="liquid-glass"] .mac-nav .icon-btn:active,
+html[data-design="liquid-glass"] .mac-new-tab:active {
+  background: rgb(var(--glass-press));
+}
+
+html[data-design="liquid-glass"] .mac-nav .icon-btn:disabled {
+  opacity: 0.3;
+}
+
+html[data-design="liquid-glass"] .mac-tabs [role="tablist"] {
+  align-items: center;
+  gap: 4px;
+  padding-block: 6px;
 }
 
 html[data-design="liquid-glass"] .mac-tabs [role="tab"] {
-  @apply rounded-[14px];
+  height: 32px;
+  border-radius: 999px;
+  padding-left: 12px;
+  padding-right: 5px;
 }
 
-html[data-design="liquid-glass"] .mac-tabs .tab-connected {
-  @apply bg-transparent;
-}
-
+/* Sin esquinas cóncavas: la pestaña es una cápsula, no una lengüeta. */
 html[data-design="liquid-glass"] .mac-tabs .tab-connected::before,
 html[data-design="liquid-glass"] .mac-tabs .tab-connected::after {
-  @apply hidden;
+  display: none;
 }
 
-html[data-design="liquid-glass"] [data-mac-rendered="true"] {
-  @apply opacity-0;
+html[data-design="liquid-glass"] .mac-tabs [role="tab"] > span[aria-hidden] {
+  inset: 0;
+  border-radius: 999px;
 }
 
-html[data-design="liquid-glass"] [data-mac-rendered="true"]:focus-visible {
-  @apply opacity-100;
+html[data-design="liquid-glass"] .mac-tabs [role="tab"]:hover > span[aria-hidden] {
+  background: rgb(var(--glass-hover));
+}
+
+html[data-design="liquid-glass"] .mac-tabs [role="tab"] button {
+  border-radius: 999px;
+}
+
+/* ── Tarjeta de contenido ── */
+html[data-design="liquid-glass"] .mac-card {
+  border-radius: 18px;
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.1),
+    0 1px 3px rgb(0 0 0 / 0.06),
+    0 18px 40px -24px rgb(0 0 0 / 0.35);
+}
+
+html.dark[data-design="liquid-glass"] .mac-card {
+  box-shadow:
+    inset 0 0.5px 0 rgb(255 255 255 / 0.07),
+    0 0 0 0.5px rgb(0 0 0 / 0.6),
+    0 18px 40px -20px rgb(0 0 0 / 0.6);
+}
+
+/* ── Hojas flotantes (ajustes, paleta, menús) ── */
+html[data-design="liquid-glass"] .backdrop {
+  background: rgb(0 0 0 / 0.12);
+}
+
+html.dark[data-design="liquid-glass"] .backdrop {
+  background: rgb(0 0 0 / 0.35);
+}
+
+html[data-design="liquid-glass"] .surface {
+  border: none;
+  border-radius: 22px;
+  background: rgb(var(--card-ch) / 0.78);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(40px) saturate(180%);
+  box-shadow:
+    inset 0 0.5px 0 rgb(var(--glass-edge)),
+    0 0 0 0.5px rgb(0 0 0 / 0.14),
+    0 30px 80px -20px rgb(0 0 0 / 0.45);
+}
+
+html.dark[data-design="liquid-glass"] .surface {
+  background: rgb(var(--card-ch) / 0.72);
+  box-shadow:
+    inset 0 0.5px 0 rgb(255 255 255 / 0.12),
+    0 0 0 0.5px rgb(0 0 0 / 0.7),
+    0 30px 80px -20px rgb(0 0 0 / 0.7);
+}
+
+/* Ajustes: barra lateral translúcida y filas como Ajustes del Sistema. */
+html[data-design="liquid-glass"] .settings-nav {
+  background: rgb(var(--ink-ch) / 0.035);
+  box-shadow: inset -0.5px 0 0 rgb(var(--ink-ch) / 0.08);
+}
+
+html[data-design="liquid-glass"] .settings-nav-item {
+  padding-block: 6px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+html[data-design="liquid-glass"] .settings-nav-item:hover {
+  background: rgb(var(--glass-hover));
+}
+
+html[data-design="liquid-glass"] .settings-nav-item[aria-current="page"] {
+  background: rgb(var(--accent-solid-ch));
+  color: rgb(var(--on-accent-ch));
+  box-shadow: none;
+}
+
+html[data-design="liquid-glass"] .settings-nav-item[aria-current="page"] svg {
+  color: currentColor;
+}
+
+/* Botones: cápsulas, como los controles de macOS 26. */
+html[data-design="liquid-glass"] .btn,
+html[data-design="liquid-glass"] .btn-primary,
+html[data-design="liquid-glass"] .btn-danger {
+  border-radius: 999px;
+  padding-inline: 14px;
+}
+
+html[data-design="liquid-glass"] .btn {
+  border-color: transparent;
+  background: rgb(var(--glass-hover));
+  box-shadow: inset 0 0 0 0.5px rgb(var(--glass-stroke));
+}
+
+html[data-design="liquid-glass"] .btn:hover {
+  background: rgb(var(--glass-press));
+}
+
+html[data-design="liquid-glass"] .field {
+  border-radius: 8px;
+}
+
+/* Portada (pestaña vacía): la tarjeta se vuelve vidrio esmerilado sobre el
+   fondo vibrante nativo, más opaca que la barra lateral para que el texto
+   siga leyéndose bien. Las páginas de documentación siguen opacas. */
+html[data-design="liquid-glass"] .mac-card {
+  transition: background-color 250ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html[data-design="liquid-glass"] .mac-card:has(.mac-welcome) {
+  background-color: rgb(var(--card-ch) / 0.74);
+}
+
+html.dark[data-design="liquid-glass"] .mac-card:has(.mac-welcome) {
+  background-color: rgb(var(--card-ch) / 0.66);
+}
+
+html[data-design="liquid-glass"] .mac-welcome .bg-card {
+  background-color: rgb(var(--card-ch) / 0.55);
+}
+
+html[data-design="liquid-glass"] .mac-welcome .bg-card-2 {
+  background-color: rgb(var(--ink-ch) / 0.045);
+}
+
+html[data-design="liquid-glass"] .mac-welcome .border-line {
+  border-color: rgb(var(--ink-ch) / 0.09);
+}
+
+html[data-design="liquid-glass"] .mac-welcome .ring-line {
+  --tw-ring-color: rgb(var(--ink-ch) / 0.09);
+}
+
+/* Pantalla completa: sin semáforos, el panel no necesita su hueco. */
+html[data-design="liquid-glass"][data-fullscreen] .sidebar-head {
+  padding-top: 14px;
+}
+
+/* El cromo de la ventana no se selecciona como texto (como en apps nativas). */
+html[data-design="liquid-glass"] [data-mac-glass-panel],
+html[data-design="liquid-glass"] .mac-tabs {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Resto de estilos en macOS 26 (barra de título superpuesta, sin la barra
+   de herramientas de Liquid Glass): los semáforos quedan sobre la barra
+   lateral, a la altura de las pestañas, sin franja vacía encima. */
+html[data-mac-window]:not([data-design="liquid-glass"]) .sidebar-head {
+  padding-top: 40px;
+}
+
+html[data-mac-window]:not([data-design="liquid-glass"]) .mac-tabs-collapsed {
+  padding-left: 76px;
+}
+
+html[data-mac-window][data-fullscreen] .sidebar-head {
+  padding-top: 12px;
+}
+
+html[data-mac-window][data-fullscreen] .mac-tabs-collapsed {
+  padding-left: 4px;
 }
