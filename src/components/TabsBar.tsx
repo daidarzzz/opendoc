@@ -52,6 +52,7 @@ const TabButton = memo(function TabButton({
       aria-selected={selected}
       aria-controls="viewer-panel"
       data-opendoc-tab-id={id}
+      data-mac-surface={selected && !dragging ? "tab" : undefined}
       tabIndex={selected ? 0 : -1}
       title={title}
       onPointerDown={onPointerDown}
@@ -299,11 +300,12 @@ export function TabsBar({
   };
 
   return (
-    <div className="flex items-end gap-1 pl-1 pr-2 pt-2">
+    <div className="mac-tabs flex items-end gap-1 pl-1 pr-2 pt-2">
       <div className="mb-1 mr-2 flex items-center">
         {sidebarCollapsed && (
           <button
-            aria-label={tr("settings.expandSidebar")}
+            data-mac-control data-mac-symbol="sidebar.left"
+          aria-label={tr("settings.expandSidebar")}
             title={tr("settings.expandSidebar")}
             onClick={() => onExpandSidebar?.()}
             className="icon-btn animate-fade-in"
@@ -312,6 +314,7 @@ export function TabsBar({
           </button>
         )}
         <button
+          data-mac-control data-mac-symbol="chevron.left"
           aria-label={tr("tabs.back")}
           title={tr("tabs.back")}
           disabled={!canBack}
@@ -321,6 +324,7 @@ export function TabsBar({
           <ChevronIcon direction="left" size={17} />
         </button>
         <button
+          data-mac-control data-mac-symbol="chevron.right"
           aria-label={tr("tabs.forward")}
           title={tr("tabs.forward")}
           disabled={!canForward}
@@ -384,7 +388,8 @@ export function TabsBar({
         })}
       </div>
       <button
-        aria-label={tr("tabs.newTab")}
+        data-mac-control data-mac-symbol="plus"
+          aria-label={tr("tabs.newTab")}
         title={tr("tabs.newTab")}
         onClick={() => {
           newTab();
