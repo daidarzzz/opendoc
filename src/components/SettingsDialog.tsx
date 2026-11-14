@@ -28,7 +28,7 @@ import { ACCENTS, ACCENT_HEX, CANVAS_HEX } from "../lib/accent";
 import { checkForUpdate, getSettings, installUpdate, relaunchApp, setRestoreTabs } from "../lib/commands";
 import { HOME_SECTIONS, PALETTE_LIMITS, type HomePrefs } from "../lib/prefs";
 import { useRecent } from "../store/recent";
-import { CARD_HEX, DESIGNS, canvasHex, type Design } from "../lib/design";
+import { CARD_HEX, DESIGNS, HAS_MAC_GLASS, canvasHex, type Design } from "../lib/design";
 import { setSessionEnabled } from "../lib/sessionSync";
 import { formatZoom, ZOOM_DEFAULT, ZOOM_MAX, ZOOM_MIN } from "../lib/zoom";
 import type { Accent, Language, ThemeMode } from "../lib/types";
@@ -78,6 +78,7 @@ const THEMES: { value: ThemeMode; key: I18nKey }[] = [
 const LANG_VALUES: Language[] = ["en", "es"];
 
 const DESIGN_KEY: Record<Design, I18nKey> = {
+  "liquid-glass": "settings.designLiquidGlass",
   color: "settings.designColor",
   paper: "settings.designPaper",
   classic: "settings.designClassic",
@@ -85,6 +86,7 @@ const DESIGN_KEY: Record<Design, I18nKey> = {
 
 /** Voz de cada estilo para su miniatura (independiente del estilo activo). */
 const DESIGN_LOOK: Record<Design, { font: string; radius: number; weight: number }> = {
+  "liquid-glass": { font: "-apple-system, sans-serif", radius: 14, weight: 650 },
   color: { font: "'Bricolage Grotesque Variable', sans-serif", radius: 10, weight: 700 },
   paper: { font: "'Newsreader Variable', serif", radius: 3, weight: 420 },
   classic: { font: "'Inter Variable', sans-serif", radius: 8, weight: 650 },
@@ -170,6 +172,7 @@ function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: 
     <button
       type="button"
       role="switch"
+      data-mac-control
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}
@@ -204,6 +207,7 @@ function Segmented<T extends string | number>({
             key={String(o.value)}
             type="button"
             aria-pressed={on}
+            data-mac-control
             onClick={() => onChange(o.value)}
             className={`min-w-[3.25rem] rounded-lg px-3 py-1 text-[12.5px] transition-all duration-150 ease-smooth ${
               on
@@ -465,7 +469,7 @@ function AppearanceSection() {
     <div className="space-y-6">
       <Group>
         <Row label={t("settings.design")} desc={t("settings.designDesc")} stacked>
-          <div role="radiogroup" aria-label={t("settings.design")} className="grid grid-cols-3 gap-3">
+          <div role="radiogroup" aria-label={t("settings.design")} className={`grid gap-3 ${HAS_MAC_GLASS ? "grid-cols-2" : "grid-cols-3"}`}>
             {DESIGNS.map((value) => {
               const on = design === value;
               return (
@@ -1008,6 +1012,7 @@ export function SettingsDialog() {
   return (
     <div className="backdrop z-40 items-center" onClick={close} role="presentation">
       <section
+        data-mac-settings
         role="dialog"
         aria-modal="true"
         aria-label={t("settings.title")}
@@ -1038,6 +1043,7 @@ export function SettingsDialog() {
                 <li key={id}>
                   <button
                     type="button"
+                    data-mac-control
                     aria-current={on ? "page" : undefined}
                     onClick={() => setSection(id)}
                     className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition-all duration-150 ease-smooth ${
@@ -1060,7 +1066,7 @@ export function SettingsDialog() {
               <h2 className="heading text-[26px] leading-tight">{t(NAV_KEY[section])}</h2>
               <p className="mt-0.5 text-[13.5px] text-muted">{t(DESC_KEY[section])}</p>
             </div>
-            <button aria-label={t("settings.close")} title={t("settings.close")} onClick={close} className="icon-btn -mr-2" autoFocus>
+            <button data-mac-control data-mac-symbol="xmark" aria-label={t("settings.close")} title={t("settings.close")} onClick={close} className="icon-btn -mr-2" autoFocus>
               <CloseIcon size={16} />
             </button>
           </header>
