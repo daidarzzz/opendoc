@@ -1,0 +1,94 @@
+name: AUR
+
+# Publica `opendoc-bin` en el AUR cuando se PUBLICA una release (los
+# borradores y las prereleases no disparan nada). También se puede lanzar a
+# mano con un tag (p. ej. `v0.3.1`) para subir una versión ya existente.
+# Usa el `.pkg.tar.zst` que ya compila el job `arch` de `release.yml`.
+# Requiere el secreto `AUR_SSH_KEY` (ver `packaging/aur/README.md`); sin él,
+# el job avisa y termina sin fallar.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag de la release a publicar en el AUR (p. ej. v0.3.1)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  aur:
+    if: github.event_name == 'workflow_dispatch' || !github.event.release.prerelease
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    env:
+      AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+      TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.release.tag_name }}
+    steps:
+      - name: Check secret
+        id: secret
+        run: |
+          if [ -z "$AUR_SSH_KEY" ]; then
+            echo "::warning::Falta el secreto AUR_SSH_KEY: no se publica en el AUR (ver packaging/aur/README.md)."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Dependencies
+        if: steps.secret.outputs.ready == 'true'
+        run: pacman -Syu --noconfirm --needed git openssh curl
+
+      - uses: actions/checkout@v4
+        if: steps.secret.outputs.ready == 'true'
+
+      - name: Render PKGBUILD
+        if: steps.secret.outputs.ready == 'true'
+        run: |
+          case "$TAG" in
+            v[0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "::error::Tag no válido: $TAG"; exit 1 ;;
+          esac
+          VERSION="${TAG#v}"
+          case "$VERSION" in
+            *[!0-9.]*) echo "::error::Versión no válida: $VERSION"; exit 1 ;;
+          esac
+          WORK="$RUNNER_TEMP/aur-src"
+          mkdir -p "$WORK"
+          curl -fsSL -o "$WORK/release.pkg.tar.zst" \
+            "https://github.com/${{ github.repository }}/releases/download/$TAG/opendoc-bin-$VERSION-1-x86_64.pkg.tar.zst"
+          SHA="$(sha256sum "$WORK/release.pkg.tar.zst" | cut -d' ' -f1)"
+          sed -e "s/@VERSION@/$VERSION/" -e "s/@SHA256@/$SHA/" packaging/aur/PKGBUILD > "$WORK/PKGBUILD"
+          rm "$WORK/release.pkg.tar.zst"
+          useradd -m builder
+          chown -R builder "$WORK"
+          su builder -c "cd '$WORK' && makepkg --printsrcinfo > .SRCINFO"
+          cat "$WORK/PKGBUILD" "$WORK/.SRCINFO"
+          echo "AUR_WORK=$WORK" >> "$GITHUB_ENV"
+          echo "AUR_VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Push to AUR
+        if: steps.secret.outputs.ready == 'true'
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$AUR_SSH_KEY" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          ssh-keyscan -t ed25519,rsa aur.archlinux.org >> ~/.ssh/known_hosts
+          export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/aur -o IdentitiesOnly=yes"
+          git config --global user.name "opendoc-aur"
+          git config --global user.email "opendoc-aur@users.noreply.github.com"
+          git config --global init.defaultBranch master
+          git clone ssh://aur@aur.archlinux.org/opendoc-bin.git "$RUNNER_TEMP/aur-repo"
+          cp "$AUR_WORK/PKGBUILD" "$AUR_WORK/.SRCINFO" "$RUNNER_TEMP/aur-repo/"
+          cd "$RUNNER_TEMP/aur-repo"
+          git add PKGBUILD .SRCINFO
+          if git diff --cached --quiet; then
+            echo "El AUR ya está en la versión $AUR_VERSION."
+            exit 0
+          fi
+          git commit -m "Update to $AUR_VERSION"
+          git push origin HEAD:master

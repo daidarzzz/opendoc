@@ -1,0 +1,27 @@
+# Maintainer: daidarzzz
+#
+# Plantilla del paquete `opendoc-bin` del AUR. NO es el PKGBUILD de CI
+# (`packaging/arch/`): aquel compila el binario dentro de la release; este
+# solo descarga ese paquete ya compilado en un contenedor Arch y lo
+# reinstala. `.github/workflows/aur.yml` sustituye @VERSION@ y @SHA256@ y
+# lo publica en el AUR cada vez que sale una release.
+pkgname=opendoc-bin
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc="Fast, modern offline documentation viewer for Dash and Zeal docsets"
+arch=('x86_64')
+url="https://github.com/daidarzzz/opendoc"
+license=('GPL-3.0-or-later')
+depends=('webkit2gtk-4.1' 'gtk3' 'hicolor-icon-theme')
+provides=('opendoc')
+conflicts=('opendoc')
+options=('!strip' '!debug')
+# El paquete de la release ya lleva binario, escritorio, iconos y licencia:
+# no se extrae solo (noextract), se vuelca en package().
+noextract=("opendoc-release-${pkgver}.pkg.tar.zst")
+source=("opendoc-release-${pkgver}.pkg.tar.zst::${url}/releases/download/v${pkgver}/opendoc-bin-${pkgver}-1-x86_64.pkg.tar.zst")
+sha256sums=('@SHA256@')
+
+package() {
+  bsdtar -xf "opendoc-release-${pkgver}.pkg.tar.zst" -C "$pkgdir" usr
+}
