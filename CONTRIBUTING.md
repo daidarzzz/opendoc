@@ -1,8 +1,18 @@
 # Contributing to OpenDoc
 
 Start with the [architecture guide](docs/architecture.md) to find the code
-behind a feature. The [README](README.md#prerequisites) lists the platform
-dependencies and [development checks](README.md#development--testing).
+behind a feature, and [SPEC.md](SPEC.md) for the full technical contract.
+
+## Prerequisites
+
+- [Node.js](https://nodejs.org/) (v22 or v24 recommended) and `npm`.
+- Stable [Rust](https://rustup.rs/) (edition 2021).
+- **Windows:** Visual Studio C++ Build Tools and WebView2 (pre-installed on
+  Windows 11 and updated Windows 10).
+- **macOS:** Xcode Command Line Tools (`xcode-select --install`).
+- **Linux:** WebKitGTK and the Tauri v2 system libraries (e.g.
+  `libwebkit2gtk-4.1-dev`, `libappindicator3-dev`, `librsvg2-dev`). See the
+  [Tauri v2 prerequisites](https://v2.tauri.app/start/prerequisites/).
 
 ## Run the desktop app
 
@@ -59,3 +69,56 @@ and WebKitGTK version when reporting rendering behavior.
 In a pull request, describe the behavior change and how you verified it.
 For platform-specific changes, include the platform and packaging format
 you tested.
+
+## Develop against a local `opendoc-core`
+
+The app pins `opendoc-core` to a Git tag in `src-tauri/Cargo.toml`. To test
+core changes together with the app, uncomment the `[patch]` block at the
+bottom of that file:
+
+```toml
+[patch."https://github.com/daidarzzz/opendoc-core"]
+opendoc-core = { path = "../../opendoc-core" }
+```
+
+Comment it back out before committing and check that `Cargo.lock` points to
+the Git tag again.
+
+## Build installers
+
+```bash
+npm run tauri build
+```
+
+Binaries land in `src-tauri/target/release/` and platform installers
+(.exe, .msi, .dmg, .deb, .AppImage) in `src-tauri/target/release/bundle/`.
+
+### In-app updates
+
+Settings → General checks the latest GitHub release (`latest.json`) and
+installs signed updates. Releases built by CI sign their update packages:
+the workflow needs the repository secrets `TAURI_SIGNING_PRIVATE_KEY` (the
+private key whose public half is in `src-tauri/tauri.conf.json`) and
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (empty if the key has no password).
+Local builds don't need the key: updater artifacts are only enabled in CI
+through `src-tauri/tauri.release.conf.json`. Automatic installs work with the
+Windows installers, the macOS app and the Linux AppImage; `.deb`/`.rpm`
+installs get a link to download the new version instead.
+
+### Microsoft Store (MSIX)
+
+Each release also ships `OpenDoc_<version>_x64.msix`, built by
+`.github/workflows/msix.yml`. It is compiled with `OPENDOC_STORE=1` /
+`VITE_OPENDOC_STORE=1`, which leaves out the in-app updater, and packaged by
+`packaging/msix/build-msix.ps1` with `makeappx`. The package is unsigned on
+purpose: the Store signs it after certification. Its identity comes from the
+repository variables `MSIX_IDENTITY_NAME`, `MSIX_PUBLISHER` and
+`MSIX_PUBLISHER_DISPLAY_NAME` (plus `MSIX_STORE_NAME` when the reserved Store
+name is not "OpenDoc"); to rebuild the .msix of an existing release, run the
+workflow by hand with its tag.
+
+### macOS Liquid Glass preview
+
+On macOS 26+ fresh profiles use AppKit Liquid Glass. The `pruebaMac` Actions
+workflow uploads a single Apple Silicon DMG for testing; see
+[docs/mac-testing.md](docs/mac-testing.md).

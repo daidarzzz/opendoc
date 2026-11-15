@@ -1,102 +1,138 @@
+<div align="center">
+
+<img src="src/assets/opendoc-logo.svg" width="96" alt="Logo de OpenDoc">
+
 # OpenDoc
 
-> Lee esto en [English](./README.md).
+**Toda tu documentación, offline. Encontrada en milisegundos.**
 
-**Un visor de documentación offline, rápido y moderno.** Busca en milisegundos entre miles de funciones, clases y guías, sin necesidad de conexión a Internet y con una interfaz de escritorio cuidada.
+Un lector de documentación rápido y bonito para Windows, macOS y Linux.<br>
+844 documentaciones a un clic. Compatible con tus docsets de Dash y Zeal.
 
-OpenDoc lee el formato estándar **docset** (el mismo creado por Dash y utilizado por Zeal), por lo que puedes configurarlo con tu carpeta de docsets existente y empezar a consultar documentación de inmediato.
+[![Última versión](https://img.shields.io/github/v/release/daidarzzz/opendoc?label=release&color=de3830)](https://github.com/daidarzzz/opendoc/releases/latest)
+[![Descargas](https://img.shields.io/github/downloads/daidarzzz/opendoc/total?label=descargas&color=de3830)](https://github.com/daidarzzz/opendoc/releases)
+[![Licencia: GPL-3.0](https://img.shields.io/badge/licencia-GPL--3.0-blue)](./LICENSE)
+![Plataformas](https://img.shields.io/badge/plataforma-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 
-> **Versión actual: v0.3.0.** OpenDoc incluye el catálogo de DevDocs por defecto (844 documentaciones, convertidas a docsets normales al instalar), navegación por pestañas con persistencia de sesiones, motor de búsqueda difusa en memoria, navegación de símbolos por tipo, tres estilos visuales con acentos personalizables, índice de la página, seguir leyendo, actualizaciones desde la app y gestión completa de docsets.
+**[⬇ Descargar](https://opendoc.daida.net/download.html)** · **[Web](https://opendoc.daida.net)** · **[English](./README.md)**
 
-La [página de descargas](https://opendoc.daida.net/download.html) reúne los instaladores por plataforma, notas de instalación y primeros pasos. Comparte las preferencias de tema, acento e idioma de la landing. Los enlaces y tamaños se consultan en la última release de GitHub; si la consulta falla, los enlaces abren la página de la release.
+</div>
+
+<p align="center"><img src="docs/media/screenshot.png" width="900" alt="Paleta de comandos de OpenDoc buscando en la documentación de Rust"></p>
 
 ---
-
-## Prueba Liquid Glass para Mac
-
-En macOS 26 o posterior, los perfiles nuevos usan Liquid Glass. AppKit dibuja el vidrio del panel lateral y la pestaña activa, los botones de navegación y varios controles de Ajustes. El workflow de la rama `pruebaMac` sube un único DMG para Apple Silicon a GitHub Actions.
 
 ## ¿Por qué OpenDoc?
 
-Aunque Zeal es una herramienta consolidada en la comunidad, su interfaz en C++/Qt se siente desfasada y ofrece pocas opciones de personalización moderna. OpenDoc nace desde cero como una alternativa moderna construida sobre cuatro principios:
+Pulsa <kbd>Ctrl</kbd> <kbd>K</kbd>, escribe un par de letras y ya estás leyendo la página que buscabas. Sin pestañas del navegador, sin red, sin anuncios, sin cuenta. Solo la documentación que usas cada día, en un avión, en un sótano o con el Wi‑Fi apagado.
 
-- **Búsqueda instantánea y bajo consumo:** Arranca en milisegundos, mantiene los índices en memoria con `nucleo-matcher` (<50 ms con más de 300.000 entradas) y conserva un consumo contenido (<80 MB de RAM en reposo).
-- **Diseño enfocado al teclado y cuidado visual:** Interfaz limpia con temas claro, oscuro y del sistema, 4 colores de acento y una Paleta de Comandos (`Ctrl+K` / `Cmd+K`) inspirada en VS Code y Obsidian.
-- **Compatibilidad total con docsets:** Detecta automáticamente esquemas SQLite estándar (`searchIndex`) y Core Data (`ZTOKEN...`), lee metadatos de `Info.plist`, extrae paquetes *tarix* de forma segura y resuelve rutas internas sin fallos.
-- **Aislamiento y seguridad:** Muestra la documentación dentro de un `<iframe>` aislado (`sandbox="allow-scripts"`), utiliza un protocolo nativo propio `opendoc://` para evitar ataques de salto de directorio (path traversal) y delega los enlaces externos directamente en el navegador predeterminado del sistema.
+- ⚡ **Búsqueda instantánea.** Un motor difuso en Rust mantiene todos los índices en memoria y pone primero lo mejor, en toda tu documentación a la vez.
+- 📚 **844 documentaciones incluidas.** El catálogo de [DevDocs](https://devdocs.io/) está listo desde el primer arranque: Python, React, Rust, MDN, Go, Node, Kubernetes… un clic cada una.
+- 🗂️ **Pestañas con memoria.** Historial propio por pestaña, arrastrar para reordenar, y tus pestañas, historial y posición vuelven al reabrir la app.
+- 🎨 **Hecho para mirarlo.** Temas claro y oscuro, tres estilos visuales, cuatro colores de acento y Liquid Glass nativo en macOS 26 (preview).
+- 🔒 **Seguro por diseño.** Cada página se abre en un marco aislado y los enlaces externos van a tu propio navegador.
+- 🪶 **Ligero y libre.** Unos pocos megas, código abierto bajo GPL‑3.0.
 
----
+## Mucho más rápido que Zeal
 
-## Funcionalidades principales
+Tiempo medio por tecla al buscar (menos es mejor):
 
-### Búsqueda y Navegación
-- **Paleta de Comandos (`Ctrl+K` / `Cmd+K`):** Modal de búsqueda global en vivo con navegación fluida por teclado (flechas, Enter, Esc), distintivos por tipo de símbolo y coincidencia en tiempo real.
-- **Motor difuso en memoria:** Clasificación por niveles mediante `nucleo-matcher`: coincidencia exacta > coincidencia por prefijo > coincidencia difusa > coincidencia en el último segmento, con ponderación prioritaria de clases y funciones sobre secciones o guías.
-- **Filtros por prefijo (`docset:consulta`):** Restringe la búsqueda a docsets específicos directamente desde el cajón de búsqueda (ej. `cpp:vector`, `py:dumps` o `rust,go:channel`).
-- **Exploración de símbolos por tipo:** Consulta todas las entradas clasificadas por categoría (funciones, clases, módulos, propiedades, tipos) con contadores reales y páginas paginadas.
+| Biblioteca | OpenDoc | Zeal | |
+| --- | ---: | ---: | :--- |
+| 31k entradas · 4 docsets | **1,9 ms** | 10,9 ms | **6× más rápido** |
+| 314k entradas · 40 docsets | **5,1 ms** | 69,8 ms | **14× más rápido** |
+| 1M entradas · 128 docsets | **13,7 ms** | 219,8 ms | **16× más rápido** |
 
-### Espacio de trabajo y Visualización
-- **Pestañas e historial independiente:** Navegación hacia adelante y hacia atrás por pestaña, pestañas reordenables por arrastre, precarga de enlaces al pasar el cursor para eliminar el parpadeo blanco (sin expulsar la página anterior, así que Atrás sigue siendo instantáneo), y clic central o `Ctrl/Cmd+clic` para abrir en pestañas nuevas.
-- **Persistencia de sesión:** Conserva pestañas abiertas, pestaña activa, historial de navegación y posiciones de scroll entre reinicios mediante `session.json` (con escritura atómica y copias de seguridad `.bak` automáticas). Puede activarse o desactivarse desde Ajustes.
-- **Protocolo de visor seguro (`opendoc://`):** Sirve los archivos locales previniendo cualquier acceso indebido fuera de `Documents/` (`..`, symlinks, unidades de disco o secuencias con doble codificación percent). Sirve las páginas fuera del hilo de UI y en paralelo; el scroll del trackpad es nativo y se reenvía al iframe cuando WebKit lo entrega a la app.
-- **Buscar en la página (`Ctrl/Cmd+F`):** Barra de búsqueda flotante propia de OpenDoc en lugar de la del webview: resalta todas las coincidencias, muestra `3 de 12` y se recorre con `Intro` / `Mayús+Intro`.
-- **Zoom de los docsets:** `Ctrl/Cmd+rueda del ratón`, `Ctrl/Cmd +`/`-`/`0` o desde el menú contextual. El nivel es común a todos los docsets y se recuerda entre sesiones.
-- **Índice de la página:** Una guía discreta de rayitas en el borde derecho del visor representa los encabezados (h1–h4) y marca la sección que estás leyendo. Al pasar el ratón se despliega el índice para saltar a cualquier parte. Opcional (Ajustes → Lectura).
-- **Seguir leyendo e historial:** La pestaña de inicio muestra tus últimas seis páginas (dos filas) con tiempos relativos; **Ver historial** abre el historial de lectura completo (hasta 200 páginas) agrupado por días, con buscador, quitar páginas sueltas y borrar todo. Con clic central se abren en otra pestaña.
-- **Arrastre de pestañas fluido:** La pestaña arrastrada sigue al puntero, las vecinas se apartan deslizándose y encaja con suavidad al soltar.
-- **Inicio configurable:** Ajustes → Inicio activa o desactiva cada parte de la pestaña de inicio (saludo, barra de búsqueda, filtros por docset, seguir leyendo, biblioteca y atajos), hasta dejarla completamente limpia.
-- **Docsets en modo oscuro (beta):** Oscurece opcionalmente las páginas de los docsets mientras la app usa el tema oscuro, conservando los colores reales de las imágenes (los diagramas transparentes llevan una placa clara para que sus líneas oscuras se sigan leyendo) y sin tocar los docsets que ya son oscuros. Se activa en Ajustes → Lectura, y se puede desactivar o activar para un docset concreto con clic derecho sobre su página o sobre él en el panel lateral.
-- **Desplazamiento suave:** El scroll con la rueda del ratón dentro de los docsets se anima con suavizado (el trackpad sigue siendo nativo). Activado por defecto; se puede desactivar en Ajustes.
-- **Menú contextual propio:** El clic derecho del navegador se sustituye por un menú minimalista de OpenDoc: copiar, buscar la selección en OpenDoc o en la página, abrir enlaces en pestaña nueva, atrás/adelante, seleccionar todo y zoom dentro de los docsets; acciones de pestaña (cerrar, cerrar las demás, reabrir) sobre las pestañas; cortar/copiar/pegar en los campos de texto.
-- **Protección de enlaces externos:** Los hipervínculos externos (`http://`, `https://`, `mailto:`) se abren automáticamente en el navegador web del sistema operativo en lugar de navegar dentro de la ventana de la aplicación.
+<sub>La búsqueda de Zeal reconstruida a partir de su código fuente (puntuación fzy dentro de SQLite) y ejecutada junto a `opendoc-core` en la misma máquina: Windows, 12 hilos, mediana de tres ejecuciones, seis consultas escritas letra a letra. Se miden los motores de búsqueda, no las ventanas que los rodean. La contrapartida: OpenDoc carga todos los índices en memoria al arrancar (unos 0,06 s para cuatro docsets).</sub>
 
-### Gestión de Docsets y Catálogo
-- **Catálogo con DevDocs por defecto:** El catálogo incluye [DevDocs](https://devdocs.io/) (844 documentaciones) y no requiere configuración: se descarga solo en el primer arranque, y cada documentación se convierte a un docset normal al instalarla (búsqueda sin conexión, navegación por símbolos y pestañas funcionan igual que con cualquier docset; las actualizaciones se detectan solas). Opcionalmente, añade tus propios repositorios de feeds compatibles con Dash/Zeal (como `zealdocs/feeds`) como fuentes extra.
-- **Explorador del catálogo:** Cuadrícula de tarjetas con los instalados primero, búsqueda en vivo, filtros por estado con recuento (todos / instalados / actualizables / no instalados), progreso de instalación y actualizar o desinstalar con un clic. Puedes instalar varios docsets a la vez: se descargan dos a la vez y el resto espera su turno en la pestaña **En cola**, donde cada tarjeta muestra su puesto y se puede quitar de la cola. Disponible incluso antes de instalar ningún docset.
-- **Iconos de lenguaje en todas partes:** Más de 170 iconos de lenguajes y frameworks ([Devicon](https://devicon.dev/), MIT) vienen con la app, así que el catálogo, las pestañas y la barra lateral muestran un icono reconocible sin conexión, incluso antes de instalar. Los lenguajes y herramientas sin Devicon tienen su propia insignia de color, así que toda entrada de DevDocs muestra un icono reconocible.
-- **Instalación con un clic:** Descarga paquetes `.tgz` con reporte del progreso real en bytes y archivos (`docset-progress`), valida la integridad del paquete y realiza sustituciones atómicas de carpetas.
-- **Comprobación de actualizaciones y desinstalación:** Detección de versiones disponibles mediante comparación numérica estricta, con desinstalación segura de docsets desde la carpeta configurada.
-- **Gestión de mirrors y caché de velocidad:** Conexión alternativa a mirrors si uno falla, memorizando el host más rápido (`fast_mirror`) para optimizar descargas posteriores.
-- **Soporte de paquetes Tarix:** Identifica docsets en formato *tarix* (`tarix.tgz`) y permite extraerlos de forma segura hacia la caché de la app sin modificar la carpeta original de docsets.
+## Funcionalidades
 
-### Personalización y Accesibilidad
-- **Una ventana con color propio:** La ventana es un lienzo teñido por tu acento (rubor, cielo, crema o lavanda, y versiones profundas en oscuro) y el contenido flota en una tarjeta redondeada, con la pestaña activa conectada a ella. Unos glifos de tipo de colores (C, F, M, P…) distinguen de un vistazo clases, funciones, propiedades y módulos en la paleta y la barra lateral. La pestaña de inicio saluda según la hora y muestra tu biblioteca en mosaicos, con filtros por docset a un clic. Compuesta en Bricolage Grotesque, Inter y JetBrains Mono, todas empaquetadas para que la app siga siendo totalmente offline.
-- **Tres estilos:** Elige **Color** (lienzo teñido por el acento, Bricolage Grotesque + Inter), **Papel** (papel y tinta, Newsreader + IBM Plex Mono, esquinas casi rectas) o **Clásico** (grises neutros e Inter) en Ajustes → Apariencia. Los tres comparten la distribución, los acentos y los glifos de tipo, y el cambio se aplica al instante, sin parpadeo al arrancar.
-- **Temas (Claro / Oscuro / Sistema):** Cambio de tema de alto contraste para la interfaz de la aplicación. Los documentos de los docsets conservan siempre su estilo claro original para evitar artefactos visuales en tablas, código o diagramas.
-- **Colores de acento:** Permite elegir entre **Rojo**, **Azul**, **Ámbar** o **Catppuccin** (Latte/Mocha Mauve). Actualiza los resaltados de la UI, botones principales, el logotipo de la aplicación y el icono en ejecución en la barra de tareas y el Dock.
-- **Panel de Ajustes (`Ctrl/Cmd+,`):** Ventana de ajustes completa organizada por secciones: General (idioma, restaurar pestañas, número de resultados de búsqueda), Apariencia (vista previa de temas, color de acento, reducir movimiento), Lectura (desplazamiento suave, zoom de los docsets, precarga de enlaces al pasar el ratón, docsets en modo oscuro beta), Docsets (carpeta, volver a escanear, lista de instalados, pendientes, catálogo), referencia de atajos de teclado y Acerca de (versión, enlaces, restablecer preferencias).
-- **Interfaz bilingüe:** Completamente traducida al **inglés** (por defecto) y **español**, con selector en caliente desde Ajustes y paridad exacta entre claves de diccionario.
+<table>
+<tr>
+<td width="50%" valign="top">
 
----
+**🔎 Búsqueda**
+- Paleta de comandos con resultados en vivo, pensada para el teclado
+- Filtra por docset: `py:dumps`, `rust,go:channel`
+- Explora todos los símbolos por tipo (clases, funciones, tipos…)
+- Buscar en la página con contador de coincidencias
 
-## Arquitectura y Stack Tecnológico
+</td>
+<td width="50%" valign="top">
 
-```
-opendoc/
-├── Frontend:    React 19, TypeScript, Tailwind CSS v3, Vite, Zustand
-├── Desktop App: Tauri v2 (Gestión de ventana, IPC, protocolo seguro, diálogos nativos)
-└── Shared Core: opendoc-core (Rust puro: escaneo, índices SQLite, tarix, búsqueda difusa, rutas)
-```
+**📖 Lectura**
+- Pestañas con su propio historial atrás/adelante
+- Navegación instantánea: las páginas se precargan al pasar el ratón
+- Índice de la página, zoom y desplazamiento suave
+- Seguir leyendo e historial de lectura completo
+- Modo oscuro para las páginas de los docsets (beta)
 
-La aplicación de escritorio forma parte de un ecosistema compuesto por:
-- **[`opendoc-core`](https://github.com/daidarzzz/opendoc-core):** El motor en Rust sin dependencias gráficas ni de red que centraliza la indexación, el escaneo y la búsqueda difusa.
-- **[`opendoc-cli` (`odc`)](https://github.com/daidarzzz/opendoc-cli):** Herramienta de línea de comandos para buscar y abrir documentación en el navegador o visor directamente desde la terminal.
+</td>
+</tr>
+<tr>
+<td valign="top">
 
----
+**📦 Biblioteca**
+- Catálogo de DevDocs con cola de instalación, actualizaciones y desinstalación
+- Usa los docsets que ya tienes de Dash o Zeal
+- Más de 170 iconos de lenguajes, todos offline
+- Actualizaciones de la app con un clic
 
-## Requisitos
+</td>
+<td valign="top">
 
-- [Node.js](https://nodejs.org/) (versión 22 o 24 recomendada) y `npm`.
-- [Rust](https://rustup.rs/) estable (edición 2021).
-- **Windows:** Herramientas de compilación de C++ de Visual Studio y WebView2 (incluido en Windows 11 y Windows 10 actualizado).
-- **macOS:** Herramientas de línea de comandos de Xcode (`xcode-select --install`).
-- **Linux:** Librerías de sistema para Tauri v2 y WebKitGTK (ej. `libwebkit2gtk-4.1-dev`, `libappindicator3-dev`, `librsvg2-dev`). Ver la [guía de requisitos de Tauri v2](https://v2.tauri.app/start/prerequisites/).
+**🎨 A tu gusto**
+- Estilos Color, Papel y Clásico
+- Acentos Rojo, Azul, Ámbar y Catppuccin, incluso en el icono de la app
+- Tema claro, oscuro o del sistema
+- Inglés y español
 
----
+</td>
+</tr>
+</table>
 
-## Primeros Pasos
+## Instalación
 
-### 1. Clonar y Ejecutar en Desarrollo
+Descarga el instalador para tu sistema desde la **[página de descargas](https://opendoc.daida.net/download.html)** o la [última release](https://github.com/daidarzzz/opendoc/releases/latest):
+
+| Plataforma | Paquetes |
+| --- | --- |
+| **Windows** | Instalador `.exe`, `.msi` |
+| **macOS** | `.dmg` para Apple Silicon e Intel |
+| **Linux** | `.AppImage`, `.deb`, `.rpm`, paquete de Arch |
+
+En el primer arranque, abre el **Catálogo** e instala lo que necesites. ¿Ya usas Dash o Zeal? Indica tu carpeta de docsets en **Ajustes → Docsets** y listo.
+
+<details>
+<summary><b>Notas y problemas conocidos</b></summary>
+
+- **Binarios sin firmar.** Windows SmartScreen y macOS Gatekeeper muestran un aviso de "editor desconocido" la primera vez que abres OpenDoc.
+- **Arch Linux.** Mejor el paquete nativo que la AppImage (usa el WebKitGTK del sistema y va más fluido):
+  `sudo pacman -U opendoc-bin-<versión>-1-x86_64.pkg.tar.zst`
+- **Renderizado en Linux.** Si la ventana no se abre o no se dibuja, prueba `WEBKIT_DISABLE_DMABUF_RENDERER=1 opendoc`.
+- **Actualizaciones.** Las actualizaciones desde la app funcionan con los instaladores de Windows, la app de macOS y la AppImage. Las instalaciones `.deb`, `.rpm` y pacman reciben un enlace a la nueva release.
+- **Espacio en disco.** Los docsets empaquetados como *tarix* se extraen a una caché y pueden ocupar decenas o cientos de MB cada uno.
+
+</details>
+
+## Atajos de teclado
+
+| Atajo | Acción |
+| --- | --- |
+| <kbd>Ctrl/⌘</kbd> <kbd>K</kbd> | Buscar en todo |
+| <kbd>Ctrl/⌘</kbd> <kbd>T</kbd> | Nueva pestaña |
+| <kbd>Ctrl/⌘</kbd> <kbd>F</kbd> | Buscar en la página |
+| <kbd>F3</kbd> | Abrir el catálogo |
+| <kbd>Ctrl/⌘</kbd> <kbd>,</kbd> | Ajustes |
+
+## La familia OpenDoc
+
+- **[opendoc-core](https://github.com/daidarzzz/opendoc-core)**: el motor en Rust que escanea, indexa y busca.
+- **[opendoc-cli](https://github.com/daidarzzz/opendoc-cli)** (`odc`): la misma búsqueda, directamente desde tu terminal.
+
+## Contribuir
+
+OpenDoc está hecho con **Tauri v2**, **React 19**, **TypeScript** y **Rust**. Para ejecutarlo desde el código:
 
 ```bash
 git clone https://github.com/daidarzzz/opendoc.git
@@ -105,105 +141,22 @@ npm install
 npm run tauri dev
 ```
 
-> Usa siempre `npm run tauri dev`. El comando `npm run dev` solo abre la vista previa en el navegador, donde los comandos nativos de Rust no están disponibles.
-
-### 2. Añadir Documentación
-
-OpenDoc **no redistribuye docsets propietarios**.
-- Si ya utilizas Zeal o Dash, puedes abrir **Ajustes** y apuntar a tu carpeta de docsets existente.
-- Si comienzas desde cero, puedes conservar la carpeta predeterminada (`<app_data>/docsets`) y abrir la pestaña **Catálogo** para descargar documentación desde DevDocs o feeds comunitarios.
-- Cualquier carpeta que termine en `.docset` situada en tu directorio configurado será reconocida al arrancar o al guardar cambios.
-
-### 3. Compilar el Instalador
-
-```bash
-npm run tauri build
-```
-
-Los binarios compilados se generan en `src-tauri/target/release/` y los instaladores empaquetados (.exe, .msi, .dmg, .deb, .AppImage) en `src-tauri/target/release/bundle/`.
-
-### 4. Actualizaciones desde la app
-
-Ajustes → General comprueba la última release de GitHub (`latest.json`) e instala la actualización firmada con un clic, y luego reinicia. Las releases de CI firman sus paquetes de actualización: el workflow necesita los secretos del repositorio `TAURI_SIGNING_PRIVATE_KEY` (el contenido de la clave privada cuya mitad pública está en `src-tauri/tauri.conf.json`) y `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (vacío si la clave no tiene contraseña). Las compilaciones locales no necesitan la clave: los artefactos del actualizador solo se activan en CI mediante `src-tauri/tauri.release.conf.json`. La instalación automática funciona con los instaladores de Windows, la app de macOS y el AppImage de Linux; las instalaciones `.deb`/`.rpm` reciben un enlace para descargar la versión nueva.
-
-### 5. Microsoft Store (MSIX)
-
-Cada release incluye también `OpenDoc_<versión>_x64.msix`, generado por `.github/workflows/msix.yml` para Microsoft Store. Se compila con `OPENDOC_STORE=1` / `VITE_OPENDOC_STORE=1`, que deja fuera el actualizador propio (las actualizaciones las instala la Store), y lo empaqueta `packaging/msix/build-msix.ps1` con `makeappx` del Windows SDK. El paquete va sin firmar a propósito: la Store lo firma tras la certificación. La identidad del paquete sale de Partner Center a través de las variables del repositorio `MSIX_IDENTITY_NAME`, `MSIX_PUBLISHER` y `MSIX_PUBLISHER_DISPLAY_NAME` (y `MSIX_STORE_NAME` si el nombre reservado en la Store no es "OpenDoc"); para regenerar el .msix de una release ya publicada, lanza el workflow a mano con su tag.
-
----
-
-## Desarrollo y Pruebas
-
-Antes de dar por completado un cambio, ejecuta la batería de pruebas, linters y comprobaciones de tipo:
-
-```bash
-# Pruebas de frontend (Vitest: 164 tests sobre stores, sync de sesión, i18n, etc.)
-npm test
-
-# Comprobación de tipos de TypeScript
-npx tsc --noEmit
-
-# Batería de pruebas de Rust (83 tests unitarios y de integración)
-cargo test --manifest-path src-tauri/Cargo.toml
-
-# Linter de Rust
-cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
-
-# Comprobación de formato de Rust
-cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
-```
-
-Los tests que utilizan fixtures reales de docsets (`CSS.docset`, `Python_3.docset`, `C++.docset`, `Swift.docset`) buscan los archivos en `src-tauri/tests/fixtures/`. Si no están presentes, los tests correspondientes se omiten limpiamente con un aviso `SKIP`, permitiendo que `cargo test` pase en verde en clones limpios. Consulta las instrucciones en [`src-tauri/tests/fixtures/README.md`](./src-tauri/tests/fixtures/README.md).
-
-### Desarrollo local contra `opendoc-core`
-
-Por defecto, OpenDoc consume `opendoc-core` a través de una etiqueta de Git fija en `src-tauri/Cargo.toml`. Para probar modificaciones locales conjuntas en el núcleo, descomenta el bloque `[patch]` al final de `src-tauri/Cargo.toml`:
-
-```toml
-[patch."https://github.com/daidarzzz/opendoc-core"]
-opendoc-core = { path = "../../opendoc-core" }
-```
-
-Asegúrate de volver a comentar el bloque de patch antes de realizar un commit.
-
----
-
-## Limitaciones Conocidas
-
-- **Ejecutables no firmados:** Los instaladores publicados en GitHub Releases no cuentan con certificados comerciales de firma; Windows SmartScreen y macOS Gatekeeper mostrarán advertencias estándar durante la primera instalación.
-- **Modo oscuro en el contenido de docsets:** Los docsets se muestran siempre con su presentación clara original. El modo oscuro aplica exclusivamente a la interfaz nativa de OpenDoc. (La inversión global mediante CSS fue descartada por provocar fallos de contraste y errores visuales en bloques de código, tablas y diagramas; la incorporación de temas CSS personalizados por docset está planificada para fases posteriores).
-- **Alcance del icono de acento:** El acento de color modifica la UI y el icono de la aplicación en ejecución (barra de tareas y Dock de macOS). El archivo ejecutable estático `.exe`, los accesos directos y el icono del instalador permanecen con el rojo de marca.
-- **Espacio en disco con docsets Tarix:** Los docsets tarix extraídos requieren espacio de almacenamiento significativo en `tarix-cache/` (decenas o cientos de megabytes por paquete).
-- **WebKitGTK en Linux:** El comportamiento del motor WebKit en Linux depende de la versión del sistema y puede presentar pequeñas diferencias respecto a WebView2 (Windows) y WebKit (macOS). El AppImage lleva su propio WebKitGTK (más antiguo) y puede ir más lento; en Arch Linux mejor el paquete nativo de cada release (`sudo pacman -U opendoc-bin-<versión>-1-x86_64.pkg.tar.zst`), que usa el WebKitGTK del sistema. Con NVIDIA en Wayland, OpenDoc mantiene disponible el renderizador DMA-BUF y desactiva la sincronización explícita de NVIDIA para su propio proceso. Si la ventana no se abre o no se dibuja bien, prueba el arranque de compatibilidad con `WEBKIT_DISABLE_DMABUF_RENDERER=1 opendoc`. Las instalaciones nativas (pacman/.deb/.rpm) se actualizan desde la página de releases, no desde la app.
-
----
-
-## Hoja de Ruta
-
-- [x] **v0.1 (MVP):** Escaneo de docsets, lectura de índices SQLite (estándar y Core Data), búsqueda difusa en memoria, Paleta de Comandos, visor seguro `opendoc://`, ajustes y temas.
-- [x] **v0.2 (Uso diario):** Pestañas con historial independiente, sesiones persistentes entre reinicios, explorador por tipos de símbolo, filtros por prefijo y gestor de catálogo (descarga, instalación, actualización y desinstalación).
-- [ ] **v0.3 (Mejoras):** ~~Tabla de contenidos (TOC) contextual~~ (hecho: índice de la página), ~~páginas recientes~~ (hecho: seguir leyendo), ~~actualizaciones desde la app~~ (hecho), favoritos y marcadores, y cancelación interactiva de extracciones.
-- [ ] **v1.0 (Refinamiento final):** Temas CSS personalizados por docset, resaltado de sintaxis avanzado, ejecución de instancia única y pruebas de estrés con colecciones masivas de documentación (más de 20 docsets).
-
-Para profundizar en el diseño del sistema, consulta [`SPEC.md`](./SPEC.md). La guía operativa para agentes y colaboradores se encuentra en [`AGENTS.md`](./AGENTS.md).
-
----
+Consulta [CONTRIBUTING.md](CONTRIBUTING.md) para requisitos, comprobaciones y builds de release, la [guía de arquitectura](docs/architecture.md) para el mapa del código y [SPEC.md](SPEC.md) para la especificación técnica completa.
 
 ## Licencia
 
-Copyright (C) 2026 daidarzzz.
+Copyright © 2026 daidarzzz. OpenDoc es software libre bajo la [GNU GPL v3.0 o posterior](./LICENSE).
 
-OpenDoc es software libre, distribuido bajo la **Licencia Pública General de GNU v3.0 o posterior (GPL-3.0-or-later)**. Consulta el archivo [`LICENSE`](./LICENSE) para más detalles.
+Los docsets pertenecen a sus autores y mantienen sus propias licencias; OpenDoc no los incluye ni los redistribuye.
 
-Cada documentación que descargues o consultes pertenece a sus respectivos autores y conserva su propia licencia; OpenDoc no incluye ni redistribuye documentación de terceros.
+<details>
+<summary>Agradecimientos</summary>
 
----
+- [DevDocs](https://devdocs.io/), cuyo catálogo es la biblioteca por defecto de OpenDoc.
+- [Zeal](https://zealdocs.org/) y [Dash](https://kapeli.com/dash), por el ecosistema de docsets offline. OpenDoc es independiente y no está afiliado a ninguno.
+- [nucleo-matcher](https://github.com/helix-editor/nucleo) para la búsqueda difusa.
+- [Catppuccin](https://catppuccin.com/) por la paleta Mauve (MIT).
+- [Devicon](https://devicon.dev/) por los iconos de lenguajes (MIT, ver `src/assets/devicons/LICENSE`).
+- [Bricolage Grotesque](https://github.com/ateliertriay/bricolage), [Inter](https://rsms.me/inter/), [JetBrains Mono](https://www.jetbrains.com/lp/mono/), [Newsreader](https://github.com/productiontype/Newsreader) e [IBM Plex Mono](https://github.com/IBM/plex), incluidas mediante Fontsource (SIL OFL 1.1).
 
-## Agradecimientos
-
-- Gracias al equipo y a quienes contribuyen a [DevDocs](https://devdocs.io/) por poner a disposición su catálogo y sus paquetes de documentación, que OpenDoc utiliza como fuente predeterminada.
-- [Zeal](https://zealdocs.org/) y [Dash](https://kapeli.com/dash) por popularizar el ecosistema de docsets offline. OpenDoc es un proyecto independiente y no está afiliado a ninguna de las dos herramientas.
-- [Catppuccin](https://catppuccin.com/) por los valores de paleta Mauve (Latte/Mocha) empleados en el tema de acento (Licencia MIT).
-- [nucleo-matcher](https://github.com/helix-editor/nucleo) por su excelente rendimiento en la búsqueda difusa en memoria.
-- [Devicon](https://devicon.dev/) por los iconos de lenguajes y frameworks incluidos (Licencia MIT, ver `src/assets/devicons/LICENSE`).
-- Tipografías [Bricolage Grotesque](https://github.com/ateliertriay/bricolage), [Inter](https://rsms.me/inter/), [JetBrains Mono](https://www.jetbrains.com/lp/mono/), [Newsreader](https://github.com/productiontype/Newsreader) e [IBM Plex Mono](https://github.com/IBM/plex), empaquetadas mediante Fontsource (SIL Open Font License 1.1).
+</details>
