@@ -26,6 +26,8 @@ A fast, beautiful documentation reader for Windows, macOS and Linux.<br>
 
 Press <kbd>Ctrl</kbd> <kbd>K</kbd>, type a few letters, and you're reading the right page. No browser tabs, no network, no ads, no account. Just the docs you use every day, on a plane, in a basement, or with the Wi‑Fi off.
 
+> **Free and open, everywhere.** Dash is great, but it's paid and Mac-only. Zeal brought offline docs to everyone else, but it feels its age. OpenDoc reads the same docsets and aims to be the open source reader that's fast and modern on every platform, **including the Mac**.
+
 - ⚡ **Instant search.** A fuzzy engine in Rust keeps every index in memory and ranks the best match first, across all your docs at once.
 - 📚 **844 docs built in.** The [DevDocs](https://devdocs.io/) catalog is ready on first launch: Python, React, Rust, MDN, Go, Node, Kubernetes… one click each.
 - 🗂️ **Tabs that remember.** Per-tab history, drag to reorder, and your tabs, history and scroll position come back when you reopen the app.
