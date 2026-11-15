@@ -66,7 +66,8 @@ Average time per keystroke while searching (shorter is better):
 - Tabs with their own back/forward history
 - Instant navigation: pages preload on hover
 - Page outline, zoom and smooth scrolling
-- Continue reading and full reading history
+- A light, fully customizable home tab: search, recent pages and favorites (star a page with `Ctrl/⌘ D`), optional library, filters and shortcuts
+- Full reading history and favorites panel (`Ctrl/⌘ Y`), also shown in the empty search palette
 - Dark mode for docset pages (beta)
 
 </td>

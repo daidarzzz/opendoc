@@ -1,15 +1,19 @@
 // Command Palette: Ctrl/Cmd+K, resultados en vivo, teclado completo.
 // Filtros por docset (`cpp:vector`): chips con icono dentro del campo,
 // fantasma de Tab-completado, aviso con filtro vacío.
-import { memo, useCallback, useEffect, useMemo, useRef } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { platform } from "@tauri-apps/plugin-os";
 import { useT } from "../hooks/useT";
 import { usePalette } from "../store/palette";
 import { useDocsets } from "../store/docsets";
+import { useFavorites } from "../store/favorites";
+import { usePrefs } from "../store/prefs";
+import { useRecent } from "../store/recent";
+import { useTabs } from "../store/tabs";
 import type { SearchResult } from "../lib/types";
 import { filterKeys, ghostFor, tailAfterColon } from "../lib/paletteFilter";
 import { DocsetIcon } from "./DocsetIcon";
-import { CloseIcon, SearchIcon } from "./Icons";
+import { CloseIcon, SearchIcon, StarIcon } from "./Icons";
 import { KindGlyph } from "./KindGlyph";
 
 // Fila memoizada: el icono se resuelve por docset_id desde un mapa (las
@@ -67,6 +71,17 @@ const PaletteRow = memo(function PaletteRow({
   );
 });
 
+/** Atajo de la consulta vacía: un favorito o una página reciente. */
+interface QuickItem {
+  url: string;
+  title: string;
+  docsetId: string;
+  favorite: boolean;
+}
+
+const QUICK_FAVORITES = 5;
+const QUICK_RECENT = 5;
+
 export function CommandPalette() {
   const {
     open,
@@ -88,6 +103,40 @@ export function CommandPalette() {
   const pending = useDocsets((s) => s.pending);
   const { t } = useT();
   const mod = platform() === "macos" ? "⌘" : "Ctrl";
+  const favoritePages = useFavorites((s) => s.pages);
+  const recentPages = useRecent((s) => s.pages);
+  const showFavorites = usePrefs((s) => s.paletteFavorites);
+  const showRecent = usePrefs((s) => s.paletteRecent);
+  const [quickIndex, setQuickIndex] = useState(0);
+
+  // Con la consulta vacía: favoritos y luego recientes (de docsets cargados,
+  // sin repetir una página que ya está en favoritos).
+  const quick: QuickItem[] = useMemo(() => {
+    const loaded = new Set(docsets.map((d) => d.id));
+    const favs = (showFavorites ? favoritePages : []).filter((p) => loaded.has(p.docsetId)).slice(0, QUICK_FAVORITES);
+    const seen = new Set(favs.map((p) => p.url.split("#", 1)[0]));
+    const recents = (showRecent ? recentPages : [])
+      .filter((p) => loaded.has(p.docsetId) && !seen.has(p.url))
+      .slice(0, QUICK_RECENT);
+    return [
+      ...favs.map((p) => ({ url: p.url, title: p.title, docsetId: p.docsetId, favorite: true })),
+      ...recents.map((p) => ({ url: p.url, title: p.title, docsetId: p.docsetId, favorite: false })),
+    ];
+  }, [docsets, favoritePages, recentPages, showFavorites, showRecent]);
+
+  useEffect(() => {
+    if (open) setQuickIndex(0);
+  }, [open]);
+
+  useEffect(() => {
+    if (open) document.getElementById(`palette-quick-${quickIndex}`)?.scrollIntoView({ block: "nearest" });
+  }, [open, quickIndex]);
+
+  const chooseQuick = (item: QuickItem | undefined, newTab: boolean): void => {
+    if (!item) return;
+    setOpen(false);
+    void useTabs.getState().openUrl(item.url, item.title, newTab ? { newTab: true } : undefined);
+  };
 
   // Mapa id -> (icono, nombre): una sola copia de cada data-URL (incluye
   // pendientes para los chips "(sin instalar)").
@@ -132,6 +181,12 @@ export function CommandPalette() {
   const completion = ghost !== null ? query + ghost : null;
 
   function onKey(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (query.trim() === "" && quick.length > 0 && ["ArrowDown", "ArrowUp", "Enter"].includes(e.key)) {
+      e.preventDefault();
+      if (e.key === "Enter") chooseQuick(quick[quickIndex], e.ctrlKey || e.metaKey);
+      else setQuickIndex((i) => (i + (e.key === "ArrowDown" ? 1 : -1) + quick.length) % quick.length);
+      return;
+    }
     if (e.key === "ArrowDown") {
       e.preventDefault();
       moveActive(1);
@@ -242,7 +297,11 @@ export function CommandPalette() {
             aria-label={t("palette.input")}
             aria-expanded={results.length > 0}
             aria-activedescendant={
-              results.length > 0 ? `palette-option-${activeIndex}` : undefined
+              results.length > 0
+                ? `palette-option-${activeIndex}`
+                : query.trim() === "" && quick.length > 0
+                  ? `palette-quick-${quickIndex}`
+                  : undefined
             }
             role="combobox"
             aria-autocomplete="list"
@@ -250,9 +309,56 @@ export function CommandPalette() {
           />
         </div>
         {query.trim() === "" ? (
-          <p className="px-5 py-4 text-[13.5px] text-muted">
-            {t("palette.emptyHint")}
-          </p>
+          quick.length === 0 ? (
+            <p className="px-5 py-4 text-[13.5px] text-muted">
+              {t("palette.emptyHint")}
+            </p>
+          ) : (
+            <ul role="listbox" className="max-h-[26rem] overflow-y-auto py-2">
+              {quick.map((q, i) => {
+                const meta = docMeta.get(q.docsetId);
+                const active = i === quickIndex;
+                const heading =
+                  i === 0 || quick[i - 1]?.favorite !== q.favorite
+                    ? q.favorite
+                      ? t("welcome.favorites")
+                      : t("welcome.recentTab")
+                    : null;
+                return (
+                  <li key={q.url} role="presentation">
+                    {heading !== null && <p className="label px-5 pb-1 pt-2">{heading}</p>}
+                    <div
+                      id={`palette-quick-${i}`}
+                      role="option"
+                      aria-selected={active}
+                      onMouseEnter={() => setQuickIndex(i)}
+                      onClick={() => chooseQuick(q, false)}
+                      onMouseDown={(e) => {
+                        if (e.button === 1) e.preventDefault();
+                      }}
+                      onAuxClick={(e) => {
+                        if (e.button === 1) {
+                          e.preventDefault();
+                          chooseQuick(q, true);
+                        }
+                      }}
+                      className={`mx-2 flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 transition-colors duration-75 ${
+                        active ? "bg-accent/[0.09] text-ink" : "text-ink-2"
+                      }`}
+                    >
+                      <DocsetIcon icon={meta?.icon ?? null} name={meta?.name ?? q.docsetId} hint={q.docsetId} size={18} />
+                      <span className={`min-w-0 flex-1 truncate text-[13.5px] ${active ? "font-semibold text-accent-text" : "font-medium"}`}>
+                        {q.title}
+                      </span>
+                      {q.favorite && <StarIcon size={12} filled className="shrink-0 text-faint" />}
+                      <span className="max-w-[11rem] shrink-0 truncate text-[12px] text-faint">{meta?.name ?? q.docsetId}</span>
+                      {active && <span aria-hidden className="text-[13px] font-semibold text-accent-text">↵</span>}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )
         ) : noticeMode ? (
           <p className="px-5 py-4 text-[13.5px] text-muted">
             {t("palette.searchingIn", { names: noticeNames.join(", ") })}

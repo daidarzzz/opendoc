@@ -7,10 +7,11 @@ import { AppLogo } from "./AppLogo";
 import { CatalogIcon } from "./CatalogIcon";
 import { DocsetIcon } from "./DocsetIcon";
 import { PanelToggleIcon } from "./PanelToggleIcon";
-import { SearchIcon, SettingsIcon } from "./Icons";
+import { ClockIcon, SearchIcon, SettingsIcon } from "./Icons";
 import { useT } from "../hooks/useT";
 import { useDocsets } from "../store/docsets";
 import { usePalette } from "../store/palette";
+import { useHistoryUi } from "../store/historyUi";
 import { useSettingsUi } from "../store/settingsUi";
 import { useTabs } from "../store/tabs";
 import { usePrefs } from "../store/prefs";
@@ -134,6 +135,14 @@ export function Sidebar({
             <span className="truncate">{t("catalog.title")}</span>
           </button>
           <span className="px-1 font-mono text-[10px] text-faint">v{version}</span>
+          <button
+            onClick={() => useHistoryUi.getState().show()}
+            title={`${t("sidebar.history")} · ${mod} Y`}
+            aria-label={t("sidebar.history")}
+            className="icon-btn"
+          >
+            <ClockIcon size={17} />
+          </button>
           <button
             onClick={() => useSettingsUi.getState().show()}
             title={t("settings.title")}

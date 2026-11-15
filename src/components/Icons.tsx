@@ -294,3 +294,16 @@ export const ClockIcon = memo(function ClockIcon(props: IconProps) {
     </Svg>
   );
 });
+
+/** Estrella de favoritos; `filled` para la página ya marcada. */
+export const StarIcon = memo(function StarIcon(props: IconProps & { filled?: boolean }) {
+  const { filled = false, ...rest } = props;
+  return (
+    <Svg {...rest}>
+      <path
+        d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"
+        fill={filled ? "currentColor" : "none"}
+      />
+    </Svg>
+  );
+});

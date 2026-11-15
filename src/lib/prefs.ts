@@ -5,24 +5,47 @@ import { DEFAULT_DESIGN, normalizeDesign, type Design } from "./design";
 export const PALETTE_LIMITS = [20, 50, 100] as const;
 export type PaletteLimit = (typeof PALETTE_LIMITS)[number];
 
-/** Secciones de la pestaña de inicio (todas visibles por defecto). */
+/** Cuántas páginas muestra el bloque de recientes/favoritos del inicio. */
+export const HOME_COUNTS = [3, 5, 8, 12] as const;
+export type HomeCount = (typeof HOME_COUNTS)[number];
+/** Aspecto de las páginas: filas compactas o tarjetas. */
+export type HomeListStyle = "list" | "cards";
+/** Titular: grande o discreto. */
+export type HomeTitle = "large" | "compact";
+/** Pestaña con la que arranca el bloque de páginas (`last`: la que elegiste por última vez). */
+export type HomeStartTab = "last" | "recent" | "favorites";
+
+/** Secciones y opciones de la pestaña de inicio. */
 export interface HomePrefs {
   greeting: boolean;
   search: boolean;
   filters: boolean;
   recent: boolean;
+  favorites: boolean;
   library: boolean;
   shortcuts: boolean;
+  /** La biblioteca va antes que las páginas. */
+  libraryFirst: boolean;
+  title: HomeTitle;
+  listStyle: HomeListStyle;
+  count: HomeCount;
+  startTab: HomeStartTab;
+  /** Última pestaña elegida en el inicio (se recuerda para `startTab: "last"`). */
+  lastTab: "recent" | "favorites";
 }
 
-export const HOME_SECTIONS: readonly (keyof HomePrefs)[] = [
+/** Secciones que se activan y desactivan (las opciones van aparte). */
+export const HOME_SECTIONS = [
   "greeting",
   "search",
   "filters",
   "recent",
+  "favorites",
   "library",
   "shortcuts",
-];
+] as const satisfies readonly (keyof HomePrefs)[];
+
+export type HomeSection = (typeof HOME_SECTIONS)[number];
 
 export interface UiPrefs {
   /** Rueda del ratón animada dentro de los docsets. */
@@ -33,6 +56,10 @@ export interface UiPrefs {
   reduceMotion: boolean;
   /** Máximo de resultados de la paleta de búsqueda. */
   paletteLimit: PaletteLimit;
+  /** Favoritos en la paleta de búsqueda vacía. */
+  paletteFavorites: boolean;
+  /** Páginas recientes en la paleta de búsqueda vacía. */
+  paletteRecent: boolean;
   /** Estilo visual de la interfaz (ver `lib/design`). */
   design: Design;
   /** Índice de encabezados de la página, al borde del visor. */
@@ -57,9 +84,25 @@ export const DEFAULT_PREFS: UiPrefs = {
   linkPrefetch: true,
   reduceMotion: false,
   paletteLimit: 20,
+  paletteFavorites: false,
+  paletteRecent: false,
   design: DEFAULT_DESIGN,
   toc: true,
-  home: { greeting: true, search: true, filters: true, recent: true, library: true, shortcuts: true },
+  home: {
+    greeting: true,
+    search: true,
+    filters: true,
+    recent: true,
+    favorites: true,
+    library: false,
+    shortcuts: false,
+    libraryFirst: false,
+    title: "compact",
+    listStyle: "list",
+    count: 5,
+    startTab: "last",
+    lastTab: "recent",
+  },
   docDarkMode: false,
   docDarkOff: [],
 };
@@ -94,6 +137,8 @@ export function normalizePrefs(raw: unknown): UiPrefs {
     linkPrefetch: bool(r["linkPrefetch"], DEFAULT_PREFS.linkPrefetch),
     reduceMotion: bool(r["reduceMotion"], DEFAULT_PREFS.reduceMotion),
     paletteLimit: limit ?? DEFAULT_PREFS.paletteLimit,
+    paletteFavorites: bool(r["paletteFavorites"], DEFAULT_PREFS.paletteFavorites),
+    paletteRecent: bool(r["paletteRecent"], DEFAULT_PREFS.paletteRecent),
     design: normalizeDesign(r["design"]),
     toc: bool(r["toc"], DEFAULT_PREFS.toc),
     home: normalizeHome(r["home"]),
@@ -104,8 +149,18 @@ export function normalizePrefs(raw: unknown): UiPrefs {
 
 function normalizeHome(raw: unknown): HomePrefs {
   const r = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
-  const out = { ...DEFAULT_PREFS.home };
-  for (const k of HOME_SECTIONS) out[k] = bool(r[k], DEFAULT_PREFS.home[k]);
+  const d = DEFAULT_PREFS.home;
+  const out: HomePrefs = {
+    ...d,
+    libraryFirst: bool(r["libraryFirst"], d.libraryFirst),
+    title: r["title"] === "large" || r["title"] === "compact" ? r["title"] : d.title,
+    listStyle: r["listStyle"] === "list" || r["listStyle"] === "cards" ? r["listStyle"] : d.listStyle,
+    count: HOME_COUNTS.find((c) => c === r["count"]) ?? d.count,
+    startTab:
+      r["startTab"] === "last" || r["startTab"] === "recent" || r["startTab"] === "favorites" ? r["startTab"] : d.startTab,
+    lastTab: r["lastTab"] === "recent" || r["lastTab"] === "favorites" ? r["lastTab"] : d.lastTab,
+  };
+  for (const k of HOME_SECTIONS) out[k] = bool(r[k], d[k]);
   return out;
 }
 

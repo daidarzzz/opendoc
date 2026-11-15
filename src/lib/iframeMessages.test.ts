@@ -264,6 +264,9 @@ describe("matchParentShortcut", () => {
     expect(matchParentShortcut({ ...base, key: "Tab" })).toEqual({ action: "next-tab" });
     expect(matchParentShortcut({ ...base, key: "Tab", shiftKey: true })).toEqual({ action: "prev-tab" });
     expect(matchParentShortcut({ ...base, key: "3" })).toEqual({ action: "tab-n", index: 2 });
+    expect(matchParentShortcut({ ...base, key: "d" })).toEqual({ action: "favorite" });
+    expect(matchParentShortcut({ ...base, key: "y" })).toEqual({ action: "history" });
+    expect(matchParentShortcut({ ...base, key: "d", shiftKey: true })).toBeNull();
     expect(matchParentShortcut({ ...base, key: "k" })).toBeNull();
     expect(matchParentShortcut({ ...base, key: "w", shiftKey: true })).toBeNull();
     expect(

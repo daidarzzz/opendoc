@@ -2,6 +2,7 @@
 // chrome de navegador ni menú nativo con estas teclas).
 // - Ctrl/Cmd+K: paleta. Ctrl+W: cerrar pestaña. Ctrl+Tab/Shift: cambiar.
 //   Ctrl/Cmd+1..9: saltar. Alt+←/→: atrás/adelante.
+//   Ctrl/Cmd+D: favorito. Ctrl/Cmd+Y: historial y favoritos.
 //   F3: abrir catálogo. Ctrl/Cmd+F: buscar en la página.
 //   Ctrl/Cmd + +/-/0: zoom del docset. Ctrl/Cmd+,: ajustes.
 // El foco dentro del iframe no llega aquí: el script inyectado reenvía
@@ -10,7 +11,9 @@
 import { useEffect } from "react";
 import { matchParentShortcut, matchViewerShortcut } from "../lib/iframeMessages";
 import { currentEntry } from "../lib/tabHistory";
+import { toggleActiveFavorite } from "../store/favorites";
 import { useFind } from "../store/find";
+import { useHistoryUi } from "../store/historyUi";
 import { usePalette } from "../store/palette";
 import { useTabs } from "../store/tabs";
 import { useZoom } from "../store/zoom";
@@ -71,6 +74,12 @@ export function useGlobalKeys() {
       } else if (hit.action === "new-tab") {
         tabs.newTab();
         usePalette.getState().setOpen(true);
+      } else if (hit.action === "favorite") {
+        toggleActiveFavorite();
+      } else if (hit.action === "history") {
+        const ui = useHistoryUi.getState();
+        if (ui.open) ui.close();
+        else ui.show();
       } else if (hit.action === "reopen-tab") {
         tabs.reopenLast();
       } else if (hit.action === "next-tab" || hit.action === "prev-tab") {

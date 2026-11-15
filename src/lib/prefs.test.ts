@@ -19,9 +19,25 @@ describe("prefs", () => {
       linkPrefetch: false,
       reduceMotion: true,
       paletteLimit: 100,
+      paletteFavorites: true,
+      paletteRecent: true,
       design: "paper",
       toc: false,
-      home: { greeting: false, search: true, filters: false, recent: true, library: false, shortcuts: true },
+      home: {
+        greeting: false,
+        search: true,
+        filters: true,
+        recent: true,
+        favorites: false,
+        library: true,
+        shortcuts: true,
+        libraryFirst: true,
+        title: "large",
+        listStyle: "cards",
+        count: 12,
+        startTab: "favorites",
+        lastTab: "favorites",
+      },
       docDarkMode: true,
       docDarkOff: ["dart"],
     };
@@ -31,6 +47,11 @@ describe("prefs", () => {
   it("completa las secciones de inicio que falten o sean basura", () => {
     const p = normalizePrefs({ home: { recent: false, library: "no" } });
     expect(p.home).toEqual({ ...DEFAULT_PREFS.home, recent: false });
+  });
+
+  it("descarta opciones de inicio inválidas", () => {
+    const p = normalizePrefs({ home: { title: "huge", listStyle: 3, count: 7, startTab: "auto", lastTab: "x", libraryFirst: "yes" } });
+    expect(p.home).toEqual(DEFAULT_PREFS.home);
   });
 
   it("guarda y carga, tolerando JSON roto o storage ausente", () => {

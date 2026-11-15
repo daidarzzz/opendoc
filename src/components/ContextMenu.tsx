@@ -20,6 +20,7 @@ import {
   PlusIcon,
   SearchIcon,
   SelectAllIcon,
+  StarIcon,
   UndoIcon,
   ZoomIcon,
 } from "./Icons";
@@ -42,6 +43,8 @@ function iconFor(icon: MenuIcon | undefined): ReactNode {
     case "reopen": return <UndoIcon {...p} />;
     case "catalog": return <CatalogIcon size={15} className={p.className} />;
     case "moon": return <MoonIcon {...p} />;
+    case "star": return <StarIcon {...p} />;
+    case "star-filled": return <StarIcon filled {...p} />;
     default: return <span className="w-[15px]" />;
   }
 }

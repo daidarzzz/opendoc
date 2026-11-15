@@ -26,7 +26,8 @@ import { useT } from "../hooks/useT";
 import { LANGUAGE_NAMES, type I18nKey } from "../lib/i18n";
 import { ACCENTS, ACCENT_HEX, CANVAS_HEX } from "../lib/accent";
 import { checkForUpdate, getSettings, installUpdate, relaunchApp, setRestoreTabs } from "../lib/commands";
-import { HOME_SECTIONS, PALETTE_LIMITS, type HomePrefs } from "../lib/prefs";
+import { HOME_COUNTS, HOME_SECTIONS, PALETTE_LIMITS, type HomePrefs, type HomeSection } from "../lib/prefs";
+import { useFavorites } from "../store/favorites";
 import { useRecent } from "../store/recent";
 import { CARD_HEX, DESIGNS, HAS_MAC_GLASS, canvasHex, type Design } from "../lib/design";
 import { setSessionEnabled } from "../lib/sessionSync";
@@ -400,6 +401,8 @@ function GeneralSection() {
   const { t, lang } = useT();
   const setLang = useLang((s) => s.setLang);
   const paletteLimit = usePrefs((s) => s.paletteLimit);
+  const paletteFavorites = usePrefs((s) => s.paletteFavorites);
+  const paletteRecent = usePrefs((s) => s.paletteRecent);
   const [restoreTabs, setRestoreTabsState] = useState(true);
 
   useEffect(() => {
@@ -443,6 +446,20 @@ function GeneralSection() {
             value={paletteLimit}
             options={PALETTE_LIMITS.map((v) => ({ value: v, label: String(v) }))}
             onChange={(v) => usePrefs.getState().set("paletteLimit", v)}
+          />
+        </Row>
+        <Row label={t("settings.paletteFavorites")} desc={t("settings.paletteFavoritesDesc")}>
+          <Switch
+            checked={paletteFavorites}
+            onChange={(v) => usePrefs.getState().set("paletteFavorites", v)}
+            label={t("settings.paletteFavorites")}
+          />
+        </Row>
+        <Row label={t("settings.paletteRecent")} desc={t("settings.paletteRecentDesc")}>
+          <Switch
+            checked={paletteRecent}
+            onChange={(v) => usePrefs.getState().set("paletteRecent", v)}
+            label={t("settings.paletteRecent")}
           />
         </Row>
       </Group>
@@ -593,63 +610,116 @@ function AppearanceSection() {
   );
 }
 
-const HOME_KEYS: Record<keyof HomePrefs, { label: I18nKey; desc: I18nKey }> = {
+const HOME_KEYS: Record<HomeSection, { label: I18nKey; desc: I18nKey }> = {
   greeting: { label: "settings.home.greeting", desc: "settings.home.greetingDesc" },
   search: { label: "settings.home.search", desc: "settings.home.searchDesc" },
   filters: { label: "settings.home.filters", desc: "settings.home.filtersDesc" },
   recent: { label: "settings.home.recent", desc: "settings.home.recentDesc" },
+  favorites: { label: "settings.home.favorites", desc: "settings.home.favoritesDesc" },
   library: { label: "settings.home.library", desc: "settings.home.libraryDesc" },
   shortcuts: { label: "settings.home.shortcuts", desc: "settings.home.shortcutsDesc" },
 };
 
-function HomeSection() {
+/** Botón que borra una lista y confirma con un «Borrado» breve. */
+function ClearButton({ count, onClear }: { count: number; onClear: () => void }) {
   const { t } = useT();
-  const home = usePrefs((s) => s.home);
-  const recentCount = useRecent((s) => s.pages.length);
   const [cleared, setCleared] = useState(false);
-
   useEffect(() => {
     if (!cleared) return;
     const id = window.setTimeout(() => setCleared(false), 2000);
     return () => window.clearTimeout(id);
   }, [cleared]);
+  return (
+    <button
+      type="button"
+      disabled={count === 0 && !cleared}
+      onClick={() => {
+        onClear();
+        setCleared(true);
+      }}
+      className="btn"
+    >
+      {cleared ? (
+        <>
+          <CheckIcon size={14} className="text-accent-text" />
+          {t("settings.home.cleared")}
+        </>
+      ) : (
+        <>
+          <TrashIcon size={14} />
+          {t("settings.home.clearAction")}
+        </>
+      )}
+    </button>
+  );
+}
+
+function HomeSection() {
+  const { t } = useT();
+  const home = usePrefs((s) => s.home);
+  const recentCount = useRecent((s) => s.pages.length);
+  const favoritesCount = useFavorites((s) => s.pages.length);
+  const setHome = <K extends keyof HomePrefs>(key: K, value: HomePrefs[K]): void =>
+    usePrefs.getState().set("home", { ...usePrefs.getState().home, [key]: value });
 
   return (
     <div className="space-y-6">
       <Group title={t("settings.home.sections")}>
         {HOME_SECTIONS.map((key) => (
           <Row key={key} label={t(HOME_KEYS[key].label)} desc={t(HOME_KEYS[key].desc)}>
-            <Switch
-              checked={home[key]}
-              onChange={(v) => usePrefs.getState().set("home", { ...usePrefs.getState().home, [key]: v })}
-              label={t(HOME_KEYS[key].label)}
-            />
+            <Switch checked={home[key]} onChange={(v) => setHome(key, v)} label={t(HOME_KEYS[key].label)} />
           </Row>
         ))}
       </Group>
+      <Group title={t("settings.home.layout")}>
+        <Row label={t("settings.home.titleSize")} desc={t("settings.home.titleSizeDesc")}>
+          <Segmented
+            value={home.title}
+            options={[
+              { value: "compact", label: t("settings.home.titleCompact") },
+              { value: "large", label: t("settings.home.titleLarge") },
+            ]}
+            onChange={(v) => setHome("title", v)}
+          />
+        </Row>
+        <Row label={t("settings.home.listStyle")} desc={t("settings.home.listStyleDesc")}>
+          <Segmented
+            value={home.listStyle}
+            options={[
+              { value: "list", label: t("settings.home.styleList") },
+              { value: "cards", label: t("settings.home.styleCards") },
+            ]}
+            onChange={(v) => setHome("listStyle", v)}
+          />
+        </Row>
+        <Row label={t("settings.home.count")} desc={t("settings.home.countDesc")}>
+          <Segmented
+            value={home.count}
+            options={HOME_COUNTS.map((v) => ({ value: v, label: String(v) }))}
+            onChange={(v) => setHome("count", v)}
+          />
+        </Row>
+        <Row label={t("settings.home.startTab")} desc={t("settings.home.startTabDesc")}>
+          <Segmented
+            value={home.startTab}
+            options={[
+              { value: "last", label: t("settings.home.startLast") },
+              { value: "recent", label: t("settings.home.startRecent") },
+              { value: "favorites", label: t("settings.home.startFavorites") },
+            ]}
+            onChange={(v) => setHome("startTab", v)}
+          />
+        </Row>
+        <Row label={t("settings.home.libraryFirst")} desc={t("settings.home.libraryFirstDesc")}>
+          <Switch checked={home.libraryFirst} onChange={(v) => setHome("libraryFirst", v)} label={t("settings.home.libraryFirst")} />
+        </Row>
+      </Group>
       <Group title={t("settings.home.history")}>
         <Row label={t("settings.home.clear")} desc={t("settings.home.clearDesc")}>
-          <button
-            type="button"
-            disabled={recentCount === 0 && !cleared}
-            onClick={() => {
-              useRecent.getState().clear();
-              setCleared(true);
-            }}
-            className="btn"
-          >
-            {cleared ? (
-              <>
-                <CheckIcon size={14} className="text-accent-text" />
-                {t("settings.home.cleared")}
-              </>
-            ) : (
-              <>
-                <TrashIcon size={14} />
-                {t("settings.home.clearAction")}
-              </>
-            )}
-          </button>
+          <ClearButton count={recentCount} onClear={() => useRecent.getState().clear()} />
+        </Row>
+        <Row label={t("settings.home.clearFavorites")} desc={t("settings.home.clearFavoritesDesc")}>
+          <ClearButton count={favoritesCount} onClear={() => useFavorites.getState().clear()} />
         </Row>
       </Group>
     </div>
@@ -846,6 +916,8 @@ function ShortcutsSection() {
         { label: "settings.sc.palette", combos: [[MOD, "K"]] },
         { label: "settings.sc.settings", combos: [[MOD, ","]] },
         { label: "settings.sc.catalog", combos: [["F3"]] },
+        { label: "settings.sc.favorite", combos: [[MOD, "D"]] },
+        { label: "settings.sc.history", combos: [[MOD, "Y"]] },
       ],
     },
     {

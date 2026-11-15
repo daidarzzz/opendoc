@@ -66,7 +66,8 @@ Tiempo medio por tecla al buscar (menos es mejor):
 - Pestañas con su propio historial atrás/adelante
 - Navegación instantánea: las páginas se precargan al pasar el ratón
 - Índice de la página, zoom y desplazamiento suave
-- Seguir leyendo e historial de lectura completo
+- Inicio ligero y totalmente personalizable: búsqueda, páginas recientes y favoritos (marca una página con `Ctrl/⌘ D`), con biblioteca, filtros y atajos opcionales
+- Panel de historial de lectura y favoritos (`Ctrl/⌘ Y`), que también aparece en la paleta de búsqueda vacía
 - Modo oscuro para las páginas de los docsets (beta)
 
 </td>

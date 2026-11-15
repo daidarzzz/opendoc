@@ -25,6 +25,8 @@ export type IframeKey =
   | "w"
   | "t"
   | "k"
+  | "d"
+  | "y"
   | "tab"
   | "1"
   | "2"
@@ -215,6 +217,8 @@ function isIframeKey(raw: unknown): raw is IframeKey {
     raw === "w" ||
     raw === "t" ||
     raw === "k" ||
+    raw === "d" ||
+    raw === "y" ||
     raw === "tab" ||
     raw === "alt-left" ||
     raw === "alt-right" ||
@@ -383,6 +387,8 @@ export type ParentShortcut =
   | "close-tab"
   | "new-tab"
   | "reopen-tab"
+  | "favorite"
+  | "history"
   | "next-tab"
   | "prev-tab"
   | "tab-n"
@@ -418,6 +424,8 @@ export function matchParentShortcut(e: {
   if (k === "w" && !e.shiftKey) return { action: "close-tab" };
   if (k === "t" && !e.shiftKey) return { action: "new-tab" };
   if (k === "t" && e.shiftKey) return { action: "reopen-tab" };
+  if (k === "d" && !e.shiftKey) return { action: "favorite" };
+  if (k === "y" && !e.shiftKey) return { action: "history" };
   if (k === "tab" && !e.shiftKey) return { action: "next-tab" };
   if (k === "tab" && e.shiftKey) return { action: "prev-tab" };
   if (k.length === 1 && k >= "1" && k <= "9" && !e.shiftKey) {
@@ -458,6 +466,8 @@ function keyFromCode(code: string | undefined): string | null {
   if (!code) return null;
   if (code === "KeyW") return "w";
   if (code === "KeyT") return "t";
+  if (code === "KeyD") return "d";
+  if (code === "KeyY") return "y";
   if (code === "Tab") return "tab";
   const digit = /^Digit([1-9])$/.exec(code) ?? /^Numpad([1-9])$/.exec(code);
   if (digit?.[1]) return digit[1];

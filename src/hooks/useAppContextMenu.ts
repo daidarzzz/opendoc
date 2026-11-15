@@ -6,8 +6,10 @@ import { useEffect } from "react";
 import { platform } from "@tauri-apps/plugin-os";
 import { copyText, readText } from "../lib/clipboard";
 import { t as translate, type I18nKey, type I18nVars } from "../lib/i18n";
-import { canGoBack, canGoForward } from "../lib/tabHistory";
+import { isFavorite } from "../lib/favorites";
+import { canGoBack, canGoForward, currentEntry } from "../lib/tabHistory";
 import { useContextMenu, type MenuEntry } from "../store/contextMenu";
+import { useFavorites } from "../store/favorites";
 import { useFind } from "../store/find";
 import { useLang } from "../store/lang";
 import { usePalette } from "../store/palette";
@@ -68,6 +70,22 @@ function docDarkEntry(docsetId: string, t: T): MenuEntry | null {
   };
 }
 
+/** Entrada «Añadir a favoritos / Quitar de favoritos» de la página de una pestaña. */
+function favoriteEntry(tabId: string | null, t: T): MenuEntry | null {
+  const tabs = useTabs.getState();
+  const tab = tabId === null ? tabs.active() : tabs.tabs.find((x) => x.id === tabId);
+  if (!tab || tab.type !== "docset") return null;
+  const entry = currentEntry(tab);
+  if (!entry) return null;
+  const on = isFavorite(useFavorites.getState().pages, entry.url);
+  return {
+    kind: "item", id: "favorite", icon: on ? "star-filled" : "star",
+    label: on ? t("favorites.remove") : t("favorites.add"),
+    hint: `${modLabel()} D`,
+    onSelect: () => useFavorites.getState().toggle(entry.url, entry.title),
+  };
+}
+
 export function docMenuEntries(ctx: DocContext): MenuEntry[] {
   const t = tr();
   const mod = modLabel();
@@ -95,6 +113,8 @@ export function docMenuEntries(ctx: DocContext): MenuEntry[] {
     { kind: "item", id: "forward", icon: "forward", label: t("menu.forward"), hint: "Alt →", disabled: !active || !canGoForward(active), onSelect: () => useTabs.getState().goForward() },
     { kind: "separator", id: "s3" },
   );
+  const favorite = favoriteEntry(null, t);
+  if (favorite) out.push(favorite);
   if (sel === "") {
     out.push({ kind: "item", id: "find", icon: "find", label: t("menu.findInPage"), hint: `${mod} F`, onSelect: () => useFind.getState().openFind() });
   }
@@ -167,8 +187,10 @@ function tabMenu(tabId: string): MenuEntry[] {
   const mod = modLabel();
   const tabs = useTabs.getState();
   const others = tabs.tabs.filter((x) => x.id !== tabId).map((x) => x.id);
+  const favorite = favoriteEntry(tabId, t);
   return [
     { kind: "item", id: "new", icon: "tab", label: t("menu.newTab"), hint: `${mod} T`, onSelect: () => { useTabs.getState().newTab(); usePalette.getState().setOpen(true); } },
+    ...(favorite ? [favorite] : []),
     { kind: "item", id: "reopen", icon: "reopen", label: t("menu.reopenTab"), hint: `${mod} ⇧ T`, disabled: tabs.closed.length === 0, onSelect: () => useTabs.getState().reopenLast() },
     { kind: "separator", id: "s1" },
     { kind: "item", id: "close", icon: "close", label: t("menu.closeTab"), hint: `${mod} W`, onSelect: () => useTabs.getState().closeTab(tabId) },

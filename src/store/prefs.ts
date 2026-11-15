@@ -23,6 +23,8 @@ function pick(s: PrefsState): UiPrefs {
     linkPrefetch: s.linkPrefetch,
     reduceMotion: s.reduceMotion,
     paletteLimit: s.paletteLimit,
+    paletteFavorites: s.paletteFavorites,
+    paletteRecent: s.paletteRecent,
     design: s.design,
     toc: s.toc,
     home: s.home,

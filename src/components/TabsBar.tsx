@@ -4,6 +4,8 @@ import { HAS_MAC_GLASS } from "../lib/design";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../hooks/useT";
 import { useDocsets } from "../store/docsets";
+import { useFavorites } from "../store/favorites";
+import { isFavorite } from "../lib/favorites";
 import { usePalette } from "../store/palette";
 import { useTabs } from "../store/tabs";
 import { canGoBack, canGoForward, currentEntry } from "../lib/tabHistory";
@@ -11,7 +13,7 @@ import { AppLogo } from "./AppLogo";
 import { DocsetIcon } from "./DocsetIcon";
 import { PanelToggleIcon } from "./PanelToggleIcon";
 import { CatalogIcon } from "./CatalogIcon";
-import { ChevronIcon, CloseIcon, PlusIcon } from "./Icons";
+import { ChevronIcon, CloseIcon, PlusIcon, StarIcon } from "./Icons";
 
 const TabButton = memo(function TabButton({
   id,
@@ -287,6 +289,8 @@ export function TabsBar({
   const canBack = active && !isCatalog ? canGoBack(active) : false;
   const canForward = active && !isCatalog ? canGoForward(active) : false;
   const { t: tr } = useT();
+  const activeEntry = active && active.type === "docset" ? currentEntry(active) : null;
+  const starred = useFavorites((s) => (activeEntry ? isFavorite(s.pages, activeEntry.url) : false));
 
   const onListKeyDown = (e: React.KeyboardEvent): void => {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
@@ -330,6 +334,17 @@ export function TabsBar({
         >
           <ChevronIcon direction="right" size={17} />
         </button>
+        {activeEntry && (
+          <button
+            aria-label={starred ? tr("favorites.remove") : tr("favorites.add")}
+            aria-pressed={starred}
+            title={starred ? tr("favorites.remove") : tr("favorites.add")}
+            onClick={() => useFavorites.getState().toggle(activeEntry.url, activeEntry.title)}
+            className={`icon-btn animate-fade-in ${starred ? "text-accent-text" : ""}`}
+          >
+            <StarIcon size={16} filled={starred} />
+          </button>
+        )}
       </div>
       <div ref={listRef} data-tauri-drag-region={HAS_MAC_GLASS || undefined} role="tablist" aria-label={tr("tabs.list")} onKeyDown={onListKeyDown} className="relative flex min-w-0 flex-1 items-end gap-1 overflow-x-auto px-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {tabs.map((t) => {

@@ -33,7 +33,9 @@ import { FRAME_SLOTS, findLoadedFrame, isPendingFrameLoad, pickFrameSlot } from 
 import { formatZoom } from "../lib/zoom";
 import { docMenuEntries } from "../hooks/useAppContextMenu";
 import { useContextMenu } from "../store/contextMenu";
+import { toggleActiveFavorite } from "../store/favorites";
 import { useFind } from "../store/find";
+import { useHistoryUi } from "../store/historyUi";
 import { useZoom } from "../store/zoom";
 import { usePrefs } from "../store/prefs";
 import { docDarkFor, type UiPrefs } from "../lib/prefs";
@@ -466,6 +468,16 @@ export function Viewer() {
         }
         if (kp.key === "k") {
           usePalette.getState().toggle();
+          return;
+        }
+        if (kp.key === "d") {
+          toggleActiveFavorite();
+          return;
+        }
+        if (kp.key === "y") {
+          const ui = useHistoryUi.getState();
+          if (ui.open) ui.close();
+          else ui.show();
           return;
         }
         // Ctrl/Cmd+T abre pestaña vacía + paleta (no es acción de pestaña).

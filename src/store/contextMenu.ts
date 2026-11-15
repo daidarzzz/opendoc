@@ -15,7 +15,9 @@ export type MenuIcon =
   | "close"
   | "reopen"
   | "catalog"
-  | "moon";
+  | "moon"
+  | "star"
+  | "star-filled";
 
 export type MenuEntry =
   | {
