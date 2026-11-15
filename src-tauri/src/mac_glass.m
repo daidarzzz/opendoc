@@ -160,7 +160,11 @@ void opendoc_glass_sync(void *handle, const char *json, size_t length) {
         bridge.webView = webView;
         objc_setAssociatedObject(webView, &association, bridge, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
-    if (@available(macOS 26.0, *)) {
-        [bridge sync:state];
-    }
+    // No `@available`: it needs `__isPlatformVersionAtLeast` from compiler-rt,
+    // which Rust's linker does not pull in. NSGlassEffectView only exists on
+    // macOS 26+, so the class check above already guards this call.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunguarded-availability-new"
+    [bridge sync:state];
+#pragma clang diagnostic pop
 }
