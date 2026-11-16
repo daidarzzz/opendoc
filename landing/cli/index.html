@@ -79,7 +79,7 @@
     <div class="title-grid" id="install">
       <div class="rise d2">
         <p class="nameline"><b>odc</b> — <span data-i18n="hero.name">search and read offline docsets from the terminal</span></p>
-        <p class="lede" data-i18n="hero.lede">The OpenDoc search engine, without the window. A full-screen reader when you want to browse, plain text when you want to pipe, JSON when your editor asks. Same docsets, same index, no network.</p>
+        <p class="lede" data-i18n="hero.lede">The OpenDoc search engine, without the window — it can even install the docs. A full-screen reader when you want to browse, plain text when you want to pipe, JSON when your editor asks. Same docsets, same index, no network.</p>
       </div>
       <div class="rise d3">
         <div class="install">
@@ -135,7 +135,7 @@
       <p class="mnote" data-i18n="s1.note">Run <code>odc</code> with nothing else and the reader opens. Pipe it, and it prints help instead.</p>
     </div></div>
     <div class="body">
-      <h2 id="syn-h" data-i18n="s1.title">Six verbs. <em>One index.</em></h2>
+      <h2 id="syn-h" data-i18n="s1.title">Eight verbs. <em>One index.</em></h2>
       <p class="prose prose-lg" data-i18n="s1.text"><code>odc</code> loads the same docsets folder and the same in-memory index as the OpenDoc app, so what you find in one, you find in the other. Every command understands the same query.</p>
       <div class="synopsis">
         <div><p class="syn"><b>odc</b> [<b>tui</b>] [<b>--docset</b> <i>DOCSET</i>] [<i>QUERY</i>]</p><p class="syn-d" data-i18n="s1.tui">The full-screen reader.</p></div>
@@ -143,6 +143,8 @@
         <div><p class="syn"><b>odc show</b> <i>QUERY</i>… [<b>--code</b> | <b>--raw</b> | <b>--copy</b> | <b>--json</b>]</p><p class="syn-d" data-i18n="s1.show">Prints one entry, typeset for the terminal. Alias: <code>cat</code>.</p></div>
         <div><p class="syn"><b>odc open</b> <i>QUERY</i>… [<b>--path</b>]</p><p class="syn-d" data-i18n="s1.open">Opens the page in your browser, or just prints its file path.</p></div>
         <div><p class="syn"><b>odc list</b> [<b>--json</b>]</p><p class="syn-d" data-i18n="s1.list">What is installed, with entry counts.</p></div>
+        <div><p class="syn"><b>odc docsets</b> <b>catalog</b> | <b>install</b> | <b>update</b> | <b>uninstall</b> <i>ID</i></p><p class="syn-d" data-i18n="s1.docsets">Browse DevDocs and Dash feeds and manage docsets — no desktop app needed.</p></div>
+        <div><p class="syn"><b>odc update</b> [<b>--check</b>]</p><p class="syn-d" data-i18n="s1.update">Updates itself from GitHub Releases, checksums verified.</p></div>
         <div><p class="syn"><b>odc completions</b> <i>SHELL</i></p><p class="syn-d" data-i18n="s1.comp">Tab completion for bash, zsh, fish, PowerShell and elvish.</p></div>
       </div>
     </div>
@@ -333,7 +335,7 @@ Takes amortized O(1) time.</pre>
     </div></div>
     <div class="body">
       <h2 id="e-h" data-i18n="s6.title">Shares the shelf <em>with the app.</em></h2>
-      <p class="prose prose-lg" data-i18n="s6.text"><code>odc</code> reads the docsets folder you chose in OpenDoc. Install a docset in the app and it is in the terminal on the next run. To point it somewhere else:</p>
+      <p class="prose prose-lg" data-i18n="s6.text"><code>odc</code> reads the docsets folder you chose in OpenDoc, so a docset installed in the app is in the terminal on the next run — and one installed with <code>odc docsets install</code> shows up in the app. No app at all? <code>odc</code> manages the folder on its own. To point it somewhere else:</p>
       <dl class="spec">
         <dt>--docsets <i>DIR</i></dt><dd data-i18n="s6.d1">The folder that holds the <code>*.docset</code> bundles. Also <code>OPENDOC_DOCSETS</code>.</dd>
         <dt>--tarix-cache <i>DIR</i></dt><dd data-i18n="s6.d2">Where compressed docsets are unpacked. Also <code>OPENDOC_TARIX_CACHE</code>.</dd>
