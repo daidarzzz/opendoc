@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-accent="red">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>odc — OpenDoc in your terminal</title>
+<meta name="description" content="odc is the OpenDoc command line: a full-screen documentation reader for the terminal, plain-text output for pipes, and JSON for your editor. Same docsets, same search engine, fully offline.">
+<meta property="og:title" content="odc — OpenDoc in your terminal">
+<meta property="og:description" content="Search and read your Dash, Zeal and DevDocs docsets without leaving the shell.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://opendoc.daida.net/cli/">
+<meta name="theme-color" content="#f2eee5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14130f" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&display=swap" rel="stylesheet">
+<script>
+  /* Theme, accent and language before first paint (shared with the main landing). */
+  (function () {
+    var d = document.documentElement, s = {};
+    try { s = JSON.parse(localStorage.getItem("opendoc-landing") || "{}"); } catch (e) {}
+    var sys = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    d.dataset.themePref = s.theme || "system";
+    d.dataset.theme = s.theme && s.theme !== "system" ? s.theme : sys;
+    d.dataset.accent = s.accent || "red";
+  })();
+</script>
+<link rel="stylesheet" href="../assets/site.css?v=2026-11-14">
+<link rel="stylesheet" href="cli.css?v=2026-11-16">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="logo" viewBox="116.771 206.771 378.458 378.458">
+      <path class="logo-bg" d="M305.873 206.899 L306.127 206.899 C410.565 206.899 495.229 291.562 495.229 396 L495.229 396 C495.229 500.438 410.565 585.101 306.127 585.101 L305.873 585.101 C201.435 585.101 116.771 500.438 116.771 396 L116.771 396 C116.771 291.562 201.435 206.899 305.873 206.899 Z"/>
+      <path fill="#fff" d="M255.244 269.837 C247.691 270.743 179.216 316.964 177.303 338.11 C175.39 359.257 244.676 374.961 243.764 396.717 C242.852 418.473 171.832 451.329 171.832 468.649 C171.832 485.969 234.662 501.852 243.764 500.638 C252.866 499.424 216.069 480.196 226.441 461.365 C236.813 442.535 306.633 409.103 305.996 387.654 C305.358 366.205 231.076 352.309 222.617 332.673 C214.159 313.037 262.796 268.931 255.244 269.837 Z"/>
+      <path fill="#fff" d="M309.065 465.568 C292.55 470.42 292.55 489.233 309.065 494.681 C325.579 500.129 391.638 503.109 408.152 498.257 C424.667 493.404 424.667 471.016 408.152 465.568 C391.638 460.12 325.579 460.715 309.065 465.568 Z"/>
+    </symbol>
+  </defs>
+</svg>
+
+<header class="runhead">
+  <div class="wrap">
+    <a class="brand" href="../" aria-label="OpenDoc">
+      <svg aria-hidden="true"><use href="#logo"/></svg><span>OpenDoc</span><span class="slash">/<b>cli</b></span>
+    </a>
+    <nav aria-label="Sections">
+      <a href="#queries" data-i18n="nav.queries">Queries</a>
+      <a href="#reading" data-i18n="nav.reading">Reading</a>
+      <a href="#keys" data-i18n="nav.keys">Keys</a>
+      <a href="#tools" data-i18n="nav.tools">Tools</a>
+      <a href="#install" class="nav-dl" data-i18n="nav.install">Install</a>
+    </nav>
+    <div class="head-tools">
+      <button class="tool" id="lang-toggle" type="button" aria-label="Cambiar a español">ES</button>
+      <button class="tool" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+<div class="wrap">
+
+  <!-- ─────────── title page ─────────── -->
+  <section class="title-page cli">
+    <div class="manstrip rise" aria-hidden="true"><span>ODC(1)</span><span data-i18n="man.title">OpenDoc Manual</span><span>ODC(1)</span></div>
+
+    <div class="kicker rise d1">
+      <span class="label" data-i18n="hero.kicker">The OpenDoc command line</span>
+      <span class="label">v<span class="ver">0.2.0</span></span>
+    </div>
+    <h1 class="rise d1" data-i18n="hero.title">The manual, <em>at your prompt.</em></h1>
+
+    <div class="title-grid" id="install">
+      <div class="rise d2">
+        <p class="nameline"><b>odc</b> — <span data-i18n="hero.name">search and read offline docsets from the terminal</span></p>
+        <p class="lede" data-i18n="hero.lede">The OpenDoc search engine, without the window. A full-screen reader when you want to browse, plain text when you want to pipe, JSON when your editor asks. Same docsets, same index, no network.</p>
+      </div>
+      <div class="rise d3">
+        <div class="install">
+          <div class="install-tabs" role="tablist" aria-label="Install method">
+            <button role="tab" type="button" data-os="unix" aria-selected="true">Linux · macOS</button>
+            <button role="tab" type="button" data-os="windows" aria-selected="false">Windows</button>
+            <button role="tab" type="button" data-os="cargo" aria-selected="false">Cargo</button>
+          </div>
+          <div class="install-cmd">
+            <pre id="install-pre"><span class="p">$ </span><span id="install-text">curl -fsSL https://raw.githubusercontent.com/daidarzzz/opendoc-cli/master/install.sh | sh</span></pre>
+            <button class="copy" id="copy" type="button" data-i18n="install.copy">Copy</button>
+          </div>
+          <p class="install-note" id="install-note" data-i18n="install.unix">Installs <code>odc</code> and <code>opendoc-cli</code> in <code>~/.local/bin</code>. x86_64 and Apple Silicon.</p>
+        </div>
+        <p class="hero-meta"><span data-i18n="hero.meta">One binary · GPL-3.0 · no account, no telemetry</span> · <a class="link-arrow" href="https://github.com/daidarzzz/opendoc-cli/releases" data-i18n="hero.releases">All releases →</a></p>
+      </div>
+    </div>
+
+    <!-- Fig. 1: the TUI, live -->
+    <figure class="term-fig rise d4" style="margin-left:0;margin-right:0">
+      <div class="term-frame">
+        <div class="term" id="term" tabindex="0" role="application" aria-roledescription="terminal demo"
+             aria-label="Interactive demo of the odc terminal reader. Type to search, arrow keys to move, Enter to read, Escape to go back." data-i18n-aria="fig.aria">
+          <div class="term-bar" aria-hidden="true"><i></i><i></i><i></i><span>odc — ~/code</span></div>
+          <div class="tui" aria-hidden="true">
+            <div class="tb t-search on" id="t-search">
+              <span class="tb-t brandchip">odc</span><span class="tb-r" id="t-count"></span>
+              <div class="t-q" id="t-q"></div>
+            </div>
+            <div class="t-cols">
+              <div class="tb t-list on" id="t-list"><span class="tb-t" id="t-list-title">Results</span><div class="t-scroll" id="t-lscroll"><ul id="t-ul"></ul></div></div>
+              <div class="tb t-read" id="t-read"><span class="tb-t plain" id="t-crumb"></span><span class="tb-b" id="t-pct"></span><div class="t-doc" id="t-doc"></div></div>
+            </div>
+            <div class="t-foot" id="t-foot"></div>
+          </div>
+        </div>
+        <span class="term-try" aria-hidden="true" data-i18n="fig.try">click · type · ↵</span>
+      </div>
+      <figcaption class="legend">
+        <span class="fig-no" data-i18n="fig.no">Fig. 1 — odc, live</span>
+        <span><span class="n">1</span><span data-i18n="fig.1">The query. <code>rust:</code> narrows it to one docset; the chip says so.</span></span>
+        <span><span class="n">2</span><span data-i18n="fig.2">Results as you type, with the matching letters lit and the real symbol kind.</span></span>
+        <span><span class="n">3</span><span data-i18n="fig.3">The reader: the exact section, typeset — headings, lists, highlighted code.</span></span>
+        <span><span class="n">4</span><span data-i18n="fig.4">This one is yours: click it, type, use ↑ ↓, Enter, <kbd class="k">/</kbd> and Esc.</span></span>
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ─────────── § 1 synopsis ─────────── -->
+  <section class="chapter" id="synopsis" aria-labelledby="syn-h">
+    <div class="margin"><div class="margin-inner">
+      <span class="sec">§ 1</span><span class="label sec-name">Synopsis</span>
+      <p class="mnote" data-i18n="s1.note">Run <code>odc</code> with nothing else and the reader opens. Pipe it, and it prints help instead.</p>
+    </div></div>
+    <div class="body">
+      <h2 id="syn-h" data-i18n="s1.title">Six verbs. <em>One index.</em></h2>
+      <p class="prose prose-lg" data-i18n="s1.text"><code>odc</code> loads the same docsets folder and the same in-memory index as the OpenDoc app, so what you find in one, you find in the other. Every command understands the same query.</p>
+      <div class="synopsis">
+        <div><p class="syn"><b>odc</b> [<b>tui</b>] [<b>--docset</b> <i>DOCSET</i>] [<i>QUERY</i>]</p><p class="syn-d" data-i18n="s1.tui">The full-screen reader.</p></div>
+        <div><p class="syn"><b>odc search</b> <i>QUERY</i>… [<b>--limit</b> <i>N</i>] [<b>--json</b>]</p><p class="syn-d" data-i18n="s1.search">A ranked table of matches — or JSON for scripts.</p></div>
+        <div><p class="syn"><b>odc show</b> <i>QUERY</i>… [<b>--code</b> | <b>--raw</b> | <b>--copy</b> | <b>--json</b>]</p><p class="syn-d" data-i18n="s1.show">Prints one entry, typeset for the terminal. Alias: <code>cat</code>.</p></div>
+        <div><p class="syn"><b>odc open</b> <i>QUERY</i>… [<b>--path</b>]</p><p class="syn-d" data-i18n="s1.open">Opens the page in your browser, or just prints its file path.</p></div>
+        <div><p class="syn"><b>odc list</b> [<b>--json</b>]</p><p class="syn-d" data-i18n="s1.list">What is installed, with entry counts.</p></div>
+        <div><p class="syn"><b>odc completions</b> <i>SHELL</i></p><p class="syn-d" data-i18n="s1.comp">Tab completion for bash, zsh, fish, PowerShell and elvish.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── § 2 queries ─────────── -->
+  <section class="chapter" id="queries" aria-labelledby="q-h">
+    <div class="margin"><div class="margin-inner">
+      <span class="sec">§ 2</span><span class="label sec-name" data-i18n="nav.queries">Queries</span>
+      <p class="mnote" data-i18n="s2.note">Short names work too: <code>py</code>, <code>js</code>, <code>ts</code>, <code>rs</code>, <code>sh</code>.</p>
+    </div></div>
+    <div class="body">
+      <h2 id="q-h" data-i18n="s2.title">Say where to look, <em>then what.</em></h2>
+      <p class="prose prose-lg" data-i18n="s2.text">A query is fuzzy text with up to two optional prefixes. Leave them out and <code>odc</code> searches everything; add one and the haystack shrinks before the first letter is matched.</p>
+
+      <figure class="anatomy" style="margin-left:0;margin-right:0">
+        <div class="anat" aria-label="rust colon fn colon push">
+          <span class="seg ds">rust</span><span class="colon">:</span><span class="seg kd">fn</span><span class="colon">:</span><span class="seg tx">push</span>
+          <span class="brk ds"><b data-i18n="s2.ds">docset</b></span><span class="gap"></span>
+          <span class="brk kd"><b data-i18n="s2.kd">kind</b></span><span class="gap"></span>
+          <span class="brk tx"><b data-i18n="s2.tx">text</b></span>
+        </div>
+        <dl class="anat-defs">
+          <div><dt data-i18n="s2.ds">docset</dt><dd data-i18n="s2.dsd">Id, name or alias. Optional.</dd></div>
+          <div><dt data-i18n="s2.kd">kind</dt><dd data-i18n="s2.kdd"><code>fn</code>, <code>struct</code>, <code>trait</code>, <code>macro</code>… Optional.</dd></div>
+          <div><dt data-i18n="s2.tx">text</dt><dd data-i18n="s2.txd">Fuzzy. Several words match in any order.</dd></div>
+        </dl>
+        <figcaption class="legend">
+          <span class="fig-no" data-i18n="s2.figno">Fig. 2 — Anatomy of a query</span>
+          <span data-i18n="s2.figcap">DevDocs stores a category where Dash keeps the symbol type, so <code>odc</code> reads the real kind from the page itself: a method is <code>fn</code>, <code>struct.Vec.html</code> is a <code>struct</code>.</span>
+        </figcaption>
+      </figure>
+
+      <table class="qtable">
+        <thead><tr><th data-i18n="s2.th1">You type</th><th data-i18n="s2.th2">You get</th></tr></thead>
+        <tbody>
+          <tr><td>Vec::push</td><td data-i18n="s2.q1">Fuzzy search across every installed docset.</td></tr>
+          <tr><td><span class="pre">rust:</span>Vec::push</td><td data-i18n="s2.q2">Only the Rust docs.</td></tr>
+          <tr><td><span class="pre">py:</span>json dumps</td><td data-i18n="s2.q3">Python, by alias. Words can come in any order.</td></tr>
+          <tr><td><span class="pre">fn:</span>map</td><td data-i18n="s2.q4">Functions and methods called something like <i>map</i>, in every language.</td></tr>
+          <tr><td><span class="pre">rust:fn:</span>push</td><td data-i18n="s2.q5">Both at once.</td></tr>
+          <tr><td>std::vector</td><td data-i18n="s2.q6">A double colon is never a prefix, so C++ stays C++.</td></tr>
+        </tbody>
+      </table>
+      <p class="boost" data-i18n="s2.ctx">Inside a project, <code>odc</code> notices <code>Cargo.toml</code>, <code>package.json</code>, <code>go.mod</code> or <code>pyproject.toml</code> and ranks that language first. <code>--no-context</code> turns it off.</p>
+    </div>
+  </section>
+
+  <!-- ─────────── § 3 reading ─────────── -->
+  <section class="chapter" id="reading" aria-labelledby="r-h">
+    <div class="margin"><div class="margin-inner">
+      <span class="sec">§ 3</span><span class="label sec-name" data-i18n="nav.reading">Reading</span>
+      <p class="mnote" data-i18n="s3.note">Output longer than the screen goes through <code>less -R</code>, or your <code>$PAGER</code>.</p>
+    </div></div>
+    <div class="body">
+      <h2 id="r-h" data-i18n="s3.title">The section you asked for, <em>not the whole page.</em></h2>
+      <p class="prose prose-lg" data-i18n="s3.text">Documentation pages are long; a method is a few paragraphs inside one. <code>odc show</code> finds those paragraphs — even when the page puts the description beside its heading rather than under it — and sets them for the terminal: signature, headings, lists, tables and highlighted code.</p>
+
+      <div class="shot" role="img" aria-label="Terminal output of odc show rust:Vec::push: the signature, a short description, panics, an example and the time complexity." data-i18n-aria="s3.aria">
+<pre><span class="pr">$</span> <span class="cmd">odc show rust:Vec::push</span>
+<span class="chip"> fn </span> <span class="ttl">std::vec::Vec::push</span>
+<span class="g">rust</span><span class="m">  ·  Stable since Rust version 1.0.0</span>
+
+<span class="bd"> <span class="hl-k">pub fn</span> <span class="hl-f">push</span>(<span class="hl-m">&amp;mut</span> <span class="hl-m">self</span>, value: <span class="hl-t">T</span>)                                   </span>
+<span class="rl">────────────────────────────────────────────────────────────────</span>
+
+Appends an element to the back of a collection.
+
+<span class="b">▌ Panics</span>
+
+Panics if the new capacity exceeds <span class="pk">isize::MAX</span> <i>bytes</i>.
+
+<span class="b">▌ Examples</span>
+
+<span class="bd"> <span class="hl-k">let mut</span> vec = <span class="hl-f">vec!</span>[<span class="hl-n">1</span>, <span class="hl-n">2</span>];                                         </span>
+<span class="bd"> vec.<span class="hl-f">push</span>(<span class="hl-n">3</span>);                                                    </span>
+<span class="bd"> <span class="hl-f">assert_eq!</span>(vec, [<span class="hl-n">1</span>, <span class="hl-n">2</span>, <span class="hl-n">3</span>]);                                     </span>
+
+<span class="b">▌ Time complexity</span>
+
+Takes amortized O(1) time.</pre>
+      </div>
+
+      <dl class="opts">
+        <dt>--code</dt><dd data-i18n="s3.code">Only the signature and the examples. A cheat sheet in one line.</dd>
+        <dt>--raw</dt><dd data-i18n="s3.raw">Plain text, no colour. Colour also switches off by itself in pipes or with <code>NO_COLOR</code>.</dd>
+        <dt>--copy</dt><dd data-i18n="s3.copy">Straight to the clipboard: <code>wl-copy</code>, <code>xclip</code>, <code>xsel</code>, the system clipboard — or OSC 52, which works over SSH.</dd>
+        <dt>--json</dt><dd data-i18n="s3.json">Name, kind, signature, code blocks and text, versioned. See § 5.</dd>
+        <dt>--width <i>COLS</i></dt><dd data-i18n="s3.width">Wrap at a fixed width instead of the terminal’s.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ─────────── § 4 the reader ─────────── -->
+  <section class="chapter" id="keys" aria-labelledby="k-h">
+    <div class="margin"><div class="margin-inner">
+      <span class="sec">§ 4</span><span class="label sec-name" data-i18n="s4.name">The reader</span>
+      <p class="mnote" data-i18n="s4.note">Under 90 columns the reader folds into a single pane. Try narrowing this window.</p>
+    </div></div>
+    <div class="body">
+      <h2 id="k-h" data-i18n="s4.title">A reader, <em>not a pager.</em></h2>
+      <p class="prose prose-lg" data-i18n="s4.text">Type and the list follows; stop and the page appears. Then stay: follow links inside the docset, jump between sections, search the page, keep what you come back to.</p>
+      <div class="features">
+        <div class="feature"><h3 data-i18n="s4.f1h">Find in page</h3><p data-i18n="s4.f1">Press <kbd class="k">/</kbd>, type, and every match lights up; <kbd class="k">n</kbd> and <kbd class="k">N</kbd> walk through them. Lower case ignores case, upper case doesn’t.</p></div>
+        <div class="feature"><h3 data-i18n="s4.f2h">Outline</h3><p data-i18n="s4.f2">The page’s headings in a list you can filter. Straight to <i>Examples</i> or <i>Panics</i> without scrolling.</p></div>
+        <div class="feature"><h3 data-i18n="s4.f3h">Related</h3><p data-i18n="s4.f3">Reading <code>Vec::push</code>? <kbd class="k">r</kbd> lists the other 241 symbols of <code>Vec</code>, ready to open.</p></div>
+        <div class="feature"><h3 data-i18n="s4.f4h">Favourites and recents</h3><p data-i18n="s4.f4"><kbd class="k">m</kbd> stars what you are reading; <kbd class="k">H</kbd> brings back your stars and your last hundred pages, no search needed.</p></div>
+        <div class="feature"><h3 data-i18n="s4.f5h">Links that go somewhere</h3><p data-i18n="s4.f5"><kbd class="k">Tab</kbd> steps through the links of the page, <kbd class="k">Enter</kbd> follows one inside the docset, <kbd class="k">⌫</kbd> comes back.</p></div>
+        <div class="feature"><h3 data-i18n="s4.f6h">Mouse, if you like</h3><p data-i18n="s4.f6">Wheel to scroll, click to pick. Drag over text to copy it; double-click for a word, triple for the line.</p></div>
+      </div>
+
+      <details class="more keys-more" open>
+        <summary data-i18n="s4.keys">Every key</summary>
+        <div class="keymap">
+          <div>
+            <h3 data-i18n="s4.ks">While searching</h3>
+            <ol>
+              <li><span data-i18n="k.s1">Move through results</span><span class="lead"></span><span class="keys"><kbd class="k">↑</kbd><kbd class="k">↓</kbd></span></li>
+              <li><span data-i18n="k.s2">Read the selected entry</span><span class="lead"></span><span class="keys"><kbd class="k">↵</kbd></span></li>
+              <li><span data-i18n="k.s3">Pick a docset · a kind</span><span class="lead"></span><span class="keys"><kbd class="k">^D</kbd><kbd class="k">^T</kbd></span></li>
+              <li><span data-i18n="k.s4">Favourites and recents</span><span class="lead"></span><span class="keys"><kbd class="k">^H</kbd><kbd class="k">F2</kbd></span></li>
+              <li><span data-i18n="k.s5">Star · outline · related</span><span class="lead"></span><span class="keys"><kbd class="k">^F</kbd><kbd class="k">^O</kbd><kbd class="k">^R</kbd></span></li>
+              <li><span data-i18n="k.s6">Copy example · open in browser</span><span class="lead"></span><span class="keys"><kbd class="k">^Y</kbd><kbd class="k">^B</kbd></span></li>
+              <li><span data-i18n="k.s7">Clear the query, then quit</span><span class="lead"></span><span class="keys"><kbd class="k">Esc</kbd></span></li>
+            </ol>
+          </div>
+          <div>
+            <h3 data-i18n="s4.kr">While reading</h3>
+            <ol>
+              <li><span data-i18n="k.r1">Scroll · page · top · end</span><span class="lead"></span><span class="keys"><kbd class="k">j</kbd><kbd class="k">k</kbd><kbd class="k">␣</kbd><kbd class="k">gg</kbd><kbd class="k">G</kbd></span></li>
+              <li><span data-i18n="k.r2">Find in page · next · previous</span><span class="lead"></span><span class="keys"><kbd class="k">/</kbd><kbd class="k">n</kbd><kbd class="k">N</kbd></span></li>
+              <li><span data-i18n="k.r3">Previous · next section</span><span class="lead"></span><span class="keys"><kbd class="k">[</kbd><kbd class="k">]</kbd></span></li>
+              <li><span data-i18n="k.r4">Outline · related</span><span class="lead"></span><span class="keys"><kbd class="k">O</kbd><kbd class="k">r</kbd></span></li>
+              <li><span data-i18n="k.r5">Next link · follow · back</span><span class="lead"></span><span class="keys"><kbd class="k">Tab</kbd><kbd class="k">↵</kbd><kbd class="k">⌫</kbd></span></li>
+              <li><span data-i18n="k.r6">Copy example · all · signature</span><span class="lead"></span><span class="keys"><kbd class="k">y</kbd><kbd class="k">Y</kbd><kbd class="k">s</kbd></span></li>
+              <li><span data-i18n="k.r7">Star · favourites and recents</span><span class="lead"></span><span class="keys"><kbd class="k">m</kbd><kbd class="k">H</kbd></span></li>
+              <li><span data-i18n="k.r8">Back to search · help · quit</span><span class="lead"></span><span class="keys"><kbd class="k">i</kbd><kbd class="k">?</kbd><kbd class="k">q</kbd></span></li>
+            </ol>
+          </div>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ─────────── § 5 tools ─────────── -->
+  <section class="chapter" id="tools" aria-labelledby="t-h">
+    <div class="margin"><div class="margin-inner">
+      <span class="sec">§ 5</span><span class="label sec-name" data-i18n="nav.tools">Tools</span>
+      <p class="mnote" data-i18n="s5.note">The JSON carries a <code>version</code> field, so tools built on it keep working.</p>
+    </div></div>
+    <div class="body">
+      <h2 id="t-h" data-i18n="s5.title">Text for pipes. <em>JSON for tools.</em></h2>
+      <p class="prose prose-lg" data-i18n="s5.text">Everything the reader shows, a script can ask for. That is how editor integrations are built on <code>odc</code>: they ask, it answers, nothing else to install.</p>
+
+      <p class="code-cap" data-i18n="s5.c1">The signature of anything, for a hover or a snippet</p>
+<pre class="code"><span class="p">$ </span>odc show --json rust:Vec::push
+{
+  <span class="j-k">"version"</span>: 1,
+  <span class="j-k">"name"</span>: <span class="j-s">"std::vec::Vec::push"</span>,
+  <span class="j-k">"kind"</span>: <span class="j-s">"std::vec"</span>,
+  <span class="j-k">"docset"</span>: <span class="j-s">"devdocs-rust"</span>,
+  <span class="j-k">"signature"</span>: <span class="j-s">"pub fn push(&amp;mut self, value: T)"</span>,
+  <span class="j-k">"file_path"</span>: <span class="j-s">"…/devdocs-rust.docset/…/std/vec/struct.vec.html"</span>,
+  <span class="j-k">"code_blocks"</span>: [<span class="j-s">"let mut vec = vec![1, 2];\nvec.push(3);\n…"</span>],
+  <span class="j-k">"content"</span>: <span class="j-s">"Appends an element to the back of a collection.\n…"</span>
+}</pre>
+
+      <p class="code-cap" data-i18n="s5.c2">A file to open in a webview, no browser involved</p>
+<pre class="code"><span class="p">$ </span>odc open --path css:grid
+<span class="c">~/.local/share/com.opendoc.app/docsets/CSS.docset/…/grid.html</span></pre>
+
+      <p class="code-cap" data-i18n="s5.c3">Candidates for a picker — Telescope, fzf, a command palette</p>
+<pre class="code"><span class="p">$ </span>odc search --json --limit 50 "$query" | jq -r '.[] | "\(.docset_id)\t\(.name)"'</pre>
+
+      <ul class="seealso" style="margin-top:3rem">
+        <li><a class="nm" href="https://github.com/daidarzzz/opendoc-vscode">OpenDoc for VS Code</a><p data-i18n="s5.e1">Search and preview inside the editor. Built on exactly these commands.</p></li>
+        <li><span class="nm" data-i18n="s5.e2h">Your shell</span><p data-i18n="s5.e2"><code>odc completions zsh &gt; ~/.zfunc/_odc</code> — subcommands and flags on Tab.</p></li>
+        <li><span class="nm" data-i18n="s5.e3h">Anything else</span><p data-i18n="s5.e3">If it can run a process and read JSON, it can search your docs.</p></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ─────────── § 6 environment ─────────── -->
+  <section class="chapter" id="env" aria-labelledby="e-h">
+    <div class="margin"><div class="margin-inner">
+      <span class="sec">§ 6</span><span class="label sec-name" data-i18n="s6.name">Environment</span>
+      <p class="mnote" data-i18n="s6.note">Every flag can go before or after the subcommand.</p>
+    </div></div>
+    <div class="body">
+      <h2 id="e-h" data-i18n="s6.title">Shares the shelf <em>with the app.</em></h2>
+      <p class="prose prose-lg" data-i18n="s6.text"><code>odc</code> reads the docsets folder you chose in OpenDoc. Install a docset in the app and it is in the terminal on the next run. To point it somewhere else:</p>
+      <dl class="spec">
+        <dt>--docsets <i>DIR</i></dt><dd data-i18n="s6.d1">The folder that holds the <code>*.docset</code> bundles. Also <code>OPENDOC_DOCSETS</code>.</dd>
+        <dt>--tarix-cache <i>DIR</i></dt><dd data-i18n="s6.d2">Where compressed docsets are unpacked. Also <code>OPENDOC_TARIX_CACHE</code>.</dd>
+        <dt>ODC_STATE</dt><dd data-i18n="s6.d3">Where favourites and recents live. By default, <code>cli-state.json</code> in OpenDoc’s data folder.</dd>
+        <dt>NO_COLOR</dt><dd data-i18n="s6.d4">No colour, anywhere. Pipes and redirects get plain text anyway.</dd>
+        <dt>PAGER</dt><dd data-i18n="s6.d5">The pager for long output. <code>less -R</code> when unset.</dd>
+      </dl>
+
+      <h3 class="subhead label" data-i18n="s6.exit">Exit status</h3>
+      <dl class="exit">
+        <dt>0</dt><dd data-i18n="s6.x0">Done — including a search with no results, or a picker you cancelled.</dd>
+        <dt>1</dt><dd data-i18n="s6.x1">Something failed: no docsets folder, an unknown docset, a page that couldn’t be read.</dd>
+        <dt>2</dt><dd data-i18n="s6.x2">The command line itself was wrong.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ─────────── see also ─────────── -->
+  <section class="chapter" id="see-also" aria-labelledby="sa-h">
+    <div class="margin"><div class="margin-inner">
+      <span class="sec">§ 7</span><span class="label sec-name" data-i18n="s7.name">See also</span>
+    </div></div>
+    <div class="body">
+      <h2 id="sa-h" class="sr-only" data-i18n="s7.name">See also</h2>
+      <ul class="seealso">
+        <li><a class="nm" href="../">opendoc(1)</a><p data-i18n="s7.a">The desktop app: tabs, a docset catalog, one-click installs.</p></li>
+        <li><a class="nm" href="https://github.com/daidarzzz/opendoc-core">opendoc-core</a><p data-i18n="s7.b">The engine both share: scanning, indexes, tarix and fuzzy search.</p></li>
+        <li><a class="nm" href="https://github.com/daidarzzz/opendoc-cli">opendoc-cli</a><p data-i18n="s7.c">Source, issues and release notes for <code>odc</code>.</p></li>
+      </ul>
+    </div>
+  </section>
+
+</div>
+</main>
+
+<footer class="wrap">
+  <div class="colophon">
+    <div class="fin">
+      <p data-i18n="foot.fin">Happy reading.</p>
+      <svg aria-hidden="true"><use href="#logo"/></svg>
+    </div>
+    <div class="colo-grid">
+      <div><span class="label" data-i18n="foot.colophon">Colophon</span><p data-i18n="foot.type">Set in Newsreader and IBM Plex Mono. The terminal is JetBrains Mono on Catppuccin Mocha, as on your machine.</p></div>
+      <div><span class="label" data-i18n="foot.thanks">Credits</span><p data-i18n="foot.thanksText">Palette by <a href="https://catppuccin.com/">Catppuccin</a> (MIT). Built with <a href="https://ratatui.rs/">Ratatui</a> and <a href="https://github.com/trishume/syntect">syntect</a>. Dash and Zeal are trademarks of their respective owners.</p></div>
+      <div><span class="label" data-i18n="foot.source">Source</span><p><a href="https://github.com/daidarzzz/opendoc-cli">github.com/daidarzzz/opendoc-cli</a><br><a href="https://github.com/daidarzzz/opendoc-cli/releases" data-i18n="foot.releases">Release notes</a> · <a href="https://github.com/daidarzzz/opendoc-cli/blob/master/LICENSE">GPL‑3.0‑or‑later</a></p></div>
+    </div>
+    <div class="manstrip foot"><span>opendoc-cli <span class="ver">0.2.0</span></span><span data-i18n="man.title">OpenDoc Manual</span><span>ODC(1)</span></div>
+  </div>
+</footer>
+
+<script src="cli.js?v=2026-11-16"></script>
+</body>
+</html>
